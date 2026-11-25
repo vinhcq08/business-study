@@ -1,0 +1,598 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Business Skill Tree</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Work+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: editorial masthead over a field-guide spread: skill-tree plate (rows = areas, columns = tiers) beside a notes column; course index below.
+   Palette: paper, soil ink, moss accent; each area takes a natural pigment (stone, heather, moss, sage, clay, ochre, madder, soil, graphite). */
+:root{
+  --paper:#F2EDE3; --sheet:#FBF8F2; --wash:#EAE3D6; --ink:#23201A; --muted:#6B6355; --rule:#D6CCBA; --edge:#B3A893; --focus:#23201A;
+  --accent:#2F5D3A; --accent-wash:#E2E8DA; --good:#3E6B34; --danger:#9B3A2A; --on-lane:#FBF8F2;
+  --econ:#4A6274; --acct:#6A4A62; --fin:#4D6B2F; --plan:#2E6A63; --mkt:#A6532E; --strat:#87661C; --people:#93424F; --entre:#6A4B32; --soft:#3A3A33;
+  --f-display:"Newsreader", "Iowan Old Style", Georgia, serif;
+  --f-body:"Work Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --paper:#1A1712; --sheet:#221E18; --wash:#2B261E; --ink:#EDE6D8; --muted:#A89F8E; --rule:#3A342B; --edge:#5A5244; --focus:#EDE6D8;
+  --accent:#9CC59F; --accent-wash:#26301F; --good:#A8C487; --danger:#E38C78; --on-lane:#1A1712;
+  --econ:#9DB4C6; --acct:#C6A2BC; --fin:#A8C487; --plan:#86C2B8; --mkt:#E39A72; --strat:#D9B866; --people:#E0959F; --entre:#C9A57F; --soft:#D8D2C2;
+  color-scheme:dark } }
+:root[data-theme="dark"]{
+  --paper:#1A1712; --sheet:#221E18; --wash:#2B261E; --ink:#EDE6D8; --muted:#A89F8E; --rule:#3A342B; --edge:#5A5244; --focus:#EDE6D8;
+  --accent:#9CC59F; --accent-wash:#26301F; --good:#A8C487; --danger:#E38C78; --on-lane:#1A1712;
+  --econ:#9DB4C6; --acct:#C6A2BC; --fin:#A8C487; --plan:#86C2B8; --mkt:#E39A72; --strat:#D9B866; --people:#E0959F; --entre:#C9A57F; --soft:#D8D2C2;
+  color-scheme:dark }
+
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font:400 15px/1.6 var(--f-body)}
+.wrap{max-width:1500px;margin:0 auto;padding-block:20px 64px;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));display:flex;flex-direction:column;gap:34px}
+h1,h2,h3{margin:0;text-wrap:balance}
+h1,h2{font-family:var(--f-display);font-weight:500;letter-spacing:-.015em}
+h2{font-size:clamp(24px,2.6vw,30px);line-height:1.15}
+h3{font:500 11px/1.3 var(--f-mono);text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
+p{margin:0}
+a{color:var(--accent);text-underline-offset:3px;text-decoration-thickness:1px}
+.mono{font-family:var(--f-mono)}
+
+/* Masthead */
+header.mast{display:flex;flex-direction:column;gap:18px;border-top:4px solid var(--ink);padding-top:12px}
+.dateline{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 18px;font:500 11.5px/1.4 var(--f-mono);text-transform:uppercase;letter-spacing:.12em;color:var(--muted);padding-bottom:12px;border-bottom:1px solid var(--rule)}
+.mast h1{font-size:clamp(48px,9vw,112px);line-height:.92;letter-spacing:-.035em;font-weight:500;font-variation-settings:"opsz" 72}
+.mast h1 em{font-style:italic;font-weight:400;color:var(--accent)}
+.mast-row{display:grid;grid-template-columns:minmax(0,1fr);gap:18px 40px;align-items:end}
+@media (min-width:900px){.mast-row{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr)}}
+.lede{max-width:56ch;font:400 clamp(18px,1.7vw,21px)/1.5 var(--f-display);color:var(--ink)}
+.lede::first-letter{font-weight:600}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:1px solid var(--ink);border-bottom:1px solid var(--rule)}
+.stats span{display:flex;flex-direction:column;gap:2px;padding:10px 12px 12px;font-size:12.5px;color:var(--muted);border-left:1px solid var(--rule)}
+.stats span:first-child{border-left:0;padding-left:0}
+.stats b{font:500 34px/1 var(--f-display);color:var(--ink);font-variant-numeric:oldstyle-nums proportional-nums}
+@media (max-width:520px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.stats span:nth-child(3){border-left:0;padding-left:0}.stats span:nth-child(n+3){border-top:1px solid var(--rule)}}
+
+.app{display:grid;grid-template-columns:minmax(0,1fr);gap:24px;align-items:start}
+@media (min-width:1080px){.app{grid-template-columns:minmax(0,1fr) 370px}}
+.treecol{display:flex;flex-direction:column;gap:12px;min-width:0}
+.section-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 16px;border-bottom:1px solid var(--ink);padding-bottom:8px}
+.section-head .kicker{font:500 11px/1 var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.toolbar .sp{flex:1}
+.btn{font:500 11.5px/1 var(--f-mono);text-transform:uppercase;letter-spacing:.08em;color:var(--ink);background:transparent;border:1px solid var(--ink);border-radius:2px;padding:12px 14px;cursor:pointer;min-height:42px}
+.btn:hover{background:var(--wash)}
+.btn[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.btn.danger{color:var(--danger);border-color:var(--danger)}
+button:focus-visible,a:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.zoom{display:flex;gap:4px}
+.zoom .btn{min-width:44px;text-align:center;font-size:14px;padding:12px 10px}
+.viewport{position:relative;overflow:auto;max-height:min(80vh,1000px);background:var(--sheet);border:1px solid var(--rule);overscroll-behavior:contain}
+.sizer{position:relative}
+.canvas{position:absolute;left:0;top:0;transform-origin:0 0}
+.band{position:absolute;left:0;right:0;border-top:1px solid var(--rule)}
+.band.alt{background:color-mix(in srgb, var(--wash) 55%, var(--sheet))}
+.lane-label{position:absolute;left:16px;width:144px;font:500 16px/1.15 var(--f-display);color:var(--c)}
+.lane-label small{display:block;font:400 10.5px/1.3 var(--f-mono);letter-spacing:.06em;color:var(--muted);margin-top:4px;text-transform:uppercase}
+.tier{position:absolute;top:13px;font:500 11px/1 var(--f-mono);color:var(--muted);letter-spacing:.14em}
+svg.edges{position:absolute;left:0;top:0;overflow:visible;pointer-events:none}
+svg.edges path{fill:none;stroke:var(--edge);stroke-width:1.2;transition:opacity .15s}
+svg.edges path.on{stroke:var(--ink);stroke-width:1.8;opacity:1}
+svg.edges path.off{opacity:.1}
+
+.node{position:absolute;width:178px;height:60px;border-radius:2px;border:1px solid var(--c);background:var(--sheet);color:var(--ink);text-align:left;padding:6px 24px 6px 10px;display:flex;flex-direction:column;justify-content:center;gap:3px;cursor:pointer;transition:opacity .15s,background .15s}
+.node .nm{font:600 14px/1.12 var(--f-display);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.node .sub{font:400 9.5px/1.2 var(--f-mono);letter-spacing:.03em;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-transform:uppercase}
+.node .st{position:absolute;top:8px;right:8px;width:9px;height:9px;border-radius:50%}
+.node.ready .st{border:1.5px solid var(--c)}
+.node.doing{background:color-mix(in srgb, var(--c) 14%, var(--sheet))}
+.node.doing .st{background:var(--c)}
+.node.done{background:var(--c);color:var(--on-lane)}
+.node.done .sub{color:var(--on-lane);opacity:.85}
+.node.done .st{width:auto;height:auto;border-radius:0;top:6px;right:8px;font:600 12px/1 var(--f-body)}
+.node.done .st::before{content:"\2713"}
+.node.locked{border-color:color-mix(in srgb, var(--c) 30%, var(--rule));color:var(--muted)}
+.node.sel{outline:2px solid var(--focus);outline-offset:3px}
+.node.dim{opacity:.22}
+.hint{font-size:13px;color:var(--muted);max-width:90ch}
+
+.panel{background:var(--sheet);border:1px solid var(--rule);border-top:3px solid var(--c, var(--ink));padding:20px;display:flex;flex-direction:column;gap:15px;min-width:0}
+@media (min-width:1080px){.panel{position:sticky;top:calc(env(safe-area-inset-top, 0px) + 16px);max-height:calc(100vh - 32px);overflow:auto}}
+.panel > *{flex-shrink:0}
+.panel h2{font-size:30px}
+.p-lane{font:500 11px/1.3 var(--f-mono);letter-spacing:.12em;color:var(--c)}
+.seg{display:flex;border:1px solid var(--ink);border-radius:2px;overflow:hidden}
+.seg button{flex:1;font:500 11px/1 var(--f-mono);letter-spacing:.06em;text-transform:uppercase;padding:13px 4px;border:0;background:transparent;color:var(--ink);cursor:pointer}
+.seg button+button{border-left:1px solid var(--ink)}
+.seg button[aria-pressed="true"]{background:var(--c);color:var(--on-lane)}
+.about{font:400 18px/1.45 var(--f-display)}
+.course{display:flex;flex-direction:column;gap:4px;text-decoration:none;border:1px solid var(--ink);border-radius:2px;padding:13px 14px;color:var(--ink);background:var(--paper)}
+.course:hover{background:var(--wash)}
+.course b{font:600 17px/1.25 var(--f-display)}
+.course span{font-size:12.5px;color:var(--muted)}
+.course .go{font:500 11px/1 var(--f-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-top:4px}
+.alt{font-size:14px}
+.alt a{font-weight:500}
+.alt span{color:var(--muted)}
+.apply{background:var(--accent-wash);border-radius:2px;padding:14px 15px;display:flex;flex-direction:column;gap:10px}
+.apply h3{color:var(--accent)}
+.check{display:flex;gap:10px;align-items:flex-start;font:400 16px/1.4 var(--f-display);cursor:pointer}
+.check input{width:20px;height:20px;margin:2px 0 0;accent-color:var(--good);flex:none}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:500 14px/1 var(--f-display);padding:9px 11px;border-radius:2px;border:1px solid var(--rule);background:var(--paper);color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;gap:7px}
+.chip:hover{border-color:var(--ink)}
+.chip i{width:8px;height:8px;border-radius:50%;background:var(--c);display:inline-block}
+.none{font-size:13px;color:var(--muted)}
+.legend{display:grid;gap:8px;font-size:13px}
+.legend div{display:flex;align-items:center;gap:10px}
+.sw{width:30px;height:16px;border-radius:2px;border:1px solid var(--plan);flex:none;background:var(--sheet)}
+.sw.done{background:var(--plan)}
+.sw.doing{background:color-mix(in srgb, var(--plan) 14%, var(--sheet))}
+.sw.locked{border-color:color-mix(in srgb, var(--plan) 30%, var(--rule))}
+.ln{width:30px;flex:none;border-top:1.2px solid var(--edge)}
+.progress{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border-top:1px solid var(--ink)}
+.progress div{padding:10px 0 12px;border-bottom:1px solid var(--rule)}
+.progress div:nth-child(odd){padding-right:12px;border-right:1px solid var(--rule)}
+.progress div:nth-child(even){padding-left:12px}
+.progress b{display:block;font:500 32px/1.05 var(--f-display);font-variant-numeric:oldstyle-nums proportional-nums}
+.progress span{font-size:12.5px;color:var(--muted)}
+.linkbtn{background:none;border:0;padding:6px 0;color:var(--accent);font:500 11px var(--f-mono);letter-spacing:.1em;text-transform:uppercase;cursor:pointer;text-decoration:underline;text-underline-offset:3px;align-self:flex-start}
+
+section.list{display:flex;flex-direction:column;gap:16px}
+.list .intro{max-width:70ch;font:400 17px/1.5 var(--f-display);color:var(--ink)}
+.tablewrap{overflow-x:auto;border-top:1px solid var(--ink);border-bottom:1px solid var(--ink)}
+table{border-collapse:collapse;width:100%;min-width:860px;font-size:14px}
+th,td{text-align:left;padding:12px 14px 12px 0;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font:500 10.5px/1.2 var(--f-mono);text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
+tr:last-child td{border-bottom:0}
+td .area{font:500 10.5px/1.3 var(--f-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--c)}
+td button.subj{background:none;border:0;padding:0;margin-top:2px;font:600 17px/1.2 var(--f-display);color:var(--ink);cursor:pointer;text-align:left}
+td button.subj:hover{color:var(--accent);text-decoration:underline;text-underline-offset:3px}
+.stcell{font:400 12px/1.4 var(--f-mono);color:var(--muted);white-space:nowrap}
+.foot{font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:12px;max-width:90ch}
+.confirm{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:13.5px}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="mast">
+    <div class="dateline"><span>A self-study curriculum</span><span>Free courses only</span><span>Checked November 2026</span></div>
+    <h1>Business <em>Skill</em> Tree</h1>
+    <div class="mast-row">
+    <p class="lede">28 business subjects in 9 areas, arranged by what to learn first. Every subject links to the newest free course available, mostly from MIT, Yale, Harvard, Stanford and NYU. Where that course runs on set dates, an always-available backup is listed too. Each subject also has an "Apply it" task that builds toward your own software business.</p>
+    <div class="stats" id="stats"></div>
+    </div>
+  </header>
+
+  <div class="app">
+    <div class="treecol">
+      <div class="section-head"><h2>The map</h2><span class="kicker">9 areas · 5 tiers · read left to right</span></div>
+      <div class="toolbar">
+        <button class="btn" id="tPath" aria-pressed="false">Path to launching a software business</button>
+        <span class="sp"></span>
+        <div class="zoom" role="group" aria-label="Zoom">
+          <button class="btn" id="zOut" aria-label="Zoom out">−</button>
+          <button class="btn" id="zFit">Fit</button>
+          <button class="btn" id="zIn" aria-label="Zoom in">+</button>
+        </div>
+      </div>
+      <div class="viewport" id="viewport">
+        <div class="sizer" id="sizer"><div class="canvas" id="canvas"></div></div>
+      </div>
+      <p class="hint">Select a subject to see its course, its "Apply it" task, and what it needs and unlocks. Tiers show the order to learn in, not a schedule. Progress is saved in this browser only.</p>
+    </div>
+    <aside class="panel" id="panel" aria-live="polite"></aside>
+  </div>
+
+  <section class="list">
+    <div class="section-head"><h2>Course index</h2><span class="kicker">28 subjects · every course free</span></div>
+    <p class="intro">Every course here is free. MITx Online and edX courses are free to audit: you get the videos and materials, but access can end when a course run closes, so each one has an always-available backup. MIT OpenCourseWare, Open Yale, OpenStax and NYU Stern's recordings need no sign-up and stay open.</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Subject</th><th>Free course</th><th>Source</th><th>Format</th><th>Your status</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <div class="foot">
+      <span>Courses checked in November 2026. Where no newer free course exists (for example negotiation, pricing and leadership), the MIT OpenCourseWare course stays as the main link; its year is shown so you know its age. Coursera courses, including Wharton's, are left out: Coursera has replaced most free audit access with a free first-module preview. Harvard's Negotiation Essentials Online is paid, so it is not included. The Contract Law course teaches US law, so check your own country's rules.</span>
+      <div class="confirm" id="resetArea"><button class="btn danger" id="resetBtn">Reset my progress</button></div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function(){
+const OCW = q => 'https://ocw.mit.edu/search/?q=' + encodeURIComponent(q);
+const OSX_MGMT = 'https://openstax.org/books/principles-managerial-accounting/pages/preface';
+const LANES = [
+  {id:'econ', name:'Economics'},
+  {id:'acct', name:'Accounting'},
+  {id:'fin', name:'Finance'},
+  {id:'plan', name:'Financial planning'},
+  {id:'mkt', name:'Marketing & sales'},
+  {id:'strat', name:'Strategy & operations'},
+  {id:'people', name:'People & law'},
+  {id:'entre', name:'Entrepreneurship'},
+  {id:'soft', name:'Software business'}
+];
+// t = tier (0-4), r = lane row. c = main course {n:name, by:source, f:format, u:url}. alt = free alternatives.
+const N = [
+ {id:'micro', n:'Microeconomics', r:0, t:0,
+  c:{n:'Microeconomics (14.100x, Jonathan Gruber)', by:'MITx Online (MIT)', f:'Free to audit · about 14 weeks, runs on set dates', u:'https://mitxonline.mit.edu/courses/course-v1:MITxT+14.100x'},
+  b:{n:'Principles of Microeconomics (14.01, Fall 2018)', by:'MIT OpenCourseWare', u:OCW('14.01 Principles of Microeconomics')},
+  alt:[{n:'Principles of Microeconomics (textbook)', by:'OpenStax, Rice University', u:'https://openstax.org/subjects/economics'}],
+  about:'How prices, supply and demand, and competition work for individual buyers and companies.',
+  why:'Explains how customers decide what to buy and how competitors react to your prices.',
+  apply:'List 3 alternatives your customers use today and roughly what each costs them.'},
+ {id:'macro', n:'Macroeconomics', r:0, t:1, pre:['micro'],
+  c:{n:'Principles of Macroeconomics (14.02)', by:'MIT OpenCourseWare', f:'Video lectures, notes, problem sets', u:OCW('14.02 Principles of Macroeconomics')},
+  alt:[{n:'Principles of Macroeconomics (textbook)', by:'OpenStax, Rice University', u:'https://openstax.org/subjects/economics'}],
+  about:'Inflation, interest rates, unemployment and economic cycles.',
+  why:'The wider economy affects customer budgets, borrowing costs and how willing investors are to fund startups.',
+  apply:'Write two sentences on how a recession would change demand for your product.'},
+ {id:'game', n:'Game Theory', r:0, t:2, pre:['micro'],
+  c:{n:'ECON 159: Game Theory (Ben Polak)', by:'Open Yale Courses', f:'Fall 2007 · recorded lectures, problem sets', u:'https://oyc.yale.edu/economics/econ-159'},
+  about:'Strategic thinking when your result depends on what others do.',
+  why:'Helps with pricing against rivals, negotiations and partnership deals.',
+  apply:'Map how your two closest competitors might react if you launch at a lower price.'},
+
+ {id:'finacct', n:'Financial Accounting', r:1, t:0,
+  c:{n:'Financial Accounting (15.516x)', by:'MITx Online (MIT)', f:'Free to audit · self-paced, about 12 weeks', u:'https://mitxonline.mit.edu/courses/course-v1:MITxT+15.516x/'},
+  b:{n:'Principles of Accounting, Vol. 1: Financial Accounting', by:'OpenStax, Rice University', u:'https://openstax.org/books/principles-financial-accounting/pages/preface'},
+  alt:[{n:'Corporate Financial Accounting (Sloan)', by:'MIT OpenCourseWare', u:OCW('Corporate Financial Accounting')}],
+  about:'The three main financial statements: income statement, balance sheet and cash flow statement.',
+  why:'Investors, banks and tax offices all read your business through these statements.',
+  apply:'Sketch a simple income statement for your first year: revenue, costs and profit.'},
+ {id:'mgmtacct', n:'Managerial Accounting', r:1, t:1, pre:['finacct'],
+  c:{n:'Principles of Accounting, Vol. 2: Managerial Accounting', by:'OpenStax, Rice University', f:'Free textbook with exercises', u:OSX_MGMT},
+  about:'Costs inside the business: fixed and variable costs, cost behavior, and costing methods.',
+  why:'Tells you what each product or customer really costs you.',
+  apply:'List your fixed monthly costs and your variable cost for each new customer.'},
+
+ {id:'markets', n:'Financial Markets', r:2, t:1, pre:['micro'],
+  c:{n:'ECON 252: Financial Markets (Robert Shiller)', by:'Open Yale Courses', f:'Spring 2011 · recorded lectures, problem sets', u:'https://oyc.yale.edu/economics/econ-252'},
+  about:'How stocks, bonds, banks and investors work, and how they price risk.',
+  why:'Background for raising money and understanding what investors expect in return.',
+  apply:'Compare 3 ways to fund your business (savings, a loan, an investor) with one pro and one con each.'},
+ {id:'corpfin', n:'Corporate Finance', r:2, t:2, pre:['finacct','markets'],
+  c:{n:'Foundations of Finance (Aswath Damodaran)', by:'NYU Stern', f:'Free YouTube class · 12 sessions, about 6 hours', u:'https://www.youtube.com/playlist?list=PLUkh9m2BorqndWimijiJ-VCAXjJUrzJQU'},
+  b:{n:'Finance Theory I (15.401, Andrew Lo, Fall 2008)', by:'MIT OpenCourseWare', u:OCW('15.401 Finance Theory')},
+  about:'Time value of money, risk and return, and how companies decide which projects to fund.',
+  why:'Lets you compare choices, like building a feature or hiring a salesperson, in money terms.',
+  apply:'Work out how many months a planned marketing spend would take to pay back.'},
+ {id:'valuation', n:'Valuation', r:2, t:3, pre:['corpfin'],
+  c:{n:'Valuation, Spring 2025 class (Aswath Damodaran)', by:'NYU Stern', f:'Free recorded lectures, slides, spreadsheets', u:'https://pages.stern.nyu.edu/~adamodar/New_Home_Page/webcasteqspr25.htm'},
+  b:{n:'All of Damodaran’s free classes', by:'NYU Stern', u:'https://pages.stern.nyu.edu/~adamodar/'},
+  about:'How to estimate what a business is worth, including young companies with little revenue.',
+  why:'You need it to judge investor offers and how much of your company to give up.',
+  apply:'Find 3 similar software companies and note how investors value them (for example, a multiple of revenue).'},
+ {id:'fund', n:'Fundraising & Term Sheets', r:2, t:4, pre:['valuation','bizmodel'],
+  c:{n:'Venture Deals', by:'Techstars & Kauffman Fellows', f:'Self-paced online course, free sign-up', u:'https://venturedeals.techstars.com/'},
+  alt:[{n:'Entrepreneurship 104: Fundamentals of Entrepreneurship Finance', by:'MITx Online (MIT) · check whether a run is open', u:'https://mitxonline.mit.edu/courses/course-v1:MITxT+Bootcamp4/'}],
+  about:'Term sheets, valuation, dilution and how venture deals are negotiated.',
+  why:'Keeps you from signing terms you don’t understand.',
+  apply:'Choose your funding path (self-funded, loan, angel or venture capital) and write down why.'},
+
+ {id:'excel', n:'Spreadsheets for Business', r:3, t:0,
+  c:{n:'Excel help & learning', by:'Microsoft', f:'Free video tutorials and guides', u:'https://support.microsoft.com/en-us/excel'},
+  about:'Formulas, tables, charts and simple models in a spreadsheet (Excel or Google Sheets).',
+  why:'Every budget, forecast and model in this tree is built in a spreadsheet.',
+  apply:'Set up a spreadsheet with tabs for costs, prices and a 12-month forecast.'},
+ {id:'unitecon', n:'Unit Economics & Break-even', r:3, t:1, pre:['excel','finacct'],
+  c:{n:'Managerial Accounting: the cost-volume-profit (CVP) chapter', by:'OpenStax, Rice University', f:'Free textbook chapter with exercises', u:OSX_MGMT},
+  alt:[{n:'Entrepreneurship 104: Fundamentals of Entrepreneurship Finance', by:'MITx Online (MIT) · check whether a run is open', u:'https://mitxonline.mit.edu/courses/course-v1:MITxT+Bootcamp4/'},
+       {n:'New Enterprises (15.390)', by:'MIT OpenCourseWare', u:'https://ocw.mit.edu/courses/15-390-new-enterprises-spring-2013/'}],
+  about:'Revenue and cost per customer, contribution margin and the break-even point.',
+  why:'Shows how many customers you need before the business stops losing money.',
+  apply:'Build a break-even sheet: price per user, cost per user, monthly fixed costs, and users needed to break even.'},
+ {id:'budget', n:'Budgeting & Forecasting', r:3, t:2, pre:['unitecon','mgmtacct'],
+  c:{n:'Managerial Accounting: the budgeting chapters', by:'OpenStax, Rice University', f:'Free textbook chapters with exercises', u:OSX_MGMT},
+  about:'Planning income and spending month by month, then comparing the plan with what really happened.',
+  why:'A budget tells you how many months your money will last, often called your runway.',
+  apply:'Make a 12-month budget and work out how many months your savings would cover.'},
+ {id:'fsa', n:'Financial Statement Analysis', r:3, t:3, pre:['budget','corpfin'],
+  c:{n:'Business Analysis Using Financial Statements (15.535)', by:'MIT OpenCourseWare', f:'Spring 2003 · lecture notes, assignments, exams', u:'https://ocw.mit.edu/courses/15-535-business-analysis-using-financial-statements-spring-2003/'},
+  about:'Using financial statements to analyze and value a company, including cash flow and earnings quality.',
+  why:'Lets you read competitors’ reports and spot problems in your own numbers.',
+  apply:'Read one public software company’s annual report and note its revenue growth and gross margin.'},
+
+ {id:'marketing', n:'Marketing Management', r:4, t:0,
+  c:{n:'Marketing Management (15.810, John Hauser)', by:'MIT OpenCourseWare', f:'Fall 2015 · lecture notes, readings, assignments', u:'https://ocw.mit.edu/courses/15-810-marketing-management-analytics-frameworks-and-applications-fall-2015/'},
+  alt:[{n:'Marketing in the 21st Century (about 6 hours, good short starter)', by:'The Open University, OpenLearn', u:'https://www.open.edu/openlearn/money-business/marketing-the-21st-century'}],
+  about:'Choosing target customers, positioning your product and planning the marketing mix.',
+  why:'Decides who you sell to and how you describe what you sell.',
+  apply:'Write a positioning statement: for [customer] who [need], our product is a [category] that [main benefit].'},
+ {id:'pricing', n:'Pricing Strategy', r:4, t:1, pre:['marketing','micro'],
+  c:{n:'Pricing (15.818, Catherine Tucker)', by:'MIT OpenCourseWare', f:'Spring 2010 · lecture notes, assignments, exams', u:'https://ocw.mit.edu/courses/15-818-pricing-spring-2010/'},
+  about:'Pricing strategies and tactics, willingness to pay and charging different customers different prices.',
+  why:'For a software product, price is the fastest way to change revenue.',
+  apply:'Draft 3 pricing tiers for your product and what each tier includes.'},
+ {id:'sales', n:'Founder-led Sales', r:4, t:2, pre:['pricing','discovery'],
+  c:{n:'Founding Sales (Pete Kazanjy)', by:'Free online book', f:'Free book', u:'https://www.foundingsales.com/'},
+  about:'How founders find, contact, pitch and close their first business customers.',
+  why:'Early customers rarely arrive on their own. Founders usually do the first sales themselves.',
+  apply:'List 20 potential first customers and write a 3-sentence outreach message.'},
+
+ {id:'strategy', n:'Strategic Management', r:5, t:1, pre:['micro'],
+  c:{n:'Strategic Management (15.902)', by:'MIT OpenCourseWare', f:'Lecture notes and cases', u:OCW('15.902 Strategic Management')},
+  about:'Competitive advantage, industry analysis and choosing where to compete.',
+  why:'Helps you pick a position that competitors can’t easily copy.',
+  apply:'Write down what would make your product hard to copy within 12 months.'},
+ {id:'ops', n:'Operations Management', r:5, t:2, pre:['strategy'],
+  c:{n:'Introduction to Operations Management (Sloan)', by:'MIT OpenCourseWare', f:'Lecture notes and assignments', u:OCW('Introduction to Operations Management')},
+  about:'Processes, capacity, quality and supply chains.',
+  why:'Keeps service quality steady as customers grow, for example in support and onboarding.',
+  apply:'Map the steps from a customer signing up to getting value, and mark the slowest step.'},
+ {id:'innov', n:'Innovation Management', r:5, t:3, pre:['strategy','game'],
+  c:{n:'Managing Innovation and Entrepreneurship (15.351)', by:'MIT OpenCourseWare', f:'Lecture notes and readings', u:OCW('Managing Innovation and Entrepreneurship')},
+  about:'How new technologies replace old ones, and how companies manage innovation.',
+  why:'Software markets change fast. This helps you see changes coming early.',
+  apply:'Name one technology change that could make your product less useful, and how you would respond.'},
+
+ {id:'lead', n:'Leadership & Teams', r:6, t:0,
+  c:{n:'Organizational Leadership and Change (15.317)', by:'MIT OpenCourseWare', f:'Lecture notes and readings', u:OCW('15.317 Organizational Leadership and Change')},
+  about:'Leading people, building teams and managing change.',
+  why:'As the company grows, hiring and keeping good people becomes a founder’s main job.',
+  apply:'Write the first 3 roles you would hire and what each must achieve in their first 6 months.'},
+ {id:'nego', n:'Negotiation', r:6, t:1, pre:['lead'],
+  c:{n:'Negotiation and Conflict Management (15.667)', by:'MIT OpenCourseWare', f:'Spring 2001 · lecture notes, readings, exercises', u:'https://ocw.mit.edu/courses/15-667-negotiation-and-conflict-management-spring-2001/'},
+  about:'Preparing for negotiations, finding gains for both sides and handling conflict.',
+  why:'You will negotiate with customers, suppliers, co-founders and investors.',
+  apply:'Prepare for one real negotiation: your goal, your walk-away point and what the other side wants.'},
+ {id:'law', n:'Contract Law', r:6, t:2, pre:['nego'],
+  c:{n:'Contract Law: From Trust to Promise to Contract', by:'HarvardX on edX', f:'Video course, free to audit', u:'https://www.edx.org/learn/business-law/harvard-university-contract-law-from-trust-to-promise-to-contract'},
+  about:'How contracts are formed and enforced, and what happens when one is broken. Teaches US law.',
+  why:'Customer agreements, freelancer contracts and who owns your code all depend on contracts.',
+  apply:'List the contracts you will need: terms of service, privacy policy, and contractor agreements that give you ownership of the code.'},
+
+ {id:'discovery', n:'Customer Discovery', r:7, t:0,
+  c:{n:'How to Build a Startup (Steve Blank)', by:'Udacity', f:'Free video course', u:'https://www.udacity.com/course/how-to-build-a-startup--ep245'},
+  alt:[{n:'Entrepreneurship 101–103 (Bill Aulet)', by:'MITx Online (MIT) · self-paced', u:'https://mitxonline.mit.edu/courses/course-v1:MITxT+Bootcamp3'}],
+  about:'Testing a business idea by talking to real customers before you build it.',
+  why:'The most common reason startups fail is building something nobody wants.',
+  apply:'Interview 10 potential customers about their problem, without pitching your idea.'},
+ {id:'bizmodel', n:'Business Models', r:7, t:1, pre:['discovery'],
+  c:{n:'Entrepreneurship 101–103 (Bill Aulet)', by:'MITx Online (MIT)', f:'Free to audit · self-paced', u:'https://mitxonline.mit.edu/courses/course-v1:MITxT+Bootcamp3'},
+  b:{n:'New Enterprises (15.390, Bill Aulet, Spring 2013)', by:'MIT OpenCourseWare', u:'https://ocw.mit.edu/courses/15-390-new-enterprises-spring-2013/'},
+  about:'A step-by-step method (from Disciplined Entrepreneurship) for finding a market, defining the product and planning a new company.',
+  why:'Turns an idea into a complete plan you can test.',
+  apply:'Fill in a one-page business model: customer, value, channels, revenue and costs.'},
+ {id:'launch', n:'Launching a Startup', r:7, t:4, pre:['growth','sales','law'],
+  c:{n:'How to Start a Startup (CS183B)', by:'Stanford University × Y Combinator', f:'Fall 2014 · recorded lectures', u:'https://startupclass.samaltman.com/'},
+  alt:[{n:'Startup School', by:'Y Combinator', u:'https://www.startupschool.org/'}],
+  about:'Lectures from founders and investors on ideas, products, teams, growth and fundraising.',
+  why:'Puts the whole tree together through the experience of people who have done it.',
+  apply:'Write a one-page launch plan: how you will get your first 100 users, a launch date and what you will measure.'},
+
+ {id:'product', n:'Product Development', r:8, t:1, pre:['discovery'],
+  c:{n:'Product Design and Development (15.783J)', by:'MIT OpenCourseWare', f:'Lecture notes and assignments', u:OCW('Product Design and Development')},
+  about:'How products are planned, designed and tested, from idea to launch.',
+  why:'Gives you a method for deciding what to build first, your minimum viable product (MVP).',
+  apply:'List the 3 features your first version must have, and 5 you will leave out.'},
+ {id:'saas', n:'SaaS Metrics', r:8, t:2, pre:['unitecon','product'],
+  c:{n:'SaaS Metrics 2.0 (David Skok)', by:'For Entrepreneurs', f:'Free guide', u:'https://www.forentrepreneurs.com/saas-metrics-2/'},
+  about:'Monthly recurring revenue (MRR), churn, customer acquisition cost (CAC) and lifetime value (LTV).',
+  why:'These numbers show whether a subscription business is healthy.',
+  apply:'Estimate your CAC and LTV, and check that LTV is at least 3 times CAC.'},
+ {id:'growth', n:'Growth & Customer Acquisition', r:8, t:3, pre:['saas','sales'],
+  c:{n:'Startup School', by:'Y Combinator', f:'Free self-paced online course', u:'https://www.startupschool.org/'},
+  about:'Finding early users, choosing growth channels and measuring what works.',
+  why:'Building the product is half the job. Getting people to use it is the other half.',
+  apply:'Pick 2 channels to test for your first users and set a weekly target for each.'}
+];
+
+const T = 5, ROWS = LANES.length, PADL = 172, COLW = 208, NW = 178, NH = 60, ROWH = 76, HEAD = 38;
+const W = PADL + T*COLW + 12, H = HEAD + ROWS*ROWH + 10;
+const byId = {}; N.forEach(n => { n.pre = n.pre || []; n.alt = n.alt || []; n.lane = LANES[n.r].id; byId[n.id] = n; });
+const EDGES = []; N.forEach(n => n.pre.forEach(p => EDGES.push({a:p, b:n.id})));
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+const KEY = 'biz-skill-tree-v1';
+let S = {prog:{}, apply:{}};
+try { const v = JSON.parse(localStorage.getItem(KEY) || 'null'); if (v && typeof v === 'object') S = {prog:v.prog || {}, apply:v.apply || {}}; } catch(e) {}
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e) {} };
+
+let pathMode = false, sel = null, scale = 1;
+function status(id){
+  const s = S.prog[id]; if (s === 'done' || s === 'doing') return s;
+  return byId[id].pre.every(p => S.prog[p] === 'done') ? 'ready' : 'locked';
+}
+const STATUS_TEXT = {done:'Done', doing:'In progress', ready:'Ready to start', locked:'Needs earlier subjects'};
+
+const nx = n => PADL + n.t*COLW + (COLW-NW)/2, ny = n => HEAD + n.r*ROWH + (ROWH-NH)/2;
+function pathD(e){
+  let a = byId[e.a], b = byId[e.b];
+  const sx = nx(a)+NW, sy = ny(a)+NH/2, ex = nx(b)-2, ey = ny(b)+NH/2, dx = Math.max(30,(ex-sx)/2);
+  return `M${sx} ${sy} C${sx+dx} ${sy} ${ex-dx} ${ey} ${ex} ${ey}`;
+}
+
+const canvas = document.getElementById('canvas'), sizer = document.getElementById('sizer'), viewport = document.getElementById('viewport');
+canvas.style.width = W+'px'; canvas.style.height = H+'px';
+let html = '';
+LANES.forEach((l,i) => {
+  const top = HEAD + i*ROWH, count = N.filter(n => n.r === i).length;
+  html += `<div class="band${i%2?' alt':''}" style="top:${top}px;height:${ROWH}px"></div>`;
+  html += `<div class="lane-label" style="--c:var(--${l.id});top:${top+20}px">${esc(l.name)}<small>${count} subject${count===1?'':'s'}</small></div>`;
+});
+const ROMAN = ['I','II','III','IV','V'];
+for (let t=0; t<T; t++) html += `<div class="tier" style="left:${PADL+t*COLW+(COLW-NW)/2}px">TIER ${ROMAN[t]}</div>`;
+html += `<svg class="edges" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true">
+<defs><marker id="arr" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L8 4L0 8z" fill="var(--edge)"/></marker>
+<marker id="arrOn" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L8 4L0 8z" fill="var(--ink)"/></marker></defs>
+${EDGES.map((e,i) => `<path id="e${i}" d="${pathD(e)}" marker-end="url(#arr)"/>`).join('')}</svg>`;
+N.forEach(n => {
+  html += `<button class="node" id="n-${n.id}" data-id="${n.id}" style="--c:var(--${n.lane});left:${nx(n)}px;top:${ny(n)}px" title="${esc(n.n)}"><span class="nm">${esc(n.n)}</span><span class="sub">${esc(n.c.by)}</span><span class="st"></span></button>`;
+});
+canvas.innerHTML = html;
+
+function anc(id, set){ set = set || new Set(); EDGES.forEach(e => { if (e.b === id && !set.has(e.a)) { set.add(e.a); anc(e.a, set); } }); return set; }
+function desc(id, set){ set = set || new Set(); EDGES.forEach(e => { if (e.a === id && !set.has(e.b)) { set.add(e.b); desc(e.b, set); } }); return set; }
+const PATH = (() => { const s = new Set(['launch','fund']); anc('launch', s); anc('fund', s); return s; })();
+
+function refresh(){
+  let F = null, onEdge = () => false;
+  if (sel){
+    const A = anc(sel), D = desc(sel); A.add(sel); D.add(sel);
+    F = new Set([...A, ...D]);
+    onEdge = e => (A.has(e.a) && A.has(e.b)) || (D.has(e.a) && D.has(e.b));
+  } else if (pathMode){
+    F = PATH; onEdge = e => F.has(e.a) && F.has(e.b);
+  }
+  N.forEach(n => {
+    const el = document.getElementById('n-'+n.id), st = status(n.id);
+    el.classList.remove('done','doing','ready','locked'); el.classList.add(st);
+    el.classList.toggle('sel', sel === n.id);
+    el.classList.toggle('dim', !!F && !F.has(n.id));
+    el.setAttribute('aria-label', `${n.n}. ${STATUS_TEXT[st]}.`);
+    el.setAttribute('aria-pressed', sel === n.id ? 'true' : 'false');
+  });
+  EDGES.forEach((e,i) => {
+    const p = document.getElementById('e'+i), on = !!F && onEdge(e);
+    p.classList.toggle('on', on); p.classList.toggle('off', !!F && !on);
+    p.setAttribute('marker-end', on ? 'url(#arrOn)' : 'url(#arr)');
+  });
+  renderPanel(); renderStats(); renderRows();
+}
+
+const chip = id => { const n = byId[id]; return `<button class="chip" data-go="${id}" style="--c:var(--${n.lane})"><i></i>${esc(n.n)}</button>`; };
+const chipList = ids => ids.length ? `<div class="chips">${ids.map(chip).join('')}</div>` : '<p class="none">None</p>';
+const panel = document.getElementById('panel');
+
+function renderPanel(){
+  if (!sel){
+    const c = k => N.filter(n => status(n.id) === k).length;
+    const applied = N.filter(n => S.apply[n.id]).length;
+    const ready = N.filter(n => status(n.id) === 'ready').map(n => n.id).slice(0, 6);
+    panel.style.removeProperty('--c');
+    panel.innerHTML = `
+      <h2>Your progress</h2>
+      <div class="progress">
+        <div><b>${c('done')}<span style="font-size:14px;color:var(--muted)"> / ${N.length}</span></b><span>Subjects done</span></div>
+        <div><b>${c('doing')}</b><span>In progress</span></div>
+        <div><b>${c('ready')}</b><span>Ready to start</span></div>
+        <div><b>${applied}<span style="font-size:14px;color:var(--muted)"> / ${N.length}</span></b><span>"Apply it" tasks done</span></div>
+      </div>
+      <p class="none">Select a subject in the tree, then mark it as in progress or done. A subject becomes ready to start once everything it needs is done.</p>
+      <h3>Ready to start</h3>
+      ${chipList(ready)}
+      <h3>Legend</h3>
+      <div class="legend">
+        <div><span class="sw done"></span>Done</div>
+        <div><span class="sw doing"></span>In progress</div>
+        <div><span class="sw"></span>Ready to start</div>
+        <div><span class="sw locked"></span>Needs earlier subjects first</div>
+        <div><span class="ln"></span>Needed before the next subject</div>
+      </div>`;
+    return;
+  }
+  const n = byId[sel], st = status(sel), lane = LANES[n.r], cur = S.prog[sel] || 'none';
+  const unlocks = EDGES.filter(e => e.a === sel).map(e => e.b);
+  panel.style.setProperty('--c', `var(--${n.lane})`);
+  panel.innerHTML = `
+    <div class="p-lane">${esc(lane.name.toUpperCase())} · TIER ${ROMAN[n.t]}</div>
+    <h2>${esc(n.n)}</h2>
+    <div class="seg" role="group" aria-label="Status">
+      <button data-set="none" aria-pressed="${cur==='none'}">Not started</button>
+      <button data-set="doing" aria-pressed="${cur==='doing'}">In progress</button>
+      <button data-set="done" aria-pressed="${cur==='done'}">Done</button>
+    </div>
+    <p class="none">${STATUS_TEXT[st]}</p>
+    <p class="about">${esc(n.about)}</p>
+    <h3>Main free course</h3>
+    <a class="course" href="${esc(n.c.u)}" target="_blank" rel="noopener">
+      <b>${esc(n.c.n)}</b>
+      <span>${esc(n.c.by)} · ${esc(n.c.f)}</span>
+      <span class="go">Open course ↗</span>
+    </a>
+    ${n.b ? `<h3>Always-available backup</h3><p class="alt"><a href="${esc(n.b.u)}" target="_blank" rel="noopener">${esc(n.b.n)}</a> <span>· ${esc(n.b.by)}</span></p>` : ''}
+    ${n.alt.length ? `<h3>Also free</h3>${n.alt.map(a => `<p class="alt"><a href="${esc(a.u)}" target="_blank" rel="noopener">${esc(a.n)}</a> <span>· ${esc(a.by)}</span></p>`).join('')}` : ''}
+    <h3>Why it matters for your business</h3>
+    <p style="font-size:14px">${esc(n.why)}</p>
+    <div class="apply">
+      <h3>Apply it to your business</h3>
+      <label class="check" for="apply-${n.id}"><input type="checkbox" id="apply-${n.id}" data-apply="${n.id}" ${S.apply[n.id]?'checked':''}><span>${esc(n.apply)}</span></label>
+    </div>
+    <h3>Needs</h3>${chipList(n.pre)}
+    <h3>Unlocks</h3>${chipList(unlocks)}
+    <button class="linkbtn" id="back">Back to overview</button>`;
+}
+panel.addEventListener('click', e => {
+  const s = e.target.closest('[data-set]');
+  if (s && sel){ const v = s.dataset.set; if (v === 'none') delete S.prog[sel]; else S.prog[sel] = v; save(); refresh(); return; }
+  const g = e.target.closest('[data-go]'); if (g){ select(g.dataset.go, true); return; }
+  if (e.target.id === 'back'){ sel = null; refresh(); }
+});
+panel.addEventListener('change', e => {
+  const a = e.target.closest('[data-apply]'); if (!a) return;
+  if (a.checked) S.apply[a.dataset.apply] = true; else delete S.apply[a.dataset.apply];
+  save(); renderStats(); renderRows();
+});
+
+const reduce = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+function select(id, scroll){
+  sel = (sel === id && !scroll) ? null : id; refresh();
+  if (scroll && sel){
+    const el = document.getElementById('n-'+id), r = el.getBoundingClientRect(), v = viewport.getBoundingClientRect();
+    if (r.left < v.left || r.right > v.right || r.top < v.top || r.bottom > v.bottom)
+      viewport.scrollTo({left: viewport.scrollLeft + (r.left-v.left) - v.width/2 + r.width/2, top: viewport.scrollTop + (r.top-v.top) - v.height/2 + r.height/2, behavior: reduce() ? 'auto' : 'smooth'});
+  }
+  if (sel && window.innerWidth < 1080){
+    const r = panel.getBoundingClientRect();
+    if (r.top > window.innerHeight * 0.6) panel.scrollIntoView({block:'start', behavior: reduce() ? 'auto' : 'smooth'});
+  }
+}
+canvas.addEventListener('click', e => { const b = e.target.closest('.node'); if (b) select(b.dataset.id, false); else if (sel){ sel = null; refresh(); } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && sel){ sel = null; refresh(); } });
+
+document.getElementById('tPath').addEventListener('click', e => {
+  pathMode = !pathMode; e.currentTarget.setAttribute('aria-pressed', String(pathMode)); if (pathMode) sel = null; refresh();
+});
+
+function applyScale(){ canvas.style.transform = `scale(${scale})`; sizer.style.width = (W*scale)+'px'; sizer.style.height = (H*scale)+'px'; }
+const fit = () => { scale = Math.max(0.55, Math.min(1, (viewport.clientWidth-2)/W)); applyScale(); };
+document.getElementById('zIn').addEventListener('click', () => { scale = Math.min(1.4, +(scale+0.1).toFixed(2)); applyScale(); });
+document.getElementById('zOut').addEventListener('click', () => { scale = Math.max(0.45, +(scale-0.1).toFixed(2)); applyScale(); });
+document.getElementById('zFit').addEventListener('click', fit);
+
+function renderStats(){
+  const c = k => N.filter(n => status(n.id) === k).length;
+  document.getElementById('stats').innerHTML =
+    `<span><b>${c('done')}</b>subjects done</span><span><b>${c('doing')}</b>in progress</span><span><b>${c('ready')}</b>ready to start</span><span><b>${N.filter(n => S.apply[n.id]).length}<small style="font-size:18px;color:var(--muted)">/${N.length}</small></b>"Apply it" tasks</span>`;
+}
+
+const rows = document.getElementById('rows');
+function renderRows(){
+  const order = [...N].sort((a,b) => a.r - b.r || a.t - b.t);
+  rows.innerHTML = order.map(n => {
+    const st = status(n.id), ap = S.apply[n.id] ? ' · applied' : '';
+    return `<tr style="--c:var(--${n.lane})"><td><span class="area">${esc(LANES[n.r].name)}</span><br><button class="subj" data-go="${n.id}">${esc(n.n)}</button></td>
+      <td><a href="${esc(n.c.u)}" target="_blank" rel="noopener">${esc(n.c.n)}</a>${n.b ? `<br><span class="none">Backup: <a href="${esc(n.b.u)}" target="_blank" rel="noopener">${esc(n.b.n)}</a></span>` : ''}</td>
+      <td>${esc(n.c.by)}</td><td>${esc(n.c.f)}</td>
+      <td class="stcell">${STATUS_TEXT[st]}${ap}</td></tr>`;
+  }).join('');
+}
+rows.addEventListener('click', e => {
+  const g = e.target.closest('[data-go]'); if (!g) return;
+  viewport.scrollIntoView({block:'center', behavior: reduce() ? 'auto' : 'smooth'}); select(g.dataset.go, true);
+});
+
+const resetArea = document.getElementById('resetArea');
+function showReset(){ resetArea.innerHTML = '<button class="btn danger" id="resetBtn">Reset my progress</button>'; }
+resetArea.addEventListener('click', e => {
+  if (e.target.id === 'resetBtn'){
+    resetArea.innerHTML = '<span>Clear all subject statuses and "Apply it" ticks?</span><button class="btn danger" id="resetYes">Yes, reset</button><button class="btn" id="resetNo">Cancel</button>';
+  } else if (e.target.id === 'resetYes'){
+    S = {prog:{}, apply:{}}; save(); sel = null; showReset(); refresh();
+  } else if (e.target.id === 'resetNo'){ showReset(); }
+});
+
+fit(); refresh();
+window.addEventListener('resize', () => { if (scale < 1 || viewport.clientWidth < W*scale) fit(); });
+})();
+</script>
+</body>
+</html>
