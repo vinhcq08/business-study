@@ -47,6 +47,7 @@ PALETTE = [
     ("pal_cream", "#FFF1D6", 0.8),
     ("pal_wood", "#A86B3C", 0.8),
     ("pal_glass", "#BFE6FF", 0.2),
+    ("pal_stone", "#D9D5CC", 0.8),
 ]
 
 # Parts the game recolours. Their colour in Blender is only a preview.
@@ -62,26 +63,34 @@ SWAPS = [
 SWAP_NAMES = {s[0] for s in SWAPS}
 
 RULES = {
-    "person": {"folder": "characters", "tris": 300, "mats": 6, "height": (1.6, 2.4), "width": 1.4},
+    "person": {"folder": "characters", "tris": 300, "mats": 6, "height": (1.3, 2.4), "width": 1.4},
     "prop": {"folder": "props", "tris": 500, "mats": 4, "height": (0.1, 6.0), "width": 4.0},
     "building": {"folder": "buildings", "tris": 2000, "mats": 8, "height": (2.0, 20.0), "width": 14.0},
     "interior": {"folder": "interiors", "tris": 5000, "mats": 12, "height": (2.0, 8.0), "width": 20.0},
 }
 PERSON_PARTS = ["head", "body", "arm_L", "arm_R", "leg_L", "leg_R"]
 MARKERS = ["door", "sign", "counter", "queue_start", "stock_spot", "seat_1", "seat_2"]
+# Interior markers: numbered slots the game fills to match the numbers, and stations the player walks to.
+MARKER_RE = re.compile(r"^(door|sign|counter|queue_start|stock_spot|returns_spot|client_seat|"
+                       r"(seat|table|staff|desk|shelf|bench|rack|support|equip|stock)_\d+|station_[a-z]+)$")
+INTERIOR_MARKERS = ["table_1", "staff_1", "desk_1", "shelf_1", "bench_1", "rack_1", "support_1", "equip_1",
+                    "stock_1", "client_seat", "returns_spot", "station_price", "station_staff", "station_stock",
+                    "station_marketing", "station_clients", "station_desk"]
 
 BUSINESSES = [("cafe", "Café"), ("saas", "Software company"), ("shop", "Online store"),
               ("agency", "Design agency"), ("idea", "Your own idea")]
+STAFF = [("staff:" + k, "Staff: " + n, "Works inside this business") for k, n in BUSINESSES if k != "idea"]
 ROLES = {
     "person": [("avatar", "Avatar (player)", "The player character"),
-               ("townsperson", "Townsperson", "Walkers and customers; several files make variants")],
+               ("townsperson", "Townsperson", "Walkers and customers; several files make variants")] + STAFF,
     "building": [("business:" + k, "Business: " + n, "Your business building") for k, n in BUSINESSES]
               + [("rival:" + k, "Rival: " + n, "The rival that opens nearby") for k, n in BUSINESSES]
               + [("kiosk", "Newspaper stand", ""), ("bank", "Bank", ""), ("library", "Library", ""),
                  ("investors", "Investors' tower", ""), ("house", "House", "Six houses; recoloured with swap_wall and swap_roof")],
     "prop": [("tree", "Tree", "Leaves use swap_leaves for seasons"), ("bench", "Bench", ""),
-             ("crate", "Crate", "Stock crates for the online store")],
-    "interior": [("interior:" + k, "Interior: " + n, "Not shown in the town yet") for k, n in BUSINESSES],
+             ("crate", "Crate", "Stock crates for the online store"),
+             ("furniture", "Furniture (named by file)", "Interior furniture; exported as furniture:<file name>")],
+    "interior": [("interior:" + k, "Interior: " + n, "The room you walk into") for k, n in BUSINESSES],
 }
 TYPES = [("person", "Person", "A character, 2 m tall"), ("prop", "Prop", "Tree, bench, crate"),
          ("building", "Building", "A building exterior"), ("interior", "Interior", "A shop interior")]
@@ -100,7 +109,14 @@ def hex_to_linear(hx):
     return (out[0], out[1], out[2], 1.0)
 
 
+def full_role(role, name):
+    """Furniture is identified by its file name, e.g. furniture:cafe-table."""
+    return "furniture:" + name if role == "furniture" else role
+
+
 def default_name(role):
+    if role == "furniture":
+        return "cafe-table"
     base = role.replace(":", "-")
     if role.startswith("business:"):
         base = role.split(":")[1] + "-exterior"
@@ -135,7 +151,7 @@ class RT_Settings(bpy.types.PropertyGroup):
                                  description="Which stand-in this model replaces in the town")
     name: bpy.props.StringProperty(name="File name", default="cafe-exterior",
                                    description="Lowercase with hyphens; saved as <name>.glb")
-    marker: bpy.props.EnumProperty(name="Marker", items=[(m, m, "") for m in MARKERS])
+    marker: bpy.props.EnumProperty(name="Marker", items=[(m, m, "") for m in MARKERS + INTERIOR_MARKERS])
     export_anyway: bpy.props.BoolProperty(name="Export even with errors", default=False)
 
 
@@ -361,8 +377,8 @@ def check_objects(context, objs, mtype, role, name):
     dup = sorted({base_name(o.name) for o in empties if o.name != base_name(o.name)})
     if dup:
         warn("Duplicate markers renamed by Blender: " + ", ".join(dup) + ". Keep one of each.")
-    markers = {base_name(o.name): o for o in empties if base_name(o.name) in MARKERS}
-    odd = sorted(base_name(o.name) for o in empties if base_name(o.name) not in MARKERS)
+    markers = {base_name(o.name): o for o in empties if MARKER_RE.match(base_name(o.name))}
+    odd = sorted(base_name(o.name) for o in empties if not MARKER_RE.match(base_name(o.name)))
     if odd:
         info("Empties the game ignores: " + ", ".join(odd[:5]) + ".")
 
@@ -413,9 +429,21 @@ def check_objects(context, objs, mtype, role, name):
     if role == "tree" and "swap_leaves" not in mats:
         warn("No swap_leaves material, so the leaves will not change with the seasons.")
     if mtype == "interior":
-        for m in ("counter", "door"):
-            if m not in markers:
-                warn("No '%s' marker." % m)
+        if door is None:
+            err("No 'door' marker where the player comes in (on the front wall, -Y).")
+        if "wall_front" not in names:
+            warn("No object named wall_front. The game hides it (and 'ceiling') so the camera can see in.")
+        stations = sorted(k for k in markers if k.startswith("station_"))
+        if stations:
+            ok("Stations: " + ", ".join(stations) + ".")
+        else:
+            warn("No station_* markers, so the player has nothing to walk up to.")
+        slots = sorted({re.sub(r"_\d+$", "", k) for k in markers if re.search(r"_\d+$", k) and not k.startswith("seat_")})
+        if slots:
+            info("Slots the game fills: " + ", ".join(s + "_*" for s in slots) + ".")
+        gated = sorted({int(o.get("rt_level")) for o in objs if o.get("rt_level") is not None})
+        if gated:
+            info("Unlocks by level: " + ", ".join("Level %d" % l for l in gated) + " (rt_level).")
 
     if not any(l[0] == "error" for l in lines):
         lines.insert(0, ("ok", "Ready to export."))
@@ -644,7 +672,7 @@ def restore_settings(scene, saved):
 
 def export_glb(context, objs, filepath, st):
     scene = context.scene
-    scene["rt_role"] = st.role
+    scene["rt_role"] = full_role(st.role, st.name)
     scene["rt_type"] = st.model_type
     scene["rt_name"] = st.name
     select_only(context, objs)
@@ -683,7 +711,7 @@ class RT_OT_export(bpy.types.Operator):
         path = os.path.join(root, rel)
         export_glb(context, objs, path, st)
         st = context.scene.rt_settings
-        entry = {"id": st.name, "file": rel, "role": st.role, "type": st.model_type,
+        entry = {"id": st.name, "file": rel, "role": full_role(st.role, st.name), "type": st.model_type,
                  "tris": stats.get("tris", 0), "updated": date.today().isoformat()}
         write_manifest(root, entry)
         lines.insert(1, ("ok", "Exported %s (%d KB) and updated manifest.json." % (rel, max(1, os.path.getsize(path) // 1024))))

@@ -150,7 +150,7 @@ li[data-l="info"] .chip{background:var(--wash);color:var(--muted)}
 (function(){
 /* ---------- Rules: keep in step with tools/blender/runway_town_exporter.py ---------- */
 const RULES = {
-  person:{label:'Person', tris:300, mats:6, h:[1.6, 2.4], w:1.4, folder:'characters'},
+  person:{label:'Person', tris:300, mats:6, h:[1.3, 2.4], w:1.4, folder:'characters'},
   prop:{label:'Prop', tris:500, mats:4, h:[0.1, 6], w:4, folder:'props'},
   building:{label:'Building', tris:2000, mats:8, h:[2, 20], w:14, folder:'buildings'},
   interior:{label:'Interior', tris:5000, mats:12, h:[2, 8], w:20, folder:'interiors'},
@@ -158,15 +158,16 @@ const RULES = {
 const SWAPS = ['swap_shirt', 'swap_pants', 'swap_skin', 'swap_hair', 'swap_wall', 'swap_roof', 'swap_leaves'];
 const PARTS = ['head', 'body', 'arm_L', 'arm_R', 'leg_L', 'leg_R'];
 const MARKERS = ['door', 'sign', 'counter', 'queue_start', 'stock_spot', 'seat_1', 'seat_2'];
+const MARKER_RE = /^(door|sign|counter|queue_start|stock_spot|returns_spot|client_seat|(seat|table|staff|desk|shelf|bench|rack|support|equip|stock)_\d+|station_[a-z]+)$/;
 const BIZ = [['cafe', 'Café'], ['saas', 'Software company'], ['shop', 'Online store'], ['agency', 'Design agency'], ['idea', 'Your own idea']];
 const ROLES = {
-  person:[['avatar', 'Avatar (the player)'], ['townsperson', 'Townsperson']],
+  person:[['avatar', 'Avatar (the player)'], ['townsperson', 'Townsperson']].concat(BIZ.filter(b => b[0] !== 'idea').map(([k, n]) => ['staff:' + k, 'Staff: ' + n])),
   building:BIZ.map(([k, n]) => ['business:' + k, 'Business: ' + n]).concat(BIZ.map(([k, n]) => ['rival:' + k, 'Rival: ' + n]),
     [['kiosk', 'Newspaper stand'], ['bank', 'Bank'], ['library', 'Library'], ['investors', 'Investors’ tower'], ['house', 'House']]),
-  prop:[['tree', 'Tree'], ['bench', 'Bench'], ['crate', 'Crate']],
-  interior:BIZ.map(([k, n]) => ['interior:' + k, 'Interior: ' + n + ' (not in the town yet)']),
+  prop:[['tree', 'Tree'], ['bench', 'Bench'], ['crate', 'Crate'], ['furniture', 'Furniture (named by file)']],
+  interior:BIZ.map(([k, n]) => ['interior:' + k, 'Interior: ' + n]),
 };
-const typeOfRole = r => Object.keys(ROLES).find(t => ROLES[t].some(x => x[0] === r)) || null;
+const typeOfRole = r => /^furniture/.test(r || '') ? 'prop' : (Object.keys(ROLES).find(t => ROLES[t].some(x => x[0] === r)) || null);
 function roleFromName(name){
   const n = name.toLowerCase().replace(/\.(glb|gltf)$/, '');
   let k = /^(?:business-)?(cafe|saas|shop|agency|idea)(?:-exterior)?$/.exec(n); if (k) return 'business:' + k[1];
@@ -186,7 +187,7 @@ const fmt = n => n.toLocaleString('en-US');
 const toast = msg => { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('show'), 2400); };
 const isCol = o => /^COL_/.test(o.name || '');
 const baseName = n => (n || '').replace(/(\.?\d{3}|_\d+)$/, '');
-const markerName = n => MARKERS.includes(n) ? n : (MARKERS.find(m => baseName(n) === m) || null);
+const markerName = n => { if (MARKER_RE.test(n)) return n; const b = (n || '').replace(/(\.?\d{3}|_\d+)$/, ''); return MARKER_RE.test(b) ? b : null; };
 
 let cur = null;  // {name, size, scene, extras, anim}
 
@@ -208,7 +209,7 @@ function loadBuffer(buf, name){
     const extras = gl.scene.userData || {};
     const role = extras.rt_role || roleFromName(name) || null;
     const type = extras.rt_type && RULES[extras.rt_type] ? extras.rt_type : (role ? typeOfRole(role) : null) || guessType(gl.scene);
-    typeSel.value = type; fillRoles(type, role);
+    typeSel.value = type; fillRoles(type, /^furniture:/.test(role || '') ? 'furniture' : role);
     cur = {name, size:buf.byteLength, scene:gl.scene, extras, anims:gl.animations || [], roleKnown:!!role};
     runChecks(); show(gl.scene);
   }, err => {
@@ -268,6 +269,7 @@ function runChecks(){
   else add('warn', `File name ${cur.name} should be lowercase words joined by hyphens, for example cafe-exterior.glb.`);
   if (!cur.roleKnown) add('info', 'The file does not say what it replaces. Pick it above, or export with the Runway add-on so the town knows by itself.');
   if (type !== typeOfRole(role)) add('warn', 'The role does not match the type.');
+  const fullRole = role === 'furniture' ? 'furniture:' + cur.name.replace(/\.glb$/i, '') : role;
 
   if (meshes.length){
     const t = stats.tris;
@@ -325,7 +327,16 @@ function runChecks(){
     if (/^(rival:|house)/.test(role) && !names.includes('swap_wall')) add('info', 'No swap_wall material, so the town cannot recolour this building.');
   }
   if (role === 'tree'){ if (names.includes('swap_leaves')) add('ok', 'Leaves use swap_leaves, so they change with the seasons.'); else add('warn', 'No swap_leaves material, so the leaves will not change with the seasons.'); }
-  if (type === 'interior'){ ['door', 'counter'].forEach(m => { if (!markers[m]) add('warn', `No ${m} marker.`); }); add('info', 'Interiors are checked but not shown in the town yet.'); }
+  if (type === 'interior'){
+    if (!door) add('error', 'No door marker where the player comes in (on the front wall).');
+    if (!scene.getObjectByName('wall_front')) add('warn', 'No object named wall_front. The game hides it (and ceiling) so the camera can see in.');
+    const st = Object.keys(markers).filter(k => /^station_/.test(k)).sort();
+    if (st.length) add('ok', `Stations: ${st.join(', ')}.`); else add('warn', 'No station_* markers, so the player has nothing to walk up to.');
+    const slots = [...new Set(Object.keys(markers).filter(k => /_\d+$/.test(k) && !/^seat_/.test(k)).map(k => k.replace(/_\d+$/, '')))].sort();
+    if (slots.length) add('info', `Slots the game fills: ${slots.map(x => x + '_*').join(', ')}.`);
+    const lv = new Set(); scene.traverse(o => { if (o.userData && o.userData.rt_level !== undefined) lv.add(+o.userData.rt_level); });
+    if (lv.size) add('info', `Unlocks by level: ${[...lv].sort().map(l => 'Level ' + l).join(', ')} (rt_level).`);
+  }
 
   const order = {error:0, warn:1, info:2, ok:3}; L.sort((a, b) => order[a[0]] - order[b[0]]);
   const nE = L.filter(l => l[0] === 'error').length, nW = L.filter(l => l[0] === 'warn').length;
@@ -344,7 +355,7 @@ function runChecks(){
   $('#checks').innerHTML = L.map(([l, t]) => `<li data-l="${l}"><span class="chip">${chip[l]}</span><p>${esc(t)}</p></li>`).join('');
 
   const id = cur.name.replace(/\.glb$/i, ''), file = R.folder + '/' + cur.name;
-  $('#entry').textContent = JSON.stringify({id, file, role, type, tris:stats.tris});
+  $('#entry').textContent = JSON.stringify({id, file, role:fullRole, type, tris:stats.tris});
   $('#where').textContent = `Save the file as world/models/${file}. The Blender add-on does both for you when it exports.`;
   markersShown = markers; drawMarkers();
 }

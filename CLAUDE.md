@@ -17,7 +17,7 @@ Ask for the reference before modelling. Build one model at a time. Never overwri
 
 ### Palette (material name, hex)
 
-Every material is named after its colour: `pal_clear_blue` #7CC8FF, `pal_grass_green` #5DBB4A, `pal_asphalt` #4A4F59, `pal_sun_yellow` #F4C430, `pal_brick_red` #E74C3C, `pal_bright_blue` #3A86FF, `pal_purple` #9B59B6, `pal_mint_green` #2ECC71, `pal_coral` #FF6B5A, `pal_night` #1F2430, `pal_white` #FFFFFF, `pal_cream` #FFF1D6, `pal_wood` #A86B3C, `pal_glass` #BFE6FF.
+Every material is named after its colour: `pal_clear_blue` #7CC8FF, `pal_grass_green` #5DBB4A, `pal_asphalt` #4A4F59, `pal_sun_yellow` #F4C430, `pal_brick_red` #E74C3C, `pal_bright_blue` #3A86FF, `pal_purple` #9B59B6, `pal_mint_green` #2ECC71, `pal_coral` #FF6B5A, `pal_night` #1F2430, `pal_white` #FFFFFF, `pal_cream` #FFF1D6, `pal_wood` #A86B3C, `pal_glass` #BFE6FF, `pal_stone` #D9D5CC (pavements, warehouse floors).
 
 Parts the game recolours use `swap_` materials (their Blender colour is only a preview): `swap_shirt`, `swap_pants`, `swap_skin`, `swap_hair`, `swap_wall`, `swap_roof`, `swap_leaves`.
 
@@ -25,7 +25,7 @@ Base Color in Blender is linear: convert hex with the sRGB-to-linear formula (th
 
 ### Rules the game depends on
 
-- 1 unit = 1 metre. Person 2.0 m tall (1.6–2.4 allowed), storey 3 m, door 1.2 × 2.2 m.
+- 1 unit = 1 metre. Adult 1.9–2.15 m, child about 1.45 m (the checks allow 1.3–2.4), storey 3 m, door 1.2 × 2.2 m.
 - The front faces Blender **−Y**. Origin at the base centre, base at Z = 0. Apply rotation and scale before export.
 - Characters are separate objects named `head`, `body`, `arm_L`, `arm_R`, `leg_L`, `leg_R` (optional `hair`), each with its origin at its joint (shoulder, hip, neck). The game walks them by rotating these about X. Small details (hands, shoes, eyes) are children of the part they move with. No armatures.
 - Buildings have empties named `door` (on the front wall, at ground level) and `sign` (front wall, about 3.4 m up), and a box mesh `COL_body` for walking collision. Other markers: `counter`, `queue_start`, `stock_spot`, `seat_1`, `seat_2`.
@@ -33,7 +33,11 @@ Base Color in Blender is linear: convert hex with the sRGB-to-linear formula (th
 
 ### Roles (what each model replaces in the town)
 
-`avatar`, `townsperson` (several files become variants), `business:cafe|saas|shop|agency|idea`, `rival:<same>`, `kiosk`, `bank`, `library`, `investors`, `house`, `tree`, `bench`, `crate`, `interior:<business>` (not shown in the town yet).
+`avatar`, `townsperson` (several files become variants), `business:cafe|saas|shop|agency|idea`, `rival:<same>`, `kiosk`, `bank`, `library`, `investors`, `house`, `tree`, `bench`, `crate`, `interior:<business>`, `staff:<business>`, `furniture:<file name>` (role **Furniture** in the add-on).
+
+Interiors use extra markers: numbered slots (`table_1`, `staff_1`, `desk_1`, `shelf_1`, `bench_1`, `rack_1`, `support_1`, `equip_1`, `stock_1`), stations (`station_price`, `station_staff`, `station_stock`, `station_marketing`, `station_clients`, `station_desk`), `wall_front` and `ceiling` objects the game hides, and an `rt_level` custom property for things that unlock at a level.
+
+**Current task list: `docs/model-tasks.md`.**
 
 ### Tools
 
