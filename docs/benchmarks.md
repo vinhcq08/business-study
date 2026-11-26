@@ -40,6 +40,29 @@ Sources: [Growth Unhinged 2025 SaaS benchmarks](https://www.growthunhinged.com/p
 
 Sources: [Triple Whale](https://www.triplewhale.com/blog/ecommerce-benchmarks), [Smart Insights](https://www.smartinsights.com/ecommerce/ecommerce-analytics/ecommerce-conversion-rates/), [Polar Analytics](https://www.polaranalytics.com/ecommerce-benchmarks), [OwlClaw](https://owlclaw.com/benchmarks/ecommerce-marketing-benchmarks/)
 
+## Service agency
+
+| Measure | Typical range | Used in game |
+|---|---|---|
+| Billable utilization | about 66% average in 2025; 75% is a common target, 80%+ best practice | "Busy share" key number and card |
+| Designer cost vs billing | studios typically bill about 2.5–3× what a designer costs | $5,500 a month per designer for about 130 billable hours |
+| Payment terms | invoices commonly paid 30–60 days later | Small businesses 30 days, startups 45, corporates 60 |
+
+Sources: [Deltek / SPI benchmark](https://www.deltek.com/en/resources/articles/5-kpis-from-the-spi-professional-services-maturity-benchmark-report-every-pso-must-track-for-sustainable-growth), [Kantata](https://www.kantata.com/blog/article/professional-services-utilization-benchmarks), [NetSuite](https://www.netsuite.com/portal/resource/articles/accounting/utilization-rates.shtml)
+
+## Valuation and loans
+
+| Measure | Typical range | Used in game |
+|---|---|---|
+| Cafés and coffee shops | about 2.0–2.2× a year's owner earnings | 2.2× average yearly profit |
+| Online stores | about 3.4× a year's earnings | 3.4× |
+| Service businesses | about 2.3× a year's owner earnings | 2.5× |
+| Small-business bank loans | about 6–11% a year (SBA loans about 10–15%) | 10% a year (software 12%), repaid over 3 years |
+
+The game values a business on its average profit over up to 12 months, leaving out one-off items such as grants and fines, and counts less than six months of history for less.
+
+Sources: [BizBuySell industry multiples](https://bizbuysell.com/learning-center/industry-valuation-multiples), [BizBuySell cafés](https://www.bizbuysell.com/learning-center/valuation-benchmarks/coffee-shops-cafes/), [BizBuySell restaurants](https://www.bizbuysell.com/learning-center/valuation-benchmarks/restaurants/), [SoFi](https://www.sofi.com/learn/content/average-interest-rates-business-loans/), [NerdWallet SBA rates](https://www.nerdwallet.com/article/small-business/sba-loan-rates)
+
 ## Models used for how things behave
 
 | Model | Typical values | Used for |

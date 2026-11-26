@@ -22,23 +22,30 @@ A map of 28 business subjects in 9 areas, arranged by what to learn first. Every
 - Courses were checked in November 2026. Course pages, dates and prices change, so check each course page before enrolling.
 - The Contract Law course teaches US law.
 
-## Runway (version 1)
+## Runway (version 3)
 
-Run a business one month at a time. Each month you make decisions, then get an income statement, key numbers and "What happened and why" cards that show the formula behind each result and link to the Skill Tree subject that explains it.
+Run a business one month at a time. Each month you make decisions, then get your statements, key numbers, what customers are saying, and "What happened and why" cards that show the formula behind each result, a real-world benchmark where one applies, and a link to the Skill Tree subject that explains it.
 
-**Businesses:** Café and Software subscription. An online store (version 2) and a service agency (version 3) are planned.
+**Businesses:** Café, Software subscription, Online store and Service agency, plus **Use my idea**, where you enter your own price, costs, expected sales and capacity and test the idea for 24 months.
 
 **Levels:** each level adds a layer of real-world complexity and matches a tier of the Skill Tree.
 
-| Level | Name | Status |
+| Level | Name | What it adds |
 |---|---|---|
-| I | Basics: price, sales, profit | Playable |
-| II | Costs & break-even: fixed and variable costs, budget, runway, marketing | Playable |
-| III | Customers & competition | Planned for version 2 |
-| IV | Real-world finances | Planned for version 2 |
-| V | Growth & funding, then "Real life" mode | Planned for version 3 |
+| I | Basics | One product: price, sales, revenue − costs = profit |
+| II | Costs & break-even | Fixed and variable costs, break-even, budget, runway, marketing |
+| III | Customers & competition | Customer groups, reputation or ratings, a rival who reacts to your prices, customer comments, first events |
+| IV | Real-world finances | Income statement, cash flow and balance sheet; stock, unpaid invoices, supplier credit, prepaid subscriptions; bank loans; seasons; random events |
+| V | Growth & funding | Expansion, investor offers with different terms, valuation and ownership. The goal is what your share is worth |
+| R | Real life | Everything on, 36 months, more frequent events and bigger swings |
 
-**Settings:** free play (open every built level), Easy / Normal / Hard or Custom difficulty (starting cash, demand, costs, randomness), game length, formulas on or off, and a random seed for replaying the same luck.
+**Events:** recessions, supplier price rises, equipment breakdowns, rent negotiations, contracts with unlimited liability, staff resignations, outages, delivery strikes, faulty stock, ad price rises, unpaid invoices, grants, delivery apps and AI disruption. Each offers choices linked to a subject.
+
+**Settings:** free play (open every level), Easy / Normal / Hard or Custom difficulty (starting cash, demand, costs, randomness), game length, formulas on or off, and a random seed for replaying the same luck and events.
+
+**End of game:** a summary, what the level teaches, and the Skill Tree subjects to revisit based on the mistakes made during play.
+
+The game uses general, global benchmarks with sources, listed in [`docs/benchmarks.md`](docs/benchmarks.md). The numbers are a simplified teaching model, not a forecast for a real business.
 
 On GitHub Pages, the game reads which subjects you have marked done in the Skill Tree, because both pages share the same site.
 
