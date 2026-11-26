@@ -49,6 +49,18 @@ The game uses general, global benchmarks with sources, listed in [`docs/benchmar
 
 On GitHub Pages, the game reads which subjects you have marked done in the Skill Tree, because both pages share the same site.
 
+## Runway Town (single-player open world)
+
+A 3D town built on the same Runway engine, numbers, levels and events. Walk around and run your business from inside the world:
+
+- **Your business** is a building on the main street. Customers queue at the door, the online store's stock piles up outside, a rival opens across the street from Level III, and a second location appears when you expand. Step inside to make decisions and run the month.
+- **The newspaper stand** prints *The Runway Ledger*: your statements, key numbers, what people in town are saying, and why things happened.
+- **The bank** (Level IV+) arranges loans. **The investors' tower** (Level V+) makes offers. **The library** tracks your study progress, shared with the Skill Tree on GitHub Pages.
+- Trees change with the seasons from Level IV.
+- **Controls:** WASD or arrow keys and E on a computer; an on-screen joystick and Enter button on a phone. The **Places** menu opens every building without walking.
+
+It uses Three.js (r128) from cdnjs. If 3D graphics aren't available, it links to Classic Runway instead. The town keeps its own save, separate from Classic Runway. "Use my idea" is only in Classic Runway for now.
+
 ## Privacy
 
 Progress for both tools is saved in your own browser only (`localStorage`). Nothing is sent anywhere, and each visitor has their own separate progress.
@@ -57,5 +69,6 @@ Progress for both tools is saved in your own browser only (`localStorage`). Noth
 
 - `index.html`: Business Skill Tree, one file with no build step
 - `game/index.html`: Runway, one file with no build step
+- `world/index.html`: Runway Town, one file with no build step (loads Three.js from cdnjs)
 
 Both load fonts from Google Fonts.
