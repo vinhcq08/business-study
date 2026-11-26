@@ -1,0 +1,619 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>[hidden]{display:none!important}</style>
+<title>Runway</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Work+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: editorial masthead, then one screen at a time (setup, settings, briefing, play, result).
+   Play screen: decisions column beside a ledger-style monthly report. Palette shared with Business Skill Tree. */
+:root{
+  --paper:#F2EDE3; --sheet:#FBF8F2; --wash:#EAE3D6; --ink:#23201A; --muted:#6B6355; --rule:#D6CCBA; --edge:#B3A893; --focus:#23201A;
+  --accent:#2F5D3A; --accent-wash:#E2E8DA; --good:#3E6B34; --bad:#9B3A2A; --bad-wash:#F3E1DA; --on-accent:#FBF8F2;
+  --cafe:#A6532E; --saas:#2E6A63; --shop:#87661C; --agency:#6A4A62;
+  --f-display:"Newsreader", "Iowan Old Style", Georgia, serif;
+  --f-body:"Work Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --paper:#1A1712; --sheet:#221E18; --wash:#2B261E; --ink:#EDE6D8; --muted:#A89F8E; --rule:#3A342B; --edge:#5A5244; --focus:#EDE6D8;
+  --accent:#9CC59F; --accent-wash:#26301F; --good:#A8C487; --bad:#E38C78; --bad-wash:#3A231C; --on-accent:#1A1712;
+  --cafe:#E39A72; --saas:#86C2B8; --shop:#D9B866; --agency:#C6A2BC;
+  color-scheme:dark } }
+:root[data-theme="dark"]{
+  --paper:#1A1712; --sheet:#221E18; --wash:#2B261E; --ink:#EDE6D8; --muted:#A89F8E; --rule:#3A342B; --edge:#5A5244; --focus:#EDE6D8;
+  --accent:#9CC59F; --accent-wash:#26301F; --good:#A8C487; --bad:#E38C78; --bad-wash:#3A231C; --on-accent:#1A1712;
+  --cafe:#E39A72; --saas:#86C2B8; --shop:#D9B866; --agency:#C6A2BC;
+  color-scheme:dark }
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--paper);color:var(--ink);font:400 15px/1.6 var(--f-body)}
+.wrap{max-width:1320px;margin:0 auto;padding-block:20px 64px;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));display:flex;flex-direction:column;gap:30px}
+h1,h2,h3{margin:0;text-wrap:balance}
+h1,h2{font-family:var(--f-display);font-weight:500;letter-spacing:-.015em}
+h2{font-size:clamp(26px,3vw,34px);line-height:1.12}
+h3{font:500 11px/1.3 var(--f-mono);text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
+p{margin:0}
+a{color:var(--accent);text-underline-offset:3px;text-decoration-thickness:1px}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+
+header.mast{display:flex;flex-direction:column;gap:14px;border-top:4px solid var(--ink);padding-top:12px}
+.dateline{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 18px;font:500 11.5px/1.4 var(--f-mono);text-transform:uppercase;letter-spacing:.12em;color:var(--muted);padding-bottom:12px;border-bottom:1px solid var(--rule)}
+.dateline a{color:var(--muted)}
+.mast-title{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px}
+.mast h1{font-size:clamp(56px,10vw,120px);line-height:.9;letter-spacing:-.04em;font-weight:500}
+.mast h1 em{font-style:italic;font-weight:400;color:var(--accent)}
+.mast .tag{max-width:46ch;font:400 clamp(17px,1.6vw,20px)/1.45 var(--f-display)}
+.nav{display:flex;flex-wrap:wrap;gap:8px}
+
+.btn{font:500 11.5px/1 var(--f-mono);text-transform:uppercase;letter-spacing:.08em;color:var(--ink);background:transparent;border:1px solid var(--ink);border-radius:2px;padding:13px 16px;cursor:pointer;min-height:44px;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.btn:hover{background:var(--wash)}
+.btn.primary{background:var(--ink);color:var(--paper)}
+.btn.primary:hover{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn.danger{color:var(--bad);border-color:var(--bad)}
+.btn[disabled]{opacity:.4;cursor:not-allowed}
+.section-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 16px;border-bottom:1px solid var(--ink);padding-bottom:8px}
+.kicker{font:500 11px/1.3 var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.lede{font:400 19px/1.5 var(--f-display);max-width:62ch}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+
+/* Setup */
+.grid-biz{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+.biz{--c:var(--ink);text-align:left;background:var(--sheet);border:1px solid var(--rule);border-top:4px solid var(--c);border-radius:2px;padding:16px;display:flex;flex-direction:column;gap:8px;cursor:pointer;color:var(--ink);font:inherit;min-height:44px}
+.biz:hover:not([disabled]){border-color:var(--ink);border-top-color:var(--c)}
+.biz[aria-pressed="true"]{outline:2px solid var(--c);outline-offset:2px}
+.biz[disabled]{cursor:not-allowed;opacity:.6}
+.biz b{font:500 24px/1.1 var(--f-display)}
+.biz .soon{font:500 10.5px/1 var(--f-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.levels{display:flex;flex-direction:column;border-top:1px solid var(--ink)}
+.lvl{display:grid;grid-template-columns:56px minmax(0,1fr) auto;gap:6px 16px;align-items:center;padding:14px 0;border-bottom:1px solid var(--rule)}
+.lvl .num{font:500 30px/1 var(--f-display);color:var(--muted)}
+.lvl.open .num{color:var(--ink)}
+.lvl .t{font:500 20px/1.2 var(--f-display)}
+.lvl .d{font-size:13.5px;color:var(--muted)}
+.state{font:500 10.5px/1 var(--f-mono);letter-spacing:.1em;text-transform:uppercase;padding:6px 8px;border:1px solid currentColor;border-radius:2px;white-space:nowrap}
+.state.won{color:var(--good)} .state.locked{color:var(--muted)} .state.soon{color:var(--muted);border-style:dashed}
+.setup-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:28px}
+@media (min-width:960px){.setup-grid{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr)}}
+.summary{background:var(--sheet);border:1px solid var(--rule);padding:18px;display:flex;flex-direction:column;gap:10px}
+.summary dl{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0;font-size:14px}
+.summary dt{color:var(--muted)} .summary dd{margin:0}
+
+/* Settings */
+.settings{display:grid;grid-template-columns:minmax(0,1fr);gap:22px;max-width:860px}
+.field{display:flex;flex-direction:column;gap:8px;padding-bottom:18px;border-bottom:1px solid var(--rule)}
+.field > label, .field > .lab{font:500 19px/1.3 var(--f-display)}
+.field .help{font-size:13.5px;color:var(--muted);max-width:70ch}
+.seg{display:flex;flex-wrap:wrap;border:1px solid var(--ink);border-radius:2px;overflow:hidden;width:fit-content;max-width:100%}
+.seg button{font:500 11.5px/1 var(--f-mono);letter-spacing:.06em;text-transform:uppercase;padding:13px 14px;border:0;border-right:1px solid var(--ink);background:transparent;color:var(--ink);cursor:pointer;min-height:44px}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.switch{display:flex;gap:12px;align-items:flex-start;cursor:pointer;font-size:15px}
+.switch input{width:22px;height:22px;margin:1px 0 0;accent-color:var(--accent);flex:none}
+.custom{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.custom[hidden]{display:none}
+.sl{display:flex;flex-direction:column;gap:4px;font-size:14px}
+.sl output{font:500 13px var(--f-mono)}
+input[type=range]{width:100%;accent-color:var(--accent);min-height:28px}
+input[type=number],input[type=text],select{font:500 14px var(--f-mono);color:var(--ink);background:var(--sheet);border:1px solid var(--edge);border-radius:2px;padding:10px 10px;min-height:44px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+
+/* Briefing */
+.brief{display:grid;grid-template-columns:minmax(0,1fr);gap:24px}
+@media (min-width:960px){.brief{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr)}}
+.goal{border:1px solid var(--ink);padding:16px 18px;background:var(--sheet);display:flex;flex-direction:column;gap:6px}
+.goal b{font:500 22px/1.3 var(--f-display)}
+.subj{display:flex;flex-direction:column;border-top:1px solid var(--rule)}
+.subj div{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--rule);font-size:14.5px}
+.subj .ok{font:500 11px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--good)}
+.subj .no{font:500 11px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+
+/* Play */
+.play{display:grid;grid-template-columns:minmax(0,1fr);gap:24px;align-items:start}
+@media (min-width:1020px){.play{grid-template-columns:360px minmax(0,1fr)}}
+.desk{background:var(--sheet);border:1px solid var(--rule);border-top:3px solid var(--c, var(--ink));padding:18px;display:flex;flex-direction:column;gap:16px}
+@media (min-width:1020px){.desk{position:sticky;top:calc(env(safe-area-inset-top, 0px) + 16px)}}
+.dec{display:flex;flex-direction:column;gap:6px;padding-bottom:14px;border-bottom:1px solid var(--rule)}
+.dec .top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.dec label{font:500 17px/1.25 var(--f-display)}
+.dec input[type=number]{width:120px;text-align:right}
+.dec .help{font-size:12.5px;color:var(--muted)}
+.hint{background:var(--accent-wash);padding:12px 14px;font-size:13.5px;border-radius:2px}
+.hint b{font-weight:600}
+.board{display:flex;flex-direction:column;gap:22px;min-width:0}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:1px solid var(--ink);border-bottom:1px solid var(--rule)}
+.stats div{display:flex;flex-direction:column;gap:2px;padding:10px 12px 12px;border-left:1px solid var(--rule);min-width:0}
+.stats div:first-child{border-left:0;padding-left:0}
+.stats b{font:500 30px/1.05 var(--f-display);font-variant-numeric:lining-nums tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stats span{font-size:12.5px;color:var(--muted)}
+.stats .neg{color:var(--bad)}
+@media (max-width:620px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.stats div:nth-child(3){border-left:0;padding-left:0}.stats div:nth-child(n+3){border-top:1px solid var(--rule)}}
+.goalbar{display:flex;flex-direction:column;gap:6px}
+.goalbar .track{height:8px;background:var(--wash);border-radius:2px;overflow:hidden}
+.goalbar .fill{height:100%;background:var(--accent)}
+.chart{background:var(--sheet);border:1px solid var(--rule);padding:12px 12px 6px}
+.chart svg{display:block;width:100%;height:auto}
+.chart text{font:400 10.5px var(--f-mono);fill:var(--muted)}
+.two{display:grid;grid-template-columns:minmax(0,1fr);gap:22px}
+@media (min-width:760px){.two{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+table.ledger{width:100%;border-collapse:collapse;font-size:14.5px}
+.ledger td{padding:8px 0;border-bottom:1px solid var(--rule)}
+.ledger td.v{text-align:right;font-family:var(--f-mono);font-size:13.5px;font-variant-numeric:tabular-nums;white-space:nowrap;padding-left:12px}
+.ledger tr.cost td:first-child{padding-left:14px;color:var(--muted)}
+.ledger tr.sub td{font-weight:600;border-top:1px solid var(--ink)}
+.ledger tr.total td{font:600 17px var(--f-display);border-top:2px solid var(--ink);border-bottom:0}
+.ledger tr.total td.v{font:600 15px var(--f-mono)}
+.ledger .neg{color:var(--bad)}
+.metrics{display:flex;flex-direction:column;border-top:1px solid var(--ink)}
+.metrics div{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--rule);font-size:14px}
+.metrics b{font:500 13.5px var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.why{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.card{background:var(--sheet);border:1px solid var(--rule);padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.card b{font:500 19px/1.25 var(--f-display)}
+.card p{font-size:14px}
+.card .f{font:400 12.5px/1.5 var(--f-mono);background:var(--wash);padding:8px 10px;border-radius:2px;overflow-wrap:anywhere}
+.card a{font:500 11px var(--f-mono);letter-spacing:.08em;text-transform:uppercase}
+.empty{border:1px dashed var(--edge);padding:22px;color:var(--muted);font:400 17px/1.5 var(--f-display)}
+
+/* Result */
+.result{display:flex;flex-direction:column;gap:20px;max-width:900px}
+.verdict{font:500 clamp(40px,7vw,80px)/.95 var(--f-display);letter-spacing:-.03em}
+.verdict.won{color:var(--good)} .verdict.lost{color:var(--bad)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom, 0px));transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 16px;font:500 12px var(--f-mono);letter-spacing:.06em;border-radius:2px;opacity:0;pointer-events:none;transition:opacity .2s;max-width:calc(100% - 32px)}
+.toast.show{opacity:1}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="mast">
+    <div class="dateline"><span>A business simulation · Version 1</span><a id="treeLink" href="#">Companion to the Business Skill Tree ↗</a><span>Free to play</span></div>
+    <div class="mast-title">
+      <h1><em>Run</em>way</h1>
+      <p class="tag">Run a business one month at a time. Every result shows the formula behind it and the subject that explains it.</p>
+    </div>
+    <nav class="nav" aria-label="Game">
+      <button class="btn" data-go="setup">New game</button>
+      <button class="btn" data-go="play" id="navResume" hidden>Resume</button>
+      <button class="btn" data-go="settings">Settings</button>
+    </nav>
+  </header>
+  <main id="screen" aria-live="polite"></main>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(function(){
+/* ---------- Links and Skill Tree data ---------- */
+const TREE_URL = /github\.io$/.test(location.hostname) ? '../' : 'https://claude.ai/artifact/XzU2C8BiYcv79R8AEKQcW2';
+document.getElementById('treeLink').href = TREE_URL;
+const SUBJ = {micro:'Microeconomics', finacct:'Financial Accounting', excel:'Spreadsheets for Business', mgmtacct:'Managerial Accounting',
+  unitecon:'Unit Economics & Break-even', budget:'Budgeting & Forecasting', marketing:'Marketing Management', pricing:'Pricing Strategy',
+  saas:'SaaS Metrics', product:'Product Development', growth:'Growth & Customer Acquisition', ops:'Operations Management'};
+function treeDone(){ try { const v = JSON.parse(localStorage.getItem('biz-skill-tree-v1') || 'null'); return (v && v.prog) || null; } catch(e){ return null; } }
+
+/* ---------- Helpers ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money = v => (v < 0 ? '−' : '') + '$' + Math.round(Math.abs(v)).toLocaleString('en-US');
+const money2 = v => '$' + Number(v).toFixed(2);
+const int = v => Math.round(v).toLocaleString('en-US');
+const pct = (v, d=1) => (v*100).toFixed(d) + '%';
+const FMT = {money, money2, int, pct: v => pct(v,0)};
+function rng(seed){ let a = seed >>> 0; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const noise = (R, vol) => 1 + (R() - R()) * vol * 1.5;
+const toast = msg => { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('show'), 2200); };
+
+/* ---------- Settings and storage ---------- */
+const DIFF = {
+  easy:   {label:'Easy',   cash:1.3, demand:1.15, cost:0.9, vol:0.05},
+  normal: {label:'Normal', cash:1,   demand:1,    cost:1,   vol:0.10},
+  hard:   {label:'Hard',   cash:0.8, demand:0.85, cost:1.1, vol:0.18},
+};
+const KEY = 'runway-v1';
+let DB = {settings:{free:false, diff:'normal', custom:{cash:1, demand:1, cost:1, vol:0.1}, length:'default', formulas:true, seed:Math.floor(Math.random()*1e6)}, progress:{}, game:null, pick:{biz:'cafe', level:1}};
+try { const v = JSON.parse(localStorage.getItem(KEY) || 'null'); if (v && typeof v === 'object') DB = Object.assign(DB, v, {settings:Object.assign(DB.settings, v.settings || {})}); } catch(e) {}
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(DB)); } catch(e) {} };
+const S = () => DB.settings;
+function envFrom(st){ return st.diff === 'custom' ? Object.assign({label:'Custom'}, st.custom) : Object.assign({}, DIFF[st.diff]); }
+
+/* ---------- Content ---------- */
+const LEVELS = [
+  {n:1, name:'Basics', d:'One product. Price, sales, revenue − costs = profit.', built:true},
+  {n:2, name:'Costs & break-even', d:'Fixed vs variable costs, break-even, budget, runway, marketing.', built:true},
+  {n:3, name:'Customers & competition', d:'Customer groups, repeat customers, a rival who reacts, hiring, capacity.', built:false, when:'version 2'},
+  {n:4, name:'Real-world finances', d:'Full financial statements, inventory, loans, seasons, recessions, contracts.', built:false, when:'version 2'},
+  {n:5, name:'Growth & funding', d:'Loans vs investors, valuation, term sheets, expansion. Then “Real life” mode.', built:false, when:'version 3'},
+];
+const ROMAN = ['I','II','III','IV','V'];
+
+const BIZ = {
+ cafe: {name:'Café', color:'var(--cafe)', blurb:'Food and drink. Daily customers, ingredients that spoil, rent and staff.', levels:{
+  1: {title:'The coffee cart', months:6, startCash:500,
+      story:'You run a coffee cart outside a busy train station. Each morning you decide your price and how many cups to prepare. Coffee you don’t sell is poured away.',
+      goalText:'Have $35,000 in cash by the end of the last month.', subjects:['micro','finacct','excel'],
+      decisions:[
+        {id:'price', label:'Price per cup', min:1, max:8, step:0.25, def:3, fmt:'money2', help:'A higher price earns more per cup, but fewer people buy.'},
+        {id:'prep', label:'Cups prepared per day', min:20, max:250, step:5, def:100, fmt:'int', help:'Cups you make but don’t sell are wasted.'}],
+      sim(g, d, E, R){
+        const cupCost = 0.9*E.cost, permit = 450*E.cost;
+        const demand = Math.max(0, 220*E.demand*(1 - d.price/7)) * noise(R, E.vol);
+        const sold = Math.min(demand, d.prep), waste = d.prep - sold, lost = Math.max(0, demand - d.prep);
+        const rev = d.price*sold*30, ingr = cupCost*d.prep*30, profit = rev - ingr - permit;
+        const why = [
+          {t:'How many people wanted coffee', p:`At ${money2(d.price)} a cup, about ${int(demand)} people a day wanted one. Fewer people buy as the price rises.`, f:`demand ≈ 220 × (1 − price ÷ 7) = ${int(220*E.demand*(1-d.price/7))} a day, give or take a little each month`, s:'micro'},
+          {t:'Profit is revenue minus costs', p:`You took ${money(rev)} and spent ${money(ingr + permit)}, so this month’s profit was ${money(profit)}.`, f:`${money(rev)} − ${money(ingr)} ingredients − ${money(permit)} permit = ${money(profit)}`, s:'finacct'}];
+        if (waste > 2) why.push({t:'Coffee poured away', p:`You made ${int(d.prep)} cups a day but sold ${int(sold)}. The ${int(waste)} unsold cups a day cost you ${money(waste*cupCost*30)} this month.`, f:`waste cost = ${int(waste)} cups × ${money2(cupCost)} × 30 days`, s:'excel'});
+        if (lost > 2) why.push({t:'You ran out', p:`About ${int(lost)} people a day wanted coffee after you’d sold out. That’s about ${money(lost*d.price*30)} of sales missed.`, f:`missed sales = ${int(lost)} × ${money2(d.price)} × 30 days`, s:'micro'});
+        return {profit,
+          rows:[['Sales', rev, 'rev'], ['Ingredients (every cup made)', -ingr, 'cost'], ['Cart permit', -permit, 'cost'], ['Profit', profit, 'total']],
+          metrics:[['Customers who wanted coffee', int(demand)+' a day'], ['Cups sold', int(sold)+' a day'], ['Cups wasted', int(waste)+' a day'], ['Customers turned away', int(lost)+' a day']],
+          why, key:{label:'Cash goal', value:g.cash + profit, target:35000}};
+      },
+      won(g){ return g.cash >= 35000; }},
+  2: {title:'Your first café', months:12, startCash:25000,
+      story:'You’ve opened a small café with rent, staff and a menu. New cafés take a few months to be discovered, so expect early losses. Your job is to reach steady profit before the money runs out.',
+      goalText:'Make a profit three months in a row before the last month ends, without running out of cash.', subjects:['mgmtacct','unitecon','budget','marketing'],
+      decisions:[
+        {id:'price', label:'Average spend per customer', min:3, max:12, step:0.25, def:5.5, fmt:'money2', help:'Set by your menu prices. Higher means fewer customers.'},
+        {id:'staff', label:'Baristas', min:1, max:6, step:1, def:2, fmt:'int', help:'Each can serve about 80 customers a day and costs $2,600 a month.'},
+        {id:'mkt', label:'Marketing per month', min:0, max:5000, step:100, def:500, fmt:'money', help:'Flyers and social posts. Each extra dollar brings fewer new customers than the last.'}],
+      consts(E){ return {varCost:(1.6*1.06 + 0.2)*E.cost, wage:2600*E.cost, rent:3500*E.cost, util:700*E.cost, other:300*E.cost}; },
+      hint(d, E){ const c = this.consts(E), fixed = c.rent + c.util + c.other + c.wage*d.staff + d.mkt, unit = d.price - c.varCost;
+        return unit <= 0 ? `At this price you lose money on every customer.` : `<b>Break-even with these choices:</b> ${int(fixed/unit/30)} customers a day. Your baristas can serve up to ${int(d.staff*80)} a day.`; },
+      sim(g, d, E, R){
+        const c = this.consts(E), month = g.month + 1, ramp = Math.min(1, 0.5 + 0.1*(month - 1));
+        const m = 0.45*(1 - Math.exp(-d.mkt/2000));
+        const demand = Math.max(0, 220*E.demand*ramp*(1 + m)*(1 - d.price/12)) * noise(R, E.vol);
+        const cap = d.staff*80, served = Math.min(demand, cap), lost = Math.max(0, demand - cap);
+        const rev = served*d.price*30, ingr = served*c.varCost*30, gross = rev - ingr;
+        const wages = c.wage*d.staff, fixed = c.rent + wages + c.util + c.other + d.mkt, profit = gross - fixed;
+        const unit = d.price - c.varCost, beDay = unit > 0 ? fixed/unit/30 : Infinity;
+        const cash = g.cash + profit;
+        const why = [
+          {t:'Break-even point', p: unit > 0 ? `Each customer leaves ${money2(unit)} after ingredients and packaging. Your fixed costs were ${money(fixed)}, so you needed ${int(beDay)} customers a day to break even. You served ${int(served)}.` : `Your price is below what each customer costs you, so more customers means bigger losses.`, f:`break-even = fixed costs ÷ (price − variable cost per customer) = ${money(fixed)} ÷ ${money2(Math.max(unit,0))} ÷ 30 days`, s:'unitecon'},
+          {t:'Fixed and variable costs', p:`Ingredients and packaging grow with every customer (variable costs). Rent, wages and utilities stay the same however busy you are (fixed costs).`, f:`variable ${money(ingr)} + fixed ${money(fixed)} = total costs ${money(ingr + fixed)}`, s:'mgmtacct'}];
+        if (ramp < 1) why.push({t:'Still being discovered', p:`New cafés take time to find regulars. This month about ${Math.round(ramp*100)}% of your future regulars knew about you. That rises each month.`, f:`awareness = 50% in month 1, +10% a month, up to 100%`, s:'marketing'});
+        if (d.mkt > 0) why.push({t:'What marketing did', p:`${money(d.mkt)} of marketing brought about ${Math.round(m*100)}% more customers. The next $1,000 would add less than the last.`, f:`extra customers = 45% × (1 − e^(−spend ÷ 2,000)) = ${Math.round(m*100)}%`, s:'marketing'});
+        if (lost > 2) why.push({t:'Queue out the door', p:`${d.staff} barista${d.staff>1?'s':''} can serve ${int(cap)} customers a day. About ${int(lost)} more a day wanted to come in.`, f:`capacity = baristas × 80 customers a day`, s:'ops'});
+        if (profit < 0) why.push({t:'Your runway', p:`You lost ${money(-profit)} this month. At that rate, your ${money(Math.max(cash,0))} of cash lasts about ${cash > 0 ? (cash/-profit).toFixed(1) : 0} more months.`, f:`runway = cash ÷ monthly loss`, s:'budget'});
+        return {profit,
+          rows:[['Sales', rev, 'rev'], ['Ingredients & packaging (incl. waste)', -ingr, 'cost'], ['Gross profit', gross, 'sub'], ['Rent', -c.rent, 'cost'], ['Staff wages', -wages, 'cost'], ['Utilities & other', -(c.util + c.other), 'cost'], ['Marketing', -d.mkt, 'cost'], ['Profit', profit, 'total']],
+          metrics:[['Customers served', int(served)+' a day'], ['Turned away', int(lost)+' a day'], ['Break-even', (isFinite(beDay) ? int(beDay) : '—')+' a day'], ['Food cost', rev > 0 ? pct(ingr/rev) + ' of sales' : '—'], ['Labour cost', rev > 0 ? pct(wages/rev) + ' of sales' : '—'], ['Runway', profit < 0 ? (cash > 0 ? (cash/-profit).toFixed(1) + ' months' : '0') : 'Not losing money']],
+          why, key:{label:'Profitable months in a row', value:(profit > 0 ? (g.streak||0) + 1 : 0), target:3, count:true}};
+      },
+      after(g, out){ g.streak = out.profit > 0 ? (g.streak||0) + 1 : 0; },
+      won(g){ return (g.streak||0) >= 3; }}
+ }},
+ saas: {name:'Software subscription', color:'var(--saas)', blurb:'Monthly subscriptions. Customers who stay or cancel, marketing, developers.', levels:{
+  1: {title:'Your first app', months:12, startCash:2000,
+      story:'You’ve built a small app that people pay for monthly. About 2,000 people visit your site each month. Choose a price: cheaper wins more sign-ups, but each pays less.',
+      goalText:'Reach $12,000 in monthly recurring revenue (MRR) by the last month.', subjects:['micro','finacct','pricing'],
+      decisions:[{id:'price', label:'Price per month', min:1, max:120, step:1, def:15, fmt:'money', help:'Each paying customer is charged this every month.'}],
+      init(g){ g.customers = 0; },
+      sim(g, d, E, R){
+        const visitors = 2000*E.demand*noise(R, E.vol), conv = 0.03*Math.max(0, 1 - d.price/120), signups = visitors*conv;
+        const churn = 0.03, lostC = (g.customers||0)*churn, customers = (g.customers||0) - lostC + signups;
+        const mrr = customers*d.price, servers = (300 + 2*customers)*E.cost, profit = mrr - servers;
+        g._customers = customers;
+        const why = [
+          {t:'Visitors who paid', p:`Of about ${int(visitors)} visitors, ${pct(conv)} signed up at ${money(d.price)} a month: ${int(signups)} new customers.`, f:`sign-up rate = 3% × (1 − price ÷ 120) = ${pct(conv)}`, s:'pricing'},
+          {t:'Subscriptions add up', p:`You kept 97% of last month’s customers and added ${int(signups)} new ones. That’s why monthly revenue grows even with the same number of visitors.`, f:`customers = ${int(g.customers||0)} − ${int(lostC)} cancelled + ${int(signups)} new = ${int(customers)}`, s:'micro'},
+          {t:'Profit this month', p:`Revenue of ${money(mrr)} minus server costs of ${money(servers)} gave a profit of ${money(profit)}.`, f:`MRR = customers × price = ${int(customers)} × ${money(d.price)}`, s:'finacct'}];
+        return {profit,
+          rows:[['Subscription revenue (MRR)', mrr, 'rev'], ['Servers and hosting', -servers, 'cost'], ['Profit', profit, 'total']],
+          metrics:[['Visitors', int(visitors)], ['New customers', int(signups)], ['Cancelled', int(lostC)], ['Paying customers', int(customers)], ['MRR', money(mrr)]],
+          why, key:{label:'MRR goal', value:mrr, target:12000}};
+      },
+      after(g){ g.customers = g._customers; delete g._customers; },
+      won(g, out){ return out.key.value >= 12000; }},
+  2: {title:'Growing the startup', months:18, startCash:80000,
+      story:'Your app has a little savings behind it. Now you can buy ads and hire developers to improve the product. Better products win more sign-ups and lose fewer customers, but developers are expensive and slow to pay off.',
+      goalText:'Have a profitable month with at least $25,000 MRR before the last month ends, without running out of cash.', subjects:['unitecon','budget','marketing','saas'],
+      decisions:[
+        {id:'price', label:'Price per month', min:5, max:200, step:1, def:29, fmt:'money', help:'Business customers will pay more than individuals, up to a point.'},
+        {id:'mkt', label:'Marketing per month', min:0, max:30000, step:500, def:3000, fmt:'money', help:'Ads bring visitors. Each extra dollar brings fewer visitors than the last.'},
+        {id:'devs', label:'Developers', min:0, max:6, step:1, def:1, fmt:'int', help:'$6,000 a month each. They slowly improve the product.'}],
+      init(g){ g.customers = 0; g.quality = 1; },
+      consts(E){ return {server:3*E.cost, fee:0.03, tools:500*E.cost, wage:6000*E.cost}; },
+      hint(d, E){ const c = this.consts(E), fixed = c.tools + c.wage*d.devs + d.mkt, unit = d.price*(1 - c.fee) - c.server;
+        return unit <= 0 ? 'At this price each customer costs more than they pay.' : `<b>Break-even with these choices:</b> about ${int(fixed/unit)} paying customers. You have ${int(DB.game ? DB.game.customers||0 : 0)}.`; },
+      sim(g, d, E, R){
+        const c = this.consts(E), q0 = g.quality||1, q = Math.min(1.8, q0 + 0.04*d.devs);
+        const organic = (1500*E.demand + 0.5*(g.customers||0)) * noise(R, E.vol);
+        const paid = 6000*E.demand*(1 - Math.exp(-d.mkt/12000)) * noise(R, E.vol);
+        const conv = 0.022*q*Math.max(0, 1 - d.price/150);
+        const newOrg = organic*conv, newPaid = paid*conv, signups = newOrg + newPaid;
+        const churn = 0.05/Math.sqrt(q), lostC = (g.customers||0)*churn, customers = (g.customers||0) - lostC + signups;
+        const mrr = customers*d.price, servers = customers*c.server, fees = mrr*c.fee, gross = mrr - servers - fees;
+        const wages = c.wage*d.devs, profit = gross - wages - c.tools - d.mkt;
+        const cac = newPaid > 0.5 ? d.mkt/newPaid : null, unit = d.price*(1 - c.fee) - c.server, ltv = unit/churn;
+        const cash = g.cash + profit;
+        g._next = {customers, quality:q};
+        const why = [
+          {t:'Cost to win a customer (CAC)', p: cac ? `Ads brought about ${int(paid)} visitors and ${int(newPaid)} paying customers, so each cost about ${money(cac)} to win.` : `You didn’t buy ads, so all ${int(signups)} new customers came from people finding you on their own.`, f: cac ? `CAC = marketing ÷ customers from ads = ${money(d.mkt)} ÷ ${int(newPaid)}` : `organic visitors = 1,500 + half your customer count (word of mouth)`, s:'growth'},
+          {t:'What a customer is worth (LTV)', p:`Each customer brings ${money2(unit)} a month after costs and stays about ${(1/churn).toFixed(0)} months, so is worth about ${money(ltv)}.${cac ? ` That’s ${(ltv/cac).toFixed(1)}× CAC. A common rule of thumb is at least 3×.` : ''}`, f:`LTV = monthly profit per customer ÷ churn = ${money2(unit)} ÷ ${pct(churn)}`, s:'saas'},
+          {t:'Customers who cancelled', p:`${int(lostC)} customers left (${pct(churn)}). Product quality is now ${q.toFixed(2)}. Developers raise it by 0.04 a month each, which lifts sign-ups and lowers churn.`, f:`churn = 5% ÷ √quality`, s:'product'}];
+        if (d.mkt >= 15000) why.push({t:'Diminishing returns', p:`Doubling ad spend doesn’t double visitors. Above about $15,000 a month, each extra dollar buys far fewer visitors.`, f:`ad visitors = 6,000 × (1 − e^(−spend ÷ 12,000))`, s:'growth'});
+        if (profit < 0) why.push({t:'Your runway', p:`You lost ${money(-profit)} this month. At that rate your ${money(Math.max(cash,0))} lasts about ${cash > 0 ? (cash/-profit).toFixed(1) : 0} more months.`, f:`runway = cash ÷ monthly loss`, s:'budget'});
+        return {profit,
+          rows:[['Subscription revenue (MRR)', mrr, 'rev'], ['Servers', -servers, 'cost'], ['Payment fees (3%)', -fees, 'cost'], ['Gross profit', gross, 'sub'], ['Developer salaries', -wages, 'cost'], ['Software tools', -c.tools, 'cost'], ['Marketing', -d.mkt, 'cost'], ['Profit', profit, 'total']],
+          metrics:[['Paying customers', int(customers)], ['New this month', int(signups)], ['Churn', pct(churn)], ['CAC', cac ? money(cac) : '—'], ['LTV', money(ltv)], ['LTV ÷ CAC', cac ? (ltv/cac).toFixed(1)+'×' : '—'], ['Product quality', q.toFixed(2)], ['Runway', profit < 0 ? (cash > 0 ? (cash/-profit).toFixed(1) + ' months' : '0') : 'Not losing money']],
+          why, key:{label:'MRR goal (with a profitable month)', value:mrr, target:25000}};
+      },
+      after(g){ Object.assign(g, g._next); delete g._next; },
+      won(g, out){ return out.key.value >= 25000 && out.profit >= 0; }}
+ }},
+ shop: {name:'Online store', color:'var(--shop)', blurb:'Stock bought ahead, shipping, returns and paid ads.', soon:'version 2'},
+ agency: {name:'Service agency', color:'var(--agency)', blurb:'Billable hours, project pricing and clients who pay late.', soon:'version 3'},
+};
+
+/* ---------- Progress helpers ---------- */
+const prog = b => DB.progress[b] || 0;
+function unlocked(b, n){ const L = LEVELS[n-1]; if (!L.built || BIZ[b].soon) return false; return S().free || n === 1 || prog(b) >= n - 1; }
+
+/* ---------- Router ---------- */
+let screen = 'setup';
+function go(name){ screen = name; render(); window.scrollTo({top:0}); }
+document.querySelector('.nav').addEventListener('click', e => { const b = e.target.closest('[data-go]'); if (b) go(b.dataset.go); });
+function render(){
+  $('#navResume').hidden = !(DB.game && DB.game.status === 'playing') || screen === 'play';
+  ({setup:renderSetup, settings:renderSettings, brief:renderBrief, play:renderPlay, result:renderResult})[screen]();
+}
+
+/* ---------- Setup ---------- */
+function renderSetup(){
+  const pk = DB.pick; if (BIZ[pk.biz].soon) pk.biz = 'cafe'; if (!unlocked(pk.biz, pk.level)) pk.level = 1;
+  const E = envFrom(S());
+  $('#screen').innerHTML = `
+  <div class="setup-grid">
+    <section style="display:flex;flex-direction:column;gap:22px">
+      <div class="section-head"><h2>Choose a business</h2><span class="kicker">2 of 4 available</span></div>
+      <div class="grid-biz">${Object.entries(BIZ).map(([k,b]) => `
+        <button class="biz" data-biz="${k}" style="--c:${b.color}" aria-pressed="${pk.biz===k}" ${b.soon?'disabled':''}>
+          <b>${esc(b.name)}</b><span class="small">${esc(b.blurb)}</span>${b.soon?`<span class="soon">Coming in ${b.soon}</span>`:''}
+        </button>`).join('')}</div>
+      <div class="section-head"><h2>Choose a level</h2><span class="kicker">Each level adds real-world complexity</span></div>
+      <div class="levels">${LEVELS.map(L => { const open = unlocked(pk.biz, L.n), won = prog(pk.biz) >= L.n;
+        const st = !L.built ? `<span class="state soon">${esc(L.when)}</span>` : won ? `<span class="state won">Completed</span>` : open ? '' : `<span class="state locked">Locked</span>`;
+        return `<div class="lvl ${open?'open':''}"><span class="num">${ROMAN[L.n-1]}</span><div><div class="t">${esc(L.name)}</div><div class="d">${esc(L.d)}</div></div>
+          <div class="row">${st}${open ? `<button class="btn ${pk.level===L.n?'primary':''}" data-level="${L.n}" aria-pressed="${pk.level===L.n}">${pk.level===L.n?'Selected':'Select'}</button>` : ''}</div></div>`; }).join('')}</div>
+      ${S().free ? '' : `<p class="small muted">Win a level to unlock the next one, or turn on <b>Free play</b> in Settings to open every level that’s built.</p>`}
+    </section>
+    <aside class="summary" style="align-self:start">
+      <h3>Your game</h3>
+      <dl>
+        <dt>Business</dt><dd>${esc(BIZ[pk.biz].name)}</dd>
+        <dt>Level</dt><dd>${ROMAN[pk.level-1]} · ${esc(LEVELS[pk.level-1].name)}</dd>
+        <dt>Difficulty</dt><dd>${esc(E.label)}</dd>
+        <dt>Length</dt><dd>${S().length === 'default' ? 'Level default' : S().length + ' months'}</dd>
+        <dt>Formulas</dt><dd>${S().formulas ? 'Shown' : 'Hidden'}</dd>
+        <dt>Free play</dt><dd>${S().free ? 'On' : 'Off'}</dd>
+      </dl>
+      <div class="row"><button class="btn primary" id="toBrief">Continue</button><button class="btn" data-go2="settings">Change settings</button></div>
+      ${DB.game && DB.game.status === 'playing' ? `<p class="small muted">Starting a new game replaces the one in progress.</p>` : ''}
+    </aside>
+  </div>`;
+  $('#screen').onclick = e => {
+    const b = e.target.closest('[data-biz]'); if (b && !b.disabled){ pk.biz = b.dataset.biz; if (!unlocked(pk.biz, pk.level)) pk.level = 1; save(); renderSetup(); return; }
+    const l = e.target.closest('[data-level]'); if (l){ pk.level = +l.dataset.level; save(); renderSetup(); return; }
+    if (e.target.closest('[data-go2]')) return go('settings');
+    if (e.target.id === 'toBrief') go('brief');
+  };
+}
+
+/* ---------- Settings ---------- */
+function renderSettings(){
+  const st = S(), c = st.custom;
+  const sl = (id, label, min, max, step, v, f) => `<label class="sl" for="c-${id}">${label} <output id="o-${id}">${f(v)}</output><input type="range" id="c-${id}" data-c="${id}" min="${min}" max="${max}" step="${step}" value="${v}"></label>`;
+  const x = v => '×' + Number(v).toFixed(2);
+  $('#screen').innerHTML = `
+  <section class="settings">
+    <div class="section-head"><h2>Settings</h2><span class="kicker">Apply to new games</span></div>
+    <div class="field">
+      <label class="switch" for="s-free"><input type="checkbox" id="s-free" ${st.free?'checked':''}><span><span class="lab" style="font:500 19px/1.3 var(--f-display)">Free play</span><br><span class="help">Open every business and level that’s built, without winning the earlier levels first.</span></span></label>
+    </div>
+    <div class="field">
+      <span class="lab">Difficulty</span>
+      <div class="seg" role="group" aria-label="Difficulty">${['easy','normal','hard','custom'].map(k => `<button data-diff="${k}" aria-pressed="${st.diff===k}">${k==='custom'?'Custom':DIFF[k].label}</button>`).join('')}</div>
+      <p class="help">Easy: more starting cash, more customers, lower costs, steadier months. Hard: the opposite.</p>
+      <div class="custom" id="custom" ${st.diff==='custom'?'':'hidden'}>
+        ${sl('cash','Starting cash',0.5,2,0.05,c.cash,x)}
+        ${sl('demand','Customer demand',0.6,1.5,0.05,c.demand,x)}
+        ${sl('cost','Costs',0.7,1.5,0.05,c.cost,x)}
+        ${sl('vol','Month-to-month randomness',0,0.3,0.01,c.vol,v => '±' + Math.round(v*150) + '%')}
+      </div>
+    </div>
+    <div class="field">
+      <label for="s-len">Game length</label>
+      <select id="s-len">${['default','6','12','18','24','36'].map(v => `<option value="${v}" ${st.length===v?'selected':''}>${v==='default'?'Level default':v+' months'}</option>`).join('')}</select>
+      <p class="help">Shorter games are harder because there’s less time to recover from mistakes.</p>
+    </div>
+    <div class="field">
+      <label class="switch" for="s-form"><input type="checkbox" id="s-form" ${st.formulas?'checked':''}><span><span style="font:500 19px/1.3 var(--f-display)">Show formulas and hints</span><br><span class="help">Show the maths in each “Why” card and the break-even hint beside your decisions. Turn off for a tougher test.</span></span></label>
+    </div>
+    <div class="field">
+      <label for="s-seed">Random seed</label>
+      <div class="row"><input type="number" id="s-seed" value="${st.seed}" min="0" step="1" style="width:160px"><button class="btn" id="newSeed">New seed</button></div>
+      <p class="help">The same seed gives the same luck each month, so you can replay a game and compare strategies.</p>
+    </div>
+    <div class="field">
+      <span class="lab">Progress</span>
+      <div class="row" id="resetArea"><button class="btn danger" id="reset">Reset all progress</button></div>
+      <p class="help">Clears completed levels and the game in progress. Settings are kept.</p>
+    </div>
+    <div class="row"><button class="btn primary" data-back>Done</button></div>
+  </section>`;
+  const scr = $('#screen');
+  scr.onclick = e => {
+    const d = e.target.closest('[data-diff]'); if (d){ st.diff = d.dataset.diff; save(); renderSettings(); return; }
+    if (e.target.id === 'newSeed'){ st.seed = Math.floor(Math.random()*1e6); save(); $('#s-seed').value = st.seed; return; }
+    if (e.target.id === 'reset'){ $('#resetArea').innerHTML = '<span>Clear completed levels and your current game?</span><button class="btn danger" id="resetYes">Yes, reset</button><button class="btn" id="resetNo">Cancel</button>'; return; }
+    if (e.target.id === 'resetYes'){ DB.progress = {}; DB.game = null; save(); toast('Progress reset'); renderSettings(); return; }
+    if (e.target.id === 'resetNo'){ renderSettings(); return; }
+    if (e.target.closest('[data-back]')) go('setup');
+  };
+  scr.oninput = e => {
+    const t = e.target;
+    if (t.dataset.c){ c[t.dataset.c] = +t.value; const o = $('#o-'+t.dataset.c); o.textContent = t.dataset.c === 'vol' ? '±' + Math.round(t.value*150) + '%' : '×' + Number(t.value).toFixed(2); save(); }
+    if (t.id === 's-seed'){ st.seed = Math.max(0, Math.floor(+t.value || 0)); save(); }
+  };
+  scr.onchange = e => {
+    const t = e.target;
+    if (t.id === 's-free'){ st.free = t.checked; save(); toast(t.checked ? 'Free play on' : 'Free play off'); }
+    if (t.id === 's-form'){ st.formulas = t.checked; save(); }
+    if (t.id === 's-len'){ st.length = t.value; save(); }
+  };
+}
+
+/* ---------- Briefing ---------- */
+function levelDef(b, n){ return BIZ[b].levels[n]; }
+function renderBrief(){
+  const {biz, level} = DB.pick, L = levelDef(biz, level), E = envFrom(S()), months = S().length === 'default' ? L.months : +S().length, done = treeDone();
+  $('#screen').innerHTML = `
+  <section class="brief">
+    <div style="display:flex;flex-direction:column;gap:18px">
+      <span class="kicker">${esc(BIZ[biz].name)} · Level ${ROMAN[level-1]} · ${esc(LEVELS[level-1].name)}</span>
+      <h2>${esc(L.title)}</h2>
+      <p class="lede">${esc(L.story)}</p>
+      <div class="goal"><h3>Your goal</h3><b>${esc(L.goalText)}</b><span class="small muted">${months} months · starting cash ${money(L.startCash*E.cash)} · ${esc(E.label)} difficulty</span></div>
+      <div class="row"><button class="btn primary" id="start">Start month 1</button><button class="btn" data-back>Back</button></div>
+    </div>
+    <aside style="display:flex;flex-direction:column;gap:12px">
+      <h3>Study these first</h3>
+      <div class="subj">${L.subjects.map(s => `<div><span>${esc(SUBJ[s])}</span>${done ? (done[s]==='done' ? '<span class="ok">Done</span>' : '<span class="no">Not yet</span>') : ''}</div>`).join('')}</div>
+      <p class="small muted">${done ? 'Status comes from your Business Skill Tree.' : 'Open the <a href="'+esc(TREE_URL)+'" target="_blank" rel="noopener">Business Skill Tree</a> to study these subjects.'}</p>
+    </aside>
+  </section>`;
+  $('#screen').onclick = e => { if (e.target.id === 'start') startGame(); if (e.target.closest('[data-back]')) go('setup'); };
+}
+function startGame(){
+  const {biz, level} = DB.pick, L = levelDef(biz, level), E = envFrom(S());
+  const g = {biz, level, env:E, months: S().length === 'default' ? L.months : +S().length, seed:S().seed, month:0, cash:L.startCash*E.cash, start:L.startCash*E.cash,
+    status:'playing', hist:[], last:null, dec:Object.fromEntries(L.decisions.map(x => [x.id, x.def])), formulas:S().formulas};
+  if (L.init) L.init(g);
+  DB.game = g; save(); go('play');
+}
+
+/* ---------- Play ---------- */
+function renderPlay(){
+  const g = DB.game; if (!g){ go('setup'); return; }
+  if (g.status !== 'playing'){ go('result'); return; }
+  const L = levelDef(g.biz, g.level), out = g.last, color = BIZ[g.biz].color;
+  const key = out ? out.key : null;
+  const goalPct = key ? Math.max(0, Math.min(1, key.value / key.target)) : 0;
+  $('#screen').innerHTML = `
+  <section style="display:flex;flex-direction:column;gap:18px">
+    <div class="section-head"><h2>${esc(L.title)}</h2><span class="kicker">${esc(BIZ[g.biz].name)} · Level ${ROMAN[g.level-1]} · ${esc(g.env.label)}</span></div>
+    <div class="play" style="--c:${color}">
+      <form class="desk" id="desk" onsubmit="return false">
+        <h3>Decisions for month ${g.month + 1} of ${g.months}</h3>
+        ${L.decisions.map(x => `<div class="dec">
+          <div class="top"><label for="d-${x.id}">${esc(x.label)}</label><input type="number" id="d-${x.id}" data-n="${x.id}" min="${x.min}" max="${x.max}" step="${x.step}" value="${g.dec[x.id]}"></div>
+          <input type="range" aria-label="${esc(x.label)}" data-r="${x.id}" min="${x.min}" max="${x.max}" step="${x.step}" value="${g.dec[x.id]}">
+          <span class="help">${esc(x.help)}</span></div>`).join('')}
+        ${L.hint && g.formulas ? `<div class="hint" id="hint">${L.hint(g.dec, g.env)}</div>` : ''}
+        <button class="btn primary" id="run" type="button">Run month ${g.month + 1}</button>
+        <button class="btn" id="quit" type="button">Abandon game</button>
+      </form>
+      <div class="board">
+        <div class="stats">
+          <div><b>${g.month}<small style="font-size:16px;color:var(--muted)">/${g.months}</small></b><span>Months played</span></div>
+          <div><b class="${g.cash < 0 ? 'neg' : ''}">${money(g.cash)}</b><span>Cash</span></div>
+          <div><b class="${out && out.profit < 0 ? 'neg' : ''}">${out ? money(out.profit) : '—'}</b><span>Last month’s profit</span></div>
+          <div><b>${key ? (key.count ? key.value + '/' + key.target : money(key.value)) : '—'}</b><span>${key ? esc(key.label) : 'Goal progress'}</span></div>
+        </div>
+        <div class="goalbar"><span class="small"><b>Goal:</b> ${esc(L.goalText)}</span><div class="track" role="progressbar" aria-label="Goal progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(goalPct*100)}"><div class="fill" style="width:${goalPct*100}%"></div></div></div>
+        ${g.hist.length ? chart(g) : ''}
+        ${out ? `
+        <div class="two">
+          <div><h3 style="margin-bottom:8px">Month ${g.month} · Income statement</h3><table class="ledger">${out.rows.map(([l,v,k]) => `<tr class="${k}"><td>${esc(l)}</td><td class="v ${v<0 && k!=='cost' ? 'neg':''}">${money(v)}</td></tr>`).join('')}</table></div>
+          <div><h3 style="margin-bottom:8px">Key numbers</h3><div class="metrics">${out.metrics.map(([l,v]) => `<div><span>${esc(l)}</span><b>${esc(v)}</b></div>`).join('')}</div></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px"><h3>What happened and why</h3>
+          <div class="why">${out.why.map(w => `<div class="card"><b>${esc(w.t)}</b><p>${esc(w.p)}</p>${g.formulas ? `<div class="f">${esc(w.f)}</div>` : ''}<a href="${esc(TREE_URL)}" target="_blank" rel="noopener">Study: ${esc(SUBJ[w.s])} ↗</a></div>`).join('')}</div>
+        </div>` : `<div class="empty">Set your decisions, then run your first month. Your income statement and an explanation of what happened will appear here.</div>`}
+      </div>
+    </div>
+  </section>`;
+  const desk = $('#desk');
+  const sync = (id, v) => { const x = L.decisions.find(d => d.id === id); v = Math.min(x.max, Math.max(x.min, +v)); if (isNaN(v)) return; g.dec[id] = v; desk.querySelector(`[data-n="${id}"]`).value = v; desk.querySelector(`[data-r="${id}"]`).value = v; if (L.hint && g.formulas) $('#hint').innerHTML = L.hint(g.dec, g.env); save(); };
+  desk.oninput = e => { const t = e.target; if (t.dataset.r) sync(t.dataset.r, t.value); };
+  desk.onchange = e => { const t = e.target; if (t.dataset.n) sync(t.dataset.n, t.value); };
+  $('#run').onclick = runMonth;
+  $('#quit').onclick = e => { const b = e.currentTarget; if (b.dataset.sure){ DB.game = null; save(); go('setup'); } else { b.dataset.sure = '1'; b.textContent = 'Click again to abandon'; } };
+}
+function runMonth(){
+  const g = DB.game, L = levelDef(g.biz, g.level), R = rng(g.seed*7919 + (g.month + 1)*104729 + g.level*31 + (g.biz === 'cafe' ? 1 : 2));
+  const out = L.sim(g, g.dec, g.env, R);
+  if (L.after) L.after(g, out);
+  g.cash += out.profit; g.month += 1; g.last = out;
+  g.hist.push({m:g.month, cash:g.cash, profit:out.profit});
+  if (g.cash < 0){ g.status = 'lost'; g.reason = 'You ran out of cash.'; }
+  else if (L.won(g, out)){ g.status = 'won'; DB.progress[g.biz] = Math.max(prog(g.biz), g.level); }
+  else if (g.month >= g.months){ g.status = 'lost'; g.reason = 'Time ran out before you reached the goal.'; }
+  save(); render();
+  if (g.status === 'playing') $('.board').scrollIntoView({block:'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'});
+}
+function chart(g){
+  const W = 640, H = 170, P = {l:58, r:10, t:12, b:22};
+  const pts = [{m:0, cash:g.start}].concat(g.hist), n = Math.max(g.months, 2);
+  const vals = pts.map(p => p.cash), lo = Math.min(0, ...vals), hi = Math.max(...vals, 1);
+  const x = m => P.l + (W - P.l - P.r) * m / n, y = v => P.t + (H - P.t - P.b) * (1 - (v - lo) / (hi - lo || 1));
+  const line = pts.map((p,i) => `${i?'L':'M'}${x(p.m).toFixed(1)} ${y(p.cash).toFixed(1)}`).join(' ');
+  const last = pts[pts.length-1];
+  const ticks = [hi, (hi+lo)/2, lo];
+  return `<figure class="chart" style="margin:0"><h3 style="margin-bottom:4px">Cash by month</h3>
+  <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Cash by month, now ${money(last.cash)}">
+    ${ticks.map(t => `<line x1="${P.l}" x2="${W-P.r}" y1="${y(t)}" y2="${y(t)}" stroke="var(--rule)" stroke-width="1"/><text x="${P.l-6}" y="${y(t)+3.5}" text-anchor="end">${money(t)}</text>`).join('')}
+    ${lo < 0 ? `<line x1="${P.l}" x2="${W-P.r}" y1="${y(0)}" y2="${y(0)}" stroke="var(--bad)" stroke-dasharray="4 4" stroke-width="1"/>` : ''}
+    <path d="${line} L${x(last.m)} ${y(lo)} L${x(0)} ${y(lo)} Z" fill="var(--accent)" fill-opacity=".08"/>
+    <path d="${line}" fill="none" stroke="var(--accent)" stroke-width="2"/>
+    <circle cx="${x(last.m)}" cy="${y(last.cash)}" r="4" fill="var(--accent)"/>
+    <text x="${x(0)}" y="${H-6}">Start</text><text x="${W-P.r}" y="${H-6}" text-anchor="end">Month ${n}</text>
+  </svg></figure>`;
+}
+
+/* ---------- Result ---------- */
+const LESSONS = {
+  'cafe-1':'Price sets how many people buy, and preparing too much or too little both cost money. Profit is simply what’s left of revenue after costs.',
+  'cafe-2':'Fixed costs must be covered before you make any profit. Break-even tells you how many customers that takes, and runway tells you how long you can wait for them.',
+  'saas-1':'Subscriptions stack up month after month, so even a small, steady flow of sign-ups builds large recurring revenue. The best price balances sign-ups against revenue per customer.',
+  'saas-2':'Software companies usually lose money while they grow. They succeed when each customer is worth well over what it cost to win them (LTV vs CAC), and cash lasts until that pays off.'};
+function renderResult(){
+  const g = DB.game; if (!g){ go('setup'); return; }
+  const L = levelDef(g.biz, g.level), won = g.status === 'won', best = Math.max(...g.hist.map(h => h.profit));
+  const next = g.level + 1, canNext = won && LEVELS[next-1] && LEVELS[next-1].built && BIZ[g.biz].levels[next];
+  $('#screen').innerHTML = `
+  <section class="result">
+    <span class="kicker">${esc(BIZ[g.biz].name)} · Level ${ROMAN[g.level-1]} · ${esc(L.title)}</span>
+    <div class="verdict ${won?'won':'lost'}">${won ? 'Goal reached.' : 'Not this time.'}</div>
+    <p class="lede">${won ? `You reached the goal in month ${g.month} of ${g.months}.` : esc(g.reason || '')} You finished with ${money(g.cash)} in cash. Your best month made ${money(best)} profit.</p>
+    ${chart(g)}
+    <div class="goal"><h3>What this level teaches</h3><b style="font-size:19px">${esc(LESSONS[g.biz+'-'+g.level])}</b></div>
+    <div class="row">
+      ${canNext ? `<button class="btn primary" id="next">Play Level ${ROMAN[next-1]}</button>` : ''}
+      <button class="btn ${canNext?'':'primary'}" id="again">Play again with the same luck</button>
+      <button class="btn" id="newg">Choose another game</button>
+    </div>
+    ${won && !canNext ? `<p class="small muted">Level ${ROMAN[g.level]} ${LEVELS[g.level] ? 'arrives in ' + esc(LEVELS[g.level].when) : ''}. Try the other business in the meantime.</p>` : ''}
+  </section>`;
+  $('#screen').onclick = e => {
+    if (e.target.id === 'next'){ DB.pick = {biz:g.biz, level:next}; save(); go('brief'); }
+    if (e.target.id === 'again'){ DB.pick = {biz:g.biz, level:g.level}; S().seed = g.seed; save(); startGame(); }
+    if (e.target.id === 'newg') go('setup');
+  };
+}
+
+go(DB.game && DB.game.status === 'playing' ? 'play' : 'setup');
+})();
+</script>
+</body>
+</html>
