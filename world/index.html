@@ -265,6 +265,10 @@ html,body{height:100%;overflow:hidden}
   .hud-stats .goalmini{min-width:84px}
   .hud-btns .btn{padding:8px 9px;min-height:40px;font-size:10.5px}
 }
+.drophint{position:fixed;inset:12px;display:flex;align-items:center;justify-content:center;border:3px dashed var(--ink);background:color-mix(in srgb, var(--paper) 82%, transparent);z-index:30;pointer-events:none;text-align:center}
+.drophint div{display:flex;flex-direction:column;gap:6px;padding:20px}
+.drophint b{font:500 26px/1.2 var(--f-display)}
+.drophint span{color:var(--muted);font-size:14px}
 .nogl{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;font:400 19px/1.5 var(--f-display);background:var(--paper);z-index:20}
 </style>
 </head>
@@ -289,6 +293,7 @@ html,body{height:100%;overflow:hidden}
 <a id="treeLink" href="#" hidden>Skill Tree</a>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <script>
 (function(){
 /* ===== Shared Runway engine (generated from the Runway game; do not edit here) ===== */
@@ -1144,6 +1149,7 @@ const BIZ_ORDER = ['cafe','saas','shop','agency'];
 const prog = b => DB.progress[b] || 0;
 function unlocked(b, n){ return S().free || n === 1 || prog(b) >= n - 1; }
 const CLASSIC_URL = /github\.io$/.test(location.hostname) ? '../game/' : 'https://claude.ai/artifact/HzLzFXMYf3X44QqsEYkBpL';
+const CHECK_URL = /github\.io$/.test(location.hostname) ? 'model-check.html' : 'https://claude.ai/artifact/7SbgsLtiTZPxiqPTBjU82j';
 const bizName = () => { const g = DB.game; return !g ? 'Your business' : g.biz === 'idea' ? g.idea.name : BIZ[g.biz].name; };
 const RIVAL_NAME = {cafe:'Bean Counter Café', saas:'Rival Software Ltd', shop:'Discount Bags', agency:'Freelancers Hub', idea:'The competition'};
 
@@ -1287,6 +1293,7 @@ function menuHtml(g){
     <div class="field"><label class="switch" for="m-free"><input type="checkbox" id="m-free" data-set="free" ${st.free?'checked':''}><span>Free play: open every level</span></label>
       <label class="switch" for="m-form"><input type="checkbox" id="m-form" data-set="formulas" ${st.formulas?'checked':''}><span>Show formulas and hints (new games)</span></label></div>
     <div class="field"><span class="lab">Controls</span><p class="help">Walk with WASD or the arrow keys, or the joystick on a touch screen. Press E or tap Enter beside a building. Scroll or pinch to zoom. Esc closes a panel. The Places button opens any building without walking.</p></div>
+    <div class="field"><span class="lab">3D models</span><p class="help">${esc(modelSummary())} Drop a .glb exported from Blender onto the town to try it until you reload.</p><div class="row" style="margin-top:8px"><a class="btn" href="${esc(CHECK_URL)}" target="_blank" rel="noopener">Model check ↗</a></div></div>
     <div class="row"><a class="btn" href="${esc(CLASSIC_URL)}" target="_blank" rel="noopener">Classic Runway ↗</a><a class="btn" href="${esc(TREE_URL)}" target="_blank" rel="noopener">Skill Tree ↗</a>${g && g.status === 'playing' ? `<button class="btn danger" data-act="abandon">Abandon game</button>` : ''}</div>
     <p class="small muted">Classic Runway also has the “Use my idea” mode. The town has its own save, separate from Classic Runway.</p>`;
 }
@@ -1385,6 +1392,7 @@ $('#modalBox').addEventListener('click', e => {
 const canvas = $('#c');
 let renderer, scene, camera, player, zoom = 1;
 const obstacles = [], targets = [], npcs = [], customers = [], trees = [], crates = [];
+const bldgs = [], people = [], props = [];  // everything a Blender model can replace
 let bizSlot = null, rivalSlot = null, loc2Slot = null, bubble = null, bubbleText = '';
 const keys = new Set(); let joy = {x:0, y:0};
 const C = {grass:0x9DAA74, road:0x6B6459, pave:0xC4B79C, walk:0xC9BCA2, ink:0x23201A, door:0x3A2E24, glass:0xBFD1D6, skin:[0xE8C4A0, 0xC99A70, 0x8D5B3C, 0xF1D3B8]};
@@ -1416,10 +1424,12 @@ function makeBuilding(o){
   const swap = o.face === 'e' || o.face === 'w', hw = (swap ? d : w)/2, hd = (swap ? w : d)/2;
   const box = {minX:o.x - hw, maxX:o.x + hw, minZ:o.z - hd, maxZ:o.z + hd, on:true}; obstacles.push(box);
   const v = new THREE.Vector3(0, 0, d/2 + 1.7).applyAxisAngle(new THREE.Vector3(0, 1, 0), ROT[o.face]);
-  return {group:g, box, door:{x:o.x + v.x, z:o.z + v.z}, face:o.face};
+  const slot = {group:g, box, door:{x:o.x + v.x, z:o.z + v.z}, face:o.face, roles:[].concat(o.role || []), variant:o.variant || 0, tint:o.tint || null, stand:g.children.filter(c => c !== sign), extras:[]};
+  bldgs.push(slot); dressBuilding(slot); return slot;
 }
-function makePerson(shirt, pants, skin, hair){
+function makePerson(shirt, pants, skin, hair, role = 'townsperson', variant = 0){
   const g = new THREE.Group(), p = {};
+  g.userData.look = {shirt, pants, skin, hair, roles: role === 'avatar' ? ['avatar', 'townsperson'] : ['townsperson', 'avatar'], variant};
   p.legL = addBox(g, 0.28, 0.8, 0.3, pants, -0.17, 0.4, 0); p.legR = addBox(g, 0.28, 0.8, 0.3, pants, 0.17, 0.4, 0);
   [p.legL, p.legR].forEach(l => { l.geometry.translate(0, -0.4, 0); l.position.y = 0.8; });
   addBox(g, 0.72, 0.8, 0.42, shirt, 0, 1.2, 0);
@@ -1427,13 +1437,14 @@ function makePerson(shirt, pants, skin, hair){
   [p.armL, p.armR].forEach(a => { a.geometry.translate(0, -0.33, 0); a.position.y = 1.55; });
   addBox(g, 0.5, 0.5, 0.5, skin, 0, 1.86, 0); addBox(g, 0.54, 0.16, 0.54, hair, 0, 2.16, 0);
   addBox(g, 0.08, 0.08, 0.02, C.ink, -0.11, 1.9, 0.26, false); addBox(g, 0.08, 0.08, 0.02, C.ink, 0.11, 1.9, 0.26, false);
-  g.userData.p = p; scene.add(g); return g;
+  g.userData.p = p; scene.add(g); people.push(g); dressPerson(g); return g;
 }
 function animatePerson(g, t, moving){ const p = g.userData.p, s = moving ? Math.sin(t*10)*0.6 : 0; p.legL.rotation.x = s; p.legR.rotation.x = -s; p.armL.rotation.x = -s*0.8; p.armR.rotation.x = s*0.8; }
 function makeTree(x, z, s = 1){
   const g = new THREE.Group(); addBox(g, 0.4*s, 1.6*s, 0.4*s, 0x6A4B32, 0, 0.8*s, 0);
   const leaves = new THREE.Mesh(new THREE.IcosahedronGeometry(1.4*s, 0), mat(0x5E8A44)); leaves.position.y = 2.6*s; leaves.castShadow = true; g.add(leaves);
-  g.position.set(x, 0, z); scene.add(g); trees.push(leaves); obstacles.push({minX:x - 0.4, maxX:x + 0.4, minZ:z - 0.4, maxZ:z + 0.4, on:true});
+  g.position.set(x, 0, z); scene.add(g); obstacles.push({minX:x - 0.4, maxX:x + 0.4, minZ:z - 0.4, maxZ:z + 0.4, on:true});
+  const t = {group:g, s, stand:g.children.slice(), mats:[leaves.material], variant:trees.length}; trees.push(t); dressTree(t);
 }
 function makeSprite(text){ const s = new THREE.Sprite(new THREE.SpriteMaterial({map:textTexture(text, {w:640, h:150, size:34, bg:'#FBF8F2'}), depthTest:false})); s.scale.set(6.4, 1.5, 1); s.renderOrder = 10; scene.add(s); return s; }
 
@@ -1454,30 +1465,31 @@ function initWorld(){
   flat(27.5, 23.5, C.pave, 0, 0, 0.03);
   for (const z of [-11.2, 11.2]) for (let x = -13; x <= 13; x += 2) flat(1.2, 0.25, 0xF2EDE3, x, z === -11.2 ? -14 : 14, 0.04);
   // Kiosk (newspaper stand)
-  const kiosk = makeBuilding({x:0, z:-2, w:3, d:2.4, h:2.8, color:0x2F5D3A, roofColor:0x23201A, face:'s', sign:'The Ledger', window:0xF2EDE3});
+  const kiosk = makeBuilding({x:0, z:-2, w:3, d:2.4, h:2.8, color:0x2F5D3A, roofColor:0x23201A, face:'s', sign:'The Ledger', window:0xF2EDE3, role:'kiosk'});
   targets.push({id:'news', name:'the newspaper stand', door:kiosk.door, r:2.8});
   // Bank, library, investors
-  const bank = makeBuilding({x:-28, z:-5, w:9, d:8, h:6, color:0xCFC6B5, roofColor:0x8A8172, face:'e', sign:'Bank'});
-  for (const dz of [-2.6, -1, 1, 2.6]){ const col = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 5, 10), mat(0xEDE6D8)); col.position.set(-23.1, 2.5, -5 + dz); col.castShadow = true; scene.add(col); }
+  const bank = makeBuilding({x:-28, z:-5, w:9, d:8, h:6, color:0xCFC6B5, roofColor:0x8A8172, face:'e', sign:'Bank', role:'bank'});
+  for (const dz of [-2.6, -1, 1, 2.6]){ const col = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 5, 10), mat(0xEDE6D8)); col.position.set(-23.1, 2.5, -5 + dz); col.castShadow = true; scene.add(col); bank.extras.push(col); }
+  if (bank.dressed) bank.extras.forEach(c => c.visible = false);
   targets.push({id:'bank', name:'the bank', door:bank.door, r:3});
-  const lib = makeBuilding({x:-28, z:12, w:9, d:8, h:5.5, color:0xB8A27A, roofColor:0x6A4B32, roof:'gable', face:'e', sign:'Library'});
+  const lib = makeBuilding({x:-28, z:12, w:9, d:8, h:5.5, color:0xB8A27A, roofColor:0x6A4B32, roof:'gable', face:'e', sign:'Library', role:'library'});
   targets.push({id:'library', name:'the library', door:lib.door, r:3});
-  const inv = makeBuilding({x:12, z:28, w:7, d:7, h:16, color:0x6F7C83, roofColor:0x4A555C, face:'n', sign:'Investors', signBg:'#23201A', signFg:'#EDE6D8'});
+  const inv = makeBuilding({x:12, z:28, w:7, d:7, h:16, color:0x6F7C83, roofColor:0x4A555C, face:'n', sign:'Investors', signBg:'#23201A', signFg:'#EDE6D8', role:'investors'});
   targets.push({id:'investor', name:'the investors’ tower', door:inv.door, r:3});
   // Houses and trees
   [[-12, 28, 0xD9C3A0, 0xA6532E], [-26, 28, 0xC9D2C1, 0x6A4B32], [28, 26, 0xE2D3C0, 0x93424F], [30, -26, 0xD6C7A8, 0x4A6274], [-30, -27, 0xE0D0B8, 0x87661C], [-14, -30, 0xD3C7B6, 0x2E6A63]].forEach(([x, z, c, r], i) =>
-    makeBuilding({x, z, w:6, d:6, h:4, color:c, roofColor:r, roof:'gable', face: z > 0 ? 'n' : 's', sign:['Home','Flats','Home','Workshop','Home','Bakery'][i]}));
+    makeBuilding({x, z, w:6, d:6, h:4, color:c, roofColor:r, roof:'gable', face: z > 0 ? 'n' : 's', sign:['Home','Flats','Home','Workshop','Home','Bakery'][i], role:'house', variant:i, tint:{wall:c, roof:r}}));
   [[-8, -8], [8, -8], [-8, 8], [8, 8], [-22, 22], [22, 20], [-22, -20], [24, -16], [-38, 4], [38, 10], [6, 40], [-6, -40], [40, -36], [-40, 34], [36, 36], [-36, -38]].forEach(([x, z], i) => makeTree(x, z, i < 4 ? 0.8 : 1 + (i % 3)*0.15));
-  for (let i = 0; i < 6; i++){ const b = addBox(scene, 2, 0.45, 0.6, 0x6A4B32, i < 3 ? -5 : 5, 0.45, -6 + (i % 3)*6); obstacles.push({minX:b.position.x - 1, maxX:b.position.x + 1, minZ:b.position.z - 0.3, maxZ:b.position.z + 0.3, on:true}); }
+  for (let i = 0; i < 6; i++){ const b = addBox(scene, 2, 0.45, 0.6, 0x6A4B32, i < 3 ? -5 : 5, 0.45, -6 + (i % 3)*6); addProp(b, 'bench', 0.45, i); obstacles.push({minX:b.position.x - 1, maxX:b.position.x + 1, minZ:b.position.z - 0.3, maxZ:b.position.z + 0.3, on:true}); }
   // Player
-  player = makePerson(0x2F5D3A, 0x23201A, C.skin[0], 0x3A2E24); player.position.set(0, 0, 6);
+  player = makePerson(0x2F5D3A, 0x23201A, C.skin[0], 0x3A2E24, 'avatar'); player.position.set(0, 0, 6);
   // Pedestrians
   const loop = [[-11, -9.5], [11, -9.5], [11, 9.5], [-11, 9.5]], outer = [[-19, -17], [19, -17], [19, 17], [-19, 17]];
   const shirts = [0xA6532E, 0x4A6274, 0x87661C, 0x93424F, 0x6A4A62, 0x2E6A63, 0xC9BCA2, 0x6B6355];
-  for (let i = 0; i < 12; i++){ const path = i % 2 ? loop : outer, n = makePerson(shirts[i % shirts.length], i % 3 ? 0x3A3A33 : 0x4A6274, C.skin[i % 4], [0x3A2E24, 0x23201A, 0x8C6A3E, 0xB9A58A][i % 4]);
+  for (let i = 0; i < 12; i++){ const path = i % 2 ? loop : outer, n = makePerson(shirts[i % shirts.length], i % 3 ? 0x3A3A33 : 0x4A6274, C.skin[i % 4], [0x3A2E24, 0x23201A, 0x8C6A3E, 0xB9A58A][i % 4], 'townsperson', i);
     npcs.push({g:n, path:i % 4 === 0 ? path.slice().reverse() : path, s:i*7.3, speed:1.6 + (i % 3)*0.35}); }
-  for (let i = 0; i < 16; i++){ const n = makePerson(shirts[(i + 3) % shirts.length], 0x3A3A33, C.skin[(i + 1) % 4], [0x3A2E24, 0x23201A, 0x8C6A3E][i % 3]); n.visible = false; customers.push(n); }
-  for (let i = 0; i < 30; i++){ const b = addBox(scene, 0.8, 0.6, 0.8, 0xB58B55, 0, 0.3, 0); b.visible = false; crates.push(b); }
+  for (let i = 0; i < 16; i++){ const n = makePerson(shirts[(i + 3) % shirts.length], 0x3A3A33, C.skin[(i + 1) % 4], [0x3A2E24, 0x23201A, 0x8C6A3E][i % 3], 'townsperson', i + 12); n.visible = false; customers.push(n); }
+  for (let i = 0; i < 30; i++){ const b = addBox(scene, 0.8, 0.6, 0.8, 0xB58B55, 0, 0.3, 0); b.visible = false; crates.push(b); addProp(b, 'crate', 0.3, i); }
   bubble = makeSprite('…'); bubble.visible = false;
   camPos = new THREE.Vector3(0, 14, 20);
   window.addEventListener('resize', resize); resize();
@@ -1492,20 +1504,20 @@ const BIZ_LOOK = {
   agency:{color:0xD5C4CF, roofColor:0x6A4A62, sign:['Design Studio', 'Agency']},
   idea:{color:0xD8D0BE, roofColor:0x2F5D3A, sign:['My business']},
 };
-function clearSlot(slot){ if (!slot) return; scene.remove(slot.group); slot.box.on = false; }
+function clearSlot(slot){ if (!slot) return; scene.remove(slot.group); slot.box.on = false; const i = bldgs.indexOf(slot); if (i >= 0) bldgs.splice(i, 1); }
 function rebuildBusiness(){
   if (!scene) return;
   [bizSlot, rivalSlot, loc2Slot].forEach(clearSlot); bizSlot = rivalSlot = loc2Slot = null;
   for (let i = targets.length - 1; i >= 0; i--) if (['desk','rival','loc2'].includes(targets[i].id)) targets.splice(i, 1);
   const g = DB.game, look = g ? BIZ_LOOK[g.biz] : {color:0xDAD2C2, roofColor:0x8A8172, sign:['For rent', 'Start a business in Menu']};
   const sign = g && g.biz === 'idea' ? [g.idea.name.slice(0, 22), 'My business'] : look.sign;
-  bizSlot = makeBuilding(Object.assign({x:0, z:-27, w:11, d:9, h:look.h || 5.5, face:'s'}, look, {sign}));
+  bizSlot = makeBuilding(Object.assign({x:0, z:-27, w:11, d:9, h:look.h || 5.5, face:'s'}, look, {sign, role: g ? 'business:' + g.biz : 'business:empty'}));
   targets.push({id:'desk', name: g ? bizName() : 'the empty shop', door:bizSlot.door, r:3.2});
   if (g){ const rl = Object.assign({}, look, {color:0xC8B8A6, roofColor:0x6B6355, awning:look.awning ? 0x6B6355 : undefined, sign:[RIVAL_NAME[g.biz], 'Your rival']});
-    rivalSlot = makeBuilding(Object.assign({x:28, z:3, w:9, d:8, h:5}, rl, {face:'w'})); rivalSlot.group.visible = false; rivalSlot.box.on = false;
+    rivalSlot = makeBuilding(Object.assign({x:28, z:3, w:9, d:8, h:5}, rl, {face:'w', role:['rival:' + g.biz, 'business:' + g.biz], tint:{wall:0xC8B8A6, roof:0x6B6355}})); rivalSlot.group.visible = false; rivalSlot.box.on = false;
     targets.push({id:'rival', name:RIVAL_NAME[g.biz], door:rivalSlot.door, r:3, rival:true});
     const l2 = {cafe:['Café', 'Second location'], saas:['Sales Office', 'Enterprise team'], shop:['Warehouse 2', 'New product line'], agency:['Design Studio', 'Second studio'], idea:['My business', 'Second site']}[g.biz];
-    loc2Slot = makeBuilding(Object.assign({}, look, {x:24, z:-27, w:9, d:8, h:5, face:'s', sign:l2})); loc2Slot.group.visible = false; loc2Slot.box.on = false;
+    loc2Slot = makeBuilding(Object.assign({}, look, {x:24, z:-27, w:9, d:8, h:5, face:'s', sign:l2, role:'business:' + g.biz})); loc2Slot.group.visible = false; loc2Slot.box.on = false;
     targets.push({id:'loc2', name:l2.join(' · '), door:loc2Slot.door, r:3, loc2:true}); }
   syncWorld();
 }
@@ -1525,7 +1537,7 @@ function syncWorld(){
   crates.forEach((b, i) => { b.visible = i < nc; if (bizSlot){ b.position.set(bizSlot.door.x - 3 - (i % 4)*0.9, 0.3 + Math.floor(i/12)*0.6, bizSlot.door.z - 1.2 - (Math.floor(i/4) % 3)*0.9); } });
   // Seasons
   const moy = g ? g.month % 12 : 4, col = !g || !F.season ? 0x5E8A44 : [0xC9D3C2, 0xC9D3C2, 0x7FA65A, 0x7FA65A, 0x6E9A4C, 0x4E7D3A, 0x4E7D3A, 0x5A7F3C, 0xB8893A, 0xC07A32, 0xA6532E, 0xC9D3C2][moy];
-  trees.forEach(t => t.material.color.setHex(col));
+  trees.forEach(t => { t.season = col; t.mats.forEach(m => m.color.setHex(col)); });
   bubbleText = g && g.last && g.last.voices && g.last.voices.length ? g.last.voices[0][1] : '';
   if (bubbleText && bubble.userData.text !== bubbleText){ bubble.material.map.dispose(); bubble.material.map = textTexture(['“' + bubbleText + '”'], {w:900, h:150, size:40}); bubble.material.needsUpdate = true; bubble.scale.set(9, 1.5, 1); bubble.userData.text = bubbleText; }
 }
@@ -1592,6 +1604,128 @@ function frame(now){
   requestAnimationFrame(frame);
 }
 
+
+/* =========================================================
+   Blender models: world/models/manifest.json lists .glb files exported
+   with tools/blender/runway_town_exporter.py. Each model replaces a
+   code-built stand-in by role. Anything missing keeps its stand-in.
+   ========================================================= */
+const MODELS = {};          // role -> [model info]; several files for one role make variants
+const baseName = n => (n || '').replace(/\.?\d{3}$/, '');
+const isCol = o => /^COL_/.test(o.name || '');
+function pickModel(roles, variant){ for (const r of roles){ const a = MODELS[r]; if (a && a.length) return a[(variant || 0) % a.length]; } return null; }
+function convertMaterials(root){
+  // glTF colours are linear; this scene draws hex colours as-is, so convert back and use the town's cheaper materials.
+  const cache = new Map();
+  const conv = m => { if (!m) return m; if (cache.has(m)) return cache.get(m);
+    const p = {color: m.color ? m.color.clone().convertLinearToSRGB() : new THREE.Color(0xffffff), map: m.map || null, transparent: !!m.transparent, opacity: m.opacity, side: m.side, vertexColors: !!m.vertexColors};
+    if (p.map) p.map.encoding = THREE.LinearEncoding;
+    const glossy = typeof m.roughness === 'number' && m.roughness < 0.6;
+    const n = glossy ? new THREE.MeshPhongMaterial(Object.assign(p, {shininess: 12 + (1 - m.roughness)*60, specular: 0x2B2B2B})) : new THREE.MeshLambertMaterial(p);
+    n.name = m.name || ''; const k = /^swap_(\w+)/.exec(n.name); n.userData.swap = k ? k[1] : null;
+    cache.set(m, n); return n; };
+  root.traverse(o => { if (!o.isMesh) return; o.castShadow = true; o.receiveShadow = true; o.material = Array.isArray(o.material) ? o.material.map(conv) : conv(o.material); });
+}
+function analyse(root, file, role){
+  convertMaterials(root); root.updateMatrixWorld(true);
+  const info = {root, file, role, box: new THREE.Box3(), col: null, markers: {}, parts: {}};
+  root.traverse(o => {
+    const n = baseName(o.name);
+    if (isCol(o) && o.isMesh){ o.geometry.computeBoundingBox(); info.col = o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld); return; }
+    if (o.isMesh){ o.geometry.computeBoundingBox(); info.box.union(o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld)); }
+    if (['door', 'sign', 'counter', 'queue_start', 'stock_spot', 'seat_1', 'seat_2'].includes(n) && !info.markers[n]) info.markers[n] = o.getWorldPosition(new THREE.Vector3());
+    if (['head', 'body', 'arm_L', 'arm_R', 'leg_L', 'leg_R'].includes(n)) info.parts[n] = true;
+  });
+  if (info.box.isEmpty()) info.box.set(new THREE.Vector3(-0.5, 0, -0.5), new THREE.Vector3(0.5, 1, 0.5));
+  return info;
+}
+function cloneModel(m, tint){
+  const c = m.root.clone(true);
+  c.traverse(o => { if (isCol(o)) o.visible = false;
+    if (o.isMesh && tint){ const sw = mm => { const k = mm && mm.userData.swap; if (!k || tint[k] === undefined) return mm; const n = mm.clone(); n.color.setHex(tint[k]); n.userData.swap = k; return n; };
+      o.material = Array.isArray(o.material) ? o.material.map(sw) : sw(o.material); } });
+  return c;
+}
+function dressBuilding(slot){
+  const m = pickModel(slot.roles, slot.variant); if (!m || slot.dressed === m) return;
+  if (slot.model) slot.group.remove(slot.model);
+  slot.stand.concat(slot.extras).forEach(o => o.visible = false);
+  slot.model = cloneModel(m, slot.tint); slot.group.add(slot.model); slot.dressed = m;
+  const sign = slot.group.userData.sign, sp = m.markers.sign;
+  if (sp) sign.position.set(sp.x, sp.y, sp.z + 0.03); else sign.position.set(0, Math.min(m.box.max.y - 0.8, 3.6), m.box.max.z + 0.06);
+  slot.group.updateMatrixWorld(true);
+  const wb = (m.col || m.box).clone().applyMatrix4(slot.group.matrixWorld);
+  Object.assign(slot.box, {minX: wb.min.x, maxX: wb.max.x, minZ: wb.min.z, maxZ: wb.max.z});
+  const dl = m.markers.door ? m.markers.door.clone().add(new THREE.Vector3(0, 0, 1.2)) : new THREE.Vector3(0, 0, m.box.max.z + 1.7);
+  dl.y = 0; const dw = slot.group.localToWorld(dl); slot.door.x = dw.x; slot.door.z = dw.z;
+}
+function dressPerson(g){
+  const L = g.userData.look, m = pickModel(L.roles, L.variant); if (!m || L.dressed === m) return;
+  g.children.slice().forEach(ch => g.remove(ch));
+  const obj = cloneModel(m, {shirt: L.shirt, pants: L.pants, skin: L.skin, hair: L.hair}); g.add(obj); L.dressed = m;
+  const f = n => obj.getObjectByName(n) || new THREE.Object3D();
+  g.userData.p = {legL: f('leg_L'), legR: f('leg_R'), armL: f('arm_L'), armR: f('arm_R')};
+}
+function dressTree(t){
+  const m = pickModel(['tree'], t.variant); if (!m || t.dressed === m) return;
+  if (t.model) t.group.remove(t.model);
+  t.stand.forEach(o => o.visible = false);
+  t.model = cloneModel(m, {leaves: t.season !== undefined ? t.season : 0x5E8A44}); t.model.scale.setScalar(t.s); t.group.add(t.model); t.dressed = m;
+  t.mats = []; t.model.traverse(o => { if (o.isMesh) [].concat(o.material).forEach(mm => { if (mm.userData.swap === 'leaves' && !t.mats.includes(mm)) t.mats.push(mm); }); });
+}
+function addProp(mesh, role, lift, variant){ const pr = {mesh, role, lift, variant}; props.push(pr); dressProp(pr); }
+function dressProp(pr){
+  const m = pickModel([pr.role], pr.variant); if (!m || pr.dressed === m) return;
+  if (pr.model) pr.mesh.remove(pr.model);
+  pr.mesh.material.visible = false; pr.mesh.castShadow = false;
+  pr.model = cloneModel(m, null); pr.model.position.y = -pr.lift; pr.mesh.add(pr.model); pr.dressed = m;
+}
+function applyModels(){ if (!scene) return; bldgs.forEach(dressBuilding); people.forEach(dressPerson); trees.forEach(dressTree); props.forEach(dressProp); syncWorld(); }
+function modelCount(){ return Object.values(MODELS).reduce((n, a) => n + a.length, 0); }
+function modelSummary(){
+  const n = modelCount(); if (!n) return 'The town uses code-built stand-ins; no Blender models are loaded.';
+  return `${n} Blender model${n === 1 ? '' : 's'} in use: ${Object.keys(MODELS).filter(r => MODELS[r].length).join(', ')}.`;
+}
+function addModel(role, gltf, file, replace){
+  const info = analyse(gltf.scene, file, role);
+  if (replace || !MODELS[role]) MODELS[role] = [];
+  MODELS[role].push(info); return info;
+}
+function roleFromName(name){
+  const n = name.toLowerCase().replace(/\.(glb|gltf)$/, '');
+  let k = /^(?:business-)?(cafe|saas|shop|agency|idea)(?:-exterior)?$/.exec(n); if (k) return 'business:' + k[1];
+  k = /^rival-(cafe|saas|shop|agency|idea)/.exec(n); if (k) return 'rival:' + k[1];
+  k = /^(avatar|townsperson|tree|bench|crate|house|kiosk|bank|library|investors)\b/.exec(n); return k ? k[1] : null;
+}
+function loadModels(){
+  if (typeof THREE.GLTFLoader !== 'function') return;
+  const loader = new THREE.GLTFLoader();
+  fetch('models/manifest.json', {cache: 'no-cache'}).then(r => r.ok ? r.json() : null).then(man => {
+    if (!man || !Array.isArray(man.models)) return;
+    return Promise.all(man.models.map(e => new Promise(done => loader.load('models/' + e.file, gl => {
+      try { const role = e.role || gl.scene.userData.rt_role || roleFromName(e.file.split('/').pop()); if (role) addModel(role, gl, e.file, false); }
+      catch(err){ console.warn('Runway Town: could not use model', e.file, err); }
+      done(); }, undefined, () => { console.warn('Runway Town: could not load model', e.file); done(); }))));
+  }).then(() => { if (modelCount()) applyModels(); }).catch(() => {});
+}
+// Drop a .glb from Blender onto the town to try it (kept until reload).
+const dropHint = document.createElement('div'); dropHint.className = 'drophint'; dropHint.hidden = true;
+dropHint.innerHTML = '<div><b>Drop a .glb to try it in the town</b><span>Exported from Blender with the Runway add-on</span></div>'; document.body.appendChild(dropHint);
+const hasFiles = e => e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files');
+addEventListener('dragover', e => { if (!hasFiles(e) || !scene) return; e.preventDefault(); dropHint.hidden = false; });
+addEventListener('dragleave', e => { if (!e.relatedTarget) dropHint.hidden = true; });
+addEventListener('drop', e => { if (!hasFiles(e)) return; e.preventDefault(); dropHint.hidden = true; if (!scene || typeof THREE.GLTFLoader !== 'function') return toast('3D models need WebGL and the glTF loader');
+  Array.from(e.dataTransfer.files).forEach(f => tryModelFile(f)); });
+function tryModelFile(f){
+  if (!/\.glb$/i.test(f.name)){ toast(f.name + ' is not a .glb file'); return Promise.resolve(null); }
+  return f.arrayBuffer().then(buf => new Promise(res => new THREE.GLTFLoader().parse(buf, '', gl => {
+    const role = gl.scene.userData.rt_role || roleFromName(f.name);
+    if (!role){ toast('Unknown role for ' + f.name + '. Export it with the Runway add-on.'); return res(null); }
+    if (/^interior:/.test(role)){ toast('Interiors are not shown in the town yet'); return res(null); }
+    addModel(role, gl, f.name, true); applyModels(); toast(f.name + ' now shows as ' + role); res(role);
+  }, () => { toast('Could not read ' + f.name); res(null); })));
+}
+
 /* ---------- Start ---------- */
 let webgl = typeof THREE !== 'undefined';
 if (webgl){ try { initWorld(); } catch(e){ webgl = false; } }
@@ -1600,11 +1734,11 @@ if (!webgl){
   d.innerHTML = `<div><p>Runway Town needs 3D graphics (WebGL), which this browser or device didn’t provide.</p><p style="margin-top:12px"><a class="btn primary" href="${esc(CLASSIC_URL)}" target="_blank" rel="noopener">Play Classic Runway instead ↗</a></p></div>`;
   document.body.appendChild(d);
 } else {
-  rebuildBusiness(); render();
+  rebuildBusiness(); render(); loadModels();
   if (!DB.game || DB.game.status !== 'playing') showSetup();
   requestAnimationFrame(t => { last = t; frame(t); });
 }
-window.__town = {DB:() => DB, runMonth, chooseEvent, startGame, openPanel, player:() => player, targets};
+window.__town = {DB:() => DB, runMonth, chooseEvent, startGame, openPanel, player:() => player, targets, MODELS, tryModelFile, slots:() => ({bldgs, bizSlot, people, trees, props})};
 })();
 </script>
 </body>

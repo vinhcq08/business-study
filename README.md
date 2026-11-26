@@ -61,6 +61,28 @@ A 3D town built on the same Runway engine, numbers, levels and events. Walk arou
 
 It uses Three.js (r128) from cdnjs. If 3D graphics aren't available, it links to Classic Runway instead. The town keeps its own save, separate from Classic Runway. "Use my idea" is only in Classic Runway for now.
 
+## 3D models from Blender
+
+Every building, person, tree, bench and crate in Runway Town can be replaced by a model you make in Blender. Until a model exists, the town keeps its code-built stand-in, so you can replace things one at a time.
+
+**1. Install the add-on.** In Blender 4.2 or newer: Edit › Preferences › Add-ons › Install from Disk, pick `tools/blender/runway_town_exporter.py`, and tick *Runway Town Exporter*. Press N in the 3D Viewport and open the **Runway** tab.
+
+**2. Build.** *Set up scene* switches to metres and adds the palette (`pal_*` colours and `swap_*` parts the game recolours). The starter buttons add a person, building, tree, bench or crate that already follows every rule; edit them or build your own. *Add marker* places the empties the game hooks into (`door`, `sign`, …), and *Add collision box* adds `COL_body`.
+
+**3. Check and export.** Choose the type and what it replaces in town, and set *Models folder* to `world/models` in your copy of this repository. *Check model* lists problems in the panel. *Export to game* checks again, saves the .glb in the right subfolder (`characters`, `buildings`, `props` or `interiors`) and adds it to `world/models/manifest.json`. Commit and push both, and the town on GitHub Pages loads the model.
+
+**Try before you commit.** Drag a .glb onto the town page and it replaces its stand-in until you reload. The [model check page](world/model-check.html) previews any .glb the way the town draws it, next to a 2 m person and a 1 m grid, and runs the same checks as the add-on: size, base and facing, triangle and material budgets, palette names, body parts and markers.
+
+The rules (scale, facing, names, budgets) are section 13 of the game design document.
+
+| Role | Replaces | Notes |
+| --- | --- | --- |
+| `avatar`, `townsperson` | The player and everyone else | Several townsperson files become variants. With only an avatar, everyone uses it in their own colours. |
+| `business:cafe` … `business:idea` | Your business and its second location | Customers queue at the `door` marker. |
+| `rival:cafe` … | The rival | Falls back to the business model with grey `swap_wall` and `swap_roof`. |
+| `kiosk`, `bank`, `library`, `investors`, `house` | Town buildings | Houses keep their own wall and roof colours through `swap_wall` and `swap_roof`. |
+| `tree`, `bench`, `crate` | Props | `swap_leaves` follows the seasons. |
+
 ## Privacy
 
 Progress for both tools is saved in your own browser only (`localStorage`). Nothing is sent anywhere, and each visitor has their own separate progress.
@@ -69,6 +91,9 @@ Progress for both tools is saved in your own browser only (`localStorage`). Noth
 
 - `index.html`: Business Skill Tree, one file with no build step
 - `game/index.html`: Runway, one file with no build step
-- `world/index.html`: Runway Town, one file with no build step (loads Three.js from cdnjs)
+- `world/index.html`: Runway Town, one file with no build step (loads Three.js from cdnjs and its glTF loader from jsDelivr)
+- `world/model-check.html`: model check page for .glb files
+- `world/models/`: Blender models and `manifest.json`, the list the town loads
+- `tools/blender/runway_town_exporter.py`: the Blender add-on
 
 Both load fonts from Google Fonts.
