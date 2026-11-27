@@ -266,6 +266,9 @@ html,body{height:100%;overflow:hidden}
   .hud-btns .btn{padding:8px 9px;min-height:40px;font-size:10.5px}
 }
 .toast{bottom:calc(92px + env(safe-area-inset-bottom, 0px))}
+.say{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom, 0px) + 84px);max-width:min(460px, calc(100% - 32px));background:var(--sheet);border:1px solid var(--ink);border-left:5px solid var(--accent);padding:12px 16px;display:flex;flex-direction:column;gap:4px;z-index:6;box-shadow:0 6px 18px rgba(0,0,0,.18)}
+.say q{font:italic 400 19px/1.35 var(--f-display)}
+.say span{font:500 11px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .drophint{position:fixed;inset:12px;display:flex;align-items:center;justify-content:center;border:3px dashed var(--ink);background:color-mix(in srgb, var(--paper) 82%, transparent);z-index:30;pointer-events:none;text-align:center}
 .drophint div{display:flex;flex-direction:column;gap:6px;padding:20px}
 .drophint b{font:500 26px/1.2 var(--f-display)}
@@ -1203,7 +1206,7 @@ function renderPanel(){
   $('#sheetTitle').textContent = S0.title(); $('#sheetKicker').textContent = S0.kicker;
   $('#sheet').style.setProperty('--c', g ? (g.biz === 'idea' ? 'var(--accent)' : BIZ[g.biz].color) : 'var(--ink)');
   const body = $('#sheetBody'), top = body.dataset.panel === panel ? body.scrollTop : 0; body.dataset.panel = panel;
-  body.innerHTML = ({desk:deskHtml, news:newsHtml, bank:bankHtml, investor:investorHtml, library:libraryHtml, places:placesHtml, menu:menuHtml})[panel](g);
+  body.innerHTML = ({desk:deskHtml, station:stationHtml, rival:rivalHtml, news:newsHtml, bank:bankHtml, investor:investorHtml, library:libraryHtml, places:placesHtml, menu:menuHtml})[panel](g);
   body.scrollTop = top;
 }
 function decHtml(g, decs){
@@ -1239,10 +1242,11 @@ function newsHtml(g){
     <div class="stats"><div><b class="${g.bs.cash < 0 ? 'neg' : ''}">${money(g.bs.cash)}</b><span>Cash</span></div><div><b class="${o.ni < 0 ? 'neg' : ''}">${money(o.ni)}</b><span>Net profit</span></div></div>
     ${chart(g)}
     <div>${F.stmts ? statementTabs(g) : `<h3 style="margin-bottom:8px">Income statement</h3>${ledger(o.rows)}`}</div>
-    <div><h3 style="margin-bottom:8px">Key numbers</h3><div class="metrics">${o.metrics.concat(F.equity ? equityMetrics(g) : []).map(([l, v]) => `<div><span>${esc(l)}</span><b>${esc(v)}</b></div>`).join('')}</div></div>
-    ${o.voices && o.voices.length ? `<div style="display:flex;flex-direction:column;gap:10px"><h3>Overheard in town</h3><div class="voices">${o.voices.slice(0, 3).map(([w, q]) => `<div class="voice"><q>${esc(q)}</q><span>${esc(w)}</span></div>`).join('')}</div></div>` : ''}
+    <div><h3 style="margin-bottom:8px">Key numbers</h3><div class="metrics">${visibleMetrics(g, o.metrics).concat(F.equity ? equityMetrics(g) : []).map(([l, v]) => `<div><span>${esc(l)}</span><b>${esc(v)}</b></div>`).join('')}</div></div>
+    ${o.voices && o.voices.length && g.heard !== g.month ? `<div style="display:flex;flex-direction:column;gap:10px"><h3>Overheard in town</h3><p class="small muted">Customers at your business have opinions about last month. Walk over and ask one.</p></div>` : ''}
+    ${o.voices && o.voices.length && g.heard === g.month ? `<div style="display:flex;flex-direction:column;gap:10px"><h3>Overheard in town</h3><div class="voices">${o.voices.slice(0, 3).map(([w, q]) => `<div class="voice"><q>${esc(q)}</q><span>${esc(w)}</span></div>`).join('')}</div></div>` : ''}
     <div style="display:flex;flex-direction:column;gap:10px"><h3>What happened and why</h3>
-      <div class="why">${o.why.map(w => `<div class="card"><b>${esc(w.t)}</b><p>${esc(w.p)}</p>${g.formulas ? `<div class="f">${esc(w.f)}</div>` : ''}${w.b ? `<p class="bm">${esc(w.b)}</p>` : ''}<a href="${esc(TREE_URL)}" target="_blank" rel="noopener">Study: ${esc(SUBJ[w.s])} ↗</a></div>`).join('')}</div></div>
+      <div class="why">${visibleWhy(g, o.why).map(w => `<div class="card"><b>${esc(w.t)}</b><p>${esc(w.p)}</p>${g.formulas ? `<div class="f">${esc(w.f)}</div>` : ''}${w.b ? `<p class="bm">${esc(w.b)}</p>` : ''}<a href="${esc(TREE_URL)}" target="_blank" rel="noopener">Study: ${esc(SUBJ[w.s])} ↗</a></div>`).join('')}</div></div>
     <div class="row"><button class="btn primary" data-act="go-desk">Back to my business</button></div>`;
 }
 function bankHtml(g){
@@ -1569,8 +1573,10 @@ function syncWorld(){
   // Seasons
   const moy = g ? g.month % 12 : 4, col = !g || !F.season ? 0x5DBB4A : [0xE8F1F2, 0xE8F1F2, 0x8EDB5E, 0x8EDB5E, 0x6CCB4F, 0x5DBB4A, 0x5DBB4A, 0x58B043, 0xF4C430, 0xF39C12, 0xE74C3C, 0xE8F1F2][moy];
   trees.forEach(t => { t.season = col; t.mats.forEach(m => m.color.setHex(col)); });
+  for (let i = targets.length - 1; i >= 0; i--) if (targets[i].talk) targets.splice(i, 1);
+  if (g && customers[0] && customers[0].visible) targets.push({talk:true, name:'a customer', verb:'Ask a customer', door:{x:customers[0].position.x, z:customers[0].position.z}, r:1.7});
   syncInterior();
-  bubbleText = g && g.last && g.last.voices && g.last.voices.length ? g.last.voices[0][1] : '';
+  bubbleText = g && g.last && g.last.voices && g.last.voices.length && g.heard !== g.month ? 'Ask me about last month' : '';
   if (bubbleText && bubble.userData.text !== bubbleText){ bubble.material.map.dispose(); bubble.material.map = textTexture(['“' + bubbleText + '”'], {w:900, h:150, size:40}); bubble.material.needsUpdate = true; bubble.scale.set(9, 1.5, 1); bubble.userData.text = bubbleText; }
 }
 
@@ -1609,8 +1615,9 @@ canvas.addEventListener('touchmove', e => { if (e.touches.length === 2 && pinch)
 let nearTarget = null;
 function interact(){ const t = nearTarget; if (!t) return;
   if (t.exit) return exitInterior();
-  if (t.station) return openPanel('desk');
-  if (t.rival) return toast(`${RIVAL_NAME[DB.game.biz]} is your rival. Their prices show in your monthly report.`);
+  if (t.talk) return talk();
+  if (t.station) return openStation(t.station);
+  if (t.rival) return openPanel('rival');
   if (t.loc2) return openPanel('desk');
   if (t.id === 'desk' && interiorModel()) return enterInterior();
   openPanel(t.id); }
@@ -1874,10 +1881,11 @@ function syncInterior(){
     grp.position.copy(e.p); grp.quaternion.copy(e.q);
     if (seated){ const P = grp.userData.p, hip = P.legL.position.y || 0.62; grp.position.y = e.p.y + 0.05 - hip;
       P.legL.rotation.x = P.legR.rotation.x = -Math.PI/2; P.armL.rotation.x = P.armR.rotation.x = -0.7; }
-    grp.userData.seated = !!seated; grp.userData.t = pv; iDyn.add(grp); iPeople.push(grp); return grp; };
+    grp.userData.seated = !!seated; grp.userData.t = pv; grp.userData.customer = roles[0] === 'townsperson'; iDyn.add(grp); iPeople.push(grp); return grp; };
   const seatOf = o => o && o.userData.M.seat ? o.userData.M.seat[0] : null;
   const turn = q => q.clone().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI));
   if (iRoom.userData.boardPlane){ iRoom.remove(iRoom.userData.boardPlane); iRoom.userData.boardPlane = null; }
+  for (let i = inTargets.length - 1; i >= 0; i--) if (inTargets[i].talk) inTargets.splice(i, 1);
   if (g.biz === 'cafe'){
     take('staff', lvl === 1 ? 1 : d.staff).forEach(e => person(['staff:cafe', 'townsperson'], e, false));
     (M.equip || []).forEach((e, i) => put(i === 0 && lvl >= 4 ? 'furniture:espresso-pro' : 'furniture:espresso-basic', e));
@@ -1910,7 +1918,9 @@ function syncInterior(){
         x.fillStyle = cols[i % cols.length]; x.fillRect(-cw*0.4, -ch*0.35, cw*0.8, ch*0.7); x.fillStyle = '#1F2430'; x.beginPath(); x.arc(0, -ch*0.26, Math.max(4, W*0.008), 0, 7); x.fill();
         x.fillRect(-cw*0.28, -ch*0.08, cw*0.56, ch*0.06); x.fillRect(-cw*0.28, ch*0.06, cw*0.4, ch*0.06); x.restore(); } });
   }
+  addTalkTarget();
 }
+function addTalkTarget(){ const c = iPeople.find(x => x.userData.customer); if (c) inTargets.push({talk:true, name:'a customer', verb:'Ask a customer', door:{x:c.position.x, z:c.position.z}, r:1.6}); }
 function fadeThen(text, fn){ if (reduceMotion()){ fn(); return; } const f = $('#fade'); f.textContent = text; f.classList.add('on'); setTimeout(() => { fn(); f.classList.remove('on'); }, 380); }
 function enterInterior(){
   const m = interiorModel(); if (!m){ openPanel('desk'); return; }
@@ -1931,6 +1941,79 @@ function collideIn(p){
     if (d2 < r*r){ if (d2 > 1e-6){ const dd = Math.sqrt(d2); p.x = cx + dx/dd*r; p.z = cz + dz/dd*r; } else { const opts = [[b.minX - r, p.z], [b.maxX + r, p.z], [p.x, b.minZ - r], [p.x, b.maxZ + r]]; opts.sort((a, c) => Math.hypot(a[0]-p.x, a[1]-p.z) - Math.hypot(c[0]-p.x, c[1]-p.z)); p.x = opts[0][0]; p.z = opts[0][1]; } } }
   p.x = clamp(p.x, iBounds.minX, iBounds.maxX); p.z = clamp(p.z, iBounds.minZ, iBounds.maxZ);
 }
+
+
+/* =========================================================
+   Stations, scouting and talking: the world gives you decisions and information.
+   - Each green ring in your business opens only its own decisions; the room updates as you change them.
+   - Your rival's numbers reach your report only in months you went to look at them.
+   - Customer comments are heard by asking a customer, not printed in the paper.
+   ========================================================= */
+const STATION_DECS = {
+  cafe:{price:['price'], staff:['staff'], stock:['prep', 'quality'], marketing:['mkt']},
+  saas:{price:['price', 'pb', 'pp', 'pe', 'annual'], staff:['devs', 'support', 'reps'], marketing:['mkt']},
+  shop:{price:['price', 'shipfee'], stock:['order', 'quality'], staff:['packers'], marketing:['ads']},
+  agency:{clients:['rate', 'pricing'], staff:['staff'], marketing:['mkt']},
+};
+const STATION_HELP = {price:'Your shop shows the change straight away. Customers react when you run the month.', staff:'Staff appear or leave as you change the number.',
+  stock:'What you buy now is what you can sell.', marketing:'Marketing brings new customers over the coming months.', clients:'Your rate and how you charge decide which clients come to you.'};
+const STATION_NOTE = {staff:'You do all the work yourself at this level. Hiring opens at Level II.', stock:'Nothing to order at this level.', marketing:'Marketing opens at Level II.'};
+let curStation = null, talkIdx = 0, inPend = false;
+SHEETS.station = {title:() => STATION_VERB[curStation] || 'Decisions', kicker:'', needGame:true};
+SHEETS.rival = {title:() => RIVAL_NAME[DB.game.biz], kicker:'Your rival · across the road', needGame:true};
+function openStation(id){ curStation = id; SHEETS.station.kicker = bizName() + ' · decisions'; openPanel('station'); }
+function stationDecs(g, id){
+  const all = decList(g).filter(x => x.id !== 'loan'), map = STATION_DECS[g.biz] || {};
+  all.forEach(x => { if (g.dec[x.id] === undefined) g.dec[x.id] = x.def; });
+  const mine = all.filter(x => (map[id] || []).includes(x.id)), claimed = new Set(Object.values(map).flat());
+  if (id === Object.keys(map)[0]) mine.push(...all.filter(x => !claimed.has(x.id)));   // decisions without a station live at the first one
+  return mine;
+}
+function stationHtml(g){
+  const id = curStation, decs = stationDecs(g, id), F = FEAT(g.level), B = BIZ[g.biz], when = F.season ? MONTHS[g.month % 12] : 'month ' + (g.month + 1);
+  return `<p class="small muted">${esc(STATION_HELP[id] || '')}</p>
+    ${decs.length ? decHtml(g, decs) : `<p class="lede">${esc(STATION_NOTE[id] || 'Nothing to decide here yet.')}</p>`}
+    ${decs.length && g.level > 1 && B.hint && g.formulas ? `<div class="hint" id="hint">${B.hint(g)}</div>` : ''}
+    <div class="row"><button class="btn primary" data-act="run" ${g.event || g.offer ? 'disabled' : ''}>Run ${when}</button><button class="btn" data-act="go-desk">All decisions</button></div>`;
+}
+function schedIn(){ if (inPend) return; inPend = true; requestAnimationFrame(() => { inPend = false; syncInterior(); }); }
+sheetBody.addEventListener('input', () => { if (inside) schedIn(); });
+sheetBody.addEventListener('change', () => { if (inside) schedIn(); });
+
+function rivalHtml(g){
+  const st = g.st, d = g.dec, b = g.biz;
+  g.scout = g.month; save();
+  const theirs = b === 'agency' ? st.rivalR : st.rivalP, mine = b === 'agency' ? d.rate : b === 'saas' ? (d.pp || d.price) : d.price;
+  const f = b === 'cafe' ? money2 : money, unit = {saas:' a month', agency:' an hour'}[b] || '';
+  const label = {cafe:['Their average spend', 'Yours'], saas:['Their Pro plan', 'Your Pro plan'], shop:['Their price per bag', 'Yours'], agency:['Freelancers charge', 'Your rate']}[b] || ['Their price', 'Yours'];
+  const gap = theirs ? (mine - theirs)/theirs : 0;
+  const read = gap > 0.1 ? 'You are noticeably dearer. Price-sensitive customers will drift to them unless you give them a reason to stay.'
+    : gap < -0.1 ? 'You are cheaper. Expect them to cut their price in response, which can start a price war that hurts you both.'
+    : 'Your prices are close, so customers choose on quality and convenience.';
+  return `<p class="lede">You walk past ${esc(RIVAL_NAME[b])} and take a good look.</p>
+    <div class="metrics"><div><span>${esc(label[0])}</span><b>${esc(f(theirs) + unit)}</b></div><div><span>${esc(label[1])}</span><b>${esc(f(mine) + unit)}</b></div></div>
+    <p>${esc(read)}</p>
+    <p class="small muted">Your monthly report includes the rival's numbers only for months when you came to look.</p>
+    <div class="row"><button class="btn primary" data-act="go-desk">Back to my decisions</button></div>`;
+}
+const RIVAL_RE = /rival|competitor|freelancer/i;
+function scouted(g){ return g.scout !== undefined && g.scout >= g.month - 1; }
+function visibleMetrics(g, list){ return scouted(g) ? list : list.filter(([l]) => !RIVAL_RE.test(l)); }
+function visibleWhy(g, list){
+  if (scouted(g)) return list;
+  const hid = list.filter(w => RIVAL_RE.test(w.t)); if (!hid.length) return list;
+  return list.filter(w => !RIVAL_RE.test(w.t)).concat([{t:'Your rival', p:'You didn’t check on your rival last month, so you don’t know their prices. Walk across the road and look before you set yours.', f:'scout the competition', s:hid[0].s}]);
+}
+
+const SMALLTALK = [['Customer', 'Nice place you have here.'], ['Regular', 'I come here most weeks.'], ['Customer', 'Not bad at all.']];
+function talk(){
+  const g = DB.game, v = g && g.last && g.last.voices && g.last.voices.length ? g.last.voices : SMALLTALK;
+  const [who, q] = v[talkIdx % v.length]; talkIdx++;
+  if (g){ g.heard = g.month; save(); }
+  say(q, who); syncWorld();
+}
+const sayEl = document.createElement('div'); sayEl.className = 'say'; sayEl.hidden = true; sayEl.setAttribute('role', 'status'); document.body.appendChild(sayEl);
+function say(q, who){ sayEl.innerHTML = `<q>${esc(q)}</q><span>${esc(who)}</span>`; sayEl.hidden = false; clearTimeout(say.h); say.h = setTimeout(() => { sayEl.hidden = true; }, 6000); }
 
 /* Street pieces from Blender (role street:<file name>) placed around the square. */
 const STREET_SPOTS = [
