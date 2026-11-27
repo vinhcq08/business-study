@@ -59,4 +59,9 @@ Commit each approved model (.blend, .glb and manifest.json) with a short message
   - `world/src/app.js`, `town.css`, `base.css`, `body.html`, `head.html`: screens, saving, lessons and the 3D town.
 - **Test the rules:** run `node tools/golden_test.js` after any engine or data change. If you changed the rules on purpose, re-record with `--update`, say so in the commit, and update `docs/roblox-port.md` if the engine's moves changed.
 - **Saves:** the game saves under `start-a-business-v1` (and migrates `runway-world-v1`). The Skill Tree's save key is `biz-skill-tree-v1`; don't break it. The game must not read or link to the Skill Tree.
-- **Look:** keep the existing look unless asked, and test in a browser (desktop and phone width).
+- **Look:** keep the existing look unless asked, and test in a browser (desktop and phone width). The approved GUI is the "Overhaul" row of the GUI directions canvas (https://claude.ai/artifact/5HPBkpPpEBw6CN2XtMyrib): D's toy-box kit, a Run button on the HUD, station windows plus a short "All decisions" list.
+- **Short text (the user asked for it):** the screen should never feel like reading.
+  - Labels: 1–3 words. Hints: one line, at most about 7 words.
+  - Let numbers, tiles and chips carry the meaning ("$2,600/month each", not a sentence).
+  - Why cards: one line with the numbers. Formulas and benchmarks stay folded under "Show the maths".
+  - Lessons: a one-line idea, a formula, a one-line example, a one-line tip. Level stories and goals: one line each.

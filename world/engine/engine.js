@@ -56,7 +56,7 @@ const BM = DATA.benchmarks;      // real-world benchmark notes: data/benchmarks.
 
 const loanDec = (sizes) => ({id:'loan', kind:'select', group:'Finance', label:'Bank loan this month', def:'none',
   opts:[['none','No change'], ['b0','Borrow ' + money(sizes[0])], ['b1','Borrow ' + money(sizes[1])], ['b2','Borrow ' + money(sizes[2])], ['repay','Repay the whole loan']],
-  help:'Repaid monthly over 3 years with interest. The bank lends up to about 4 months of sales.'});
+  help:'Repaid over 3 years, with interest.'});
 
 const BIZ = {};
 
@@ -64,13 +64,13 @@ const BIZ = {};
 BIZ.cafe = {
   ...DATA.businesses.cafe,  // name, colour, money settings and levels: data/businesses.json
   dec1:[
-    {id:'price', label:'Price per cup', min:1, max:8, step:0.25, def:3, fmt:'money2', help:'A higher price earns more per cup, but fewer people buy.'},
-    {id:'prep', label:'Cups prepared per day', min:20, max:250, step:5, def:100, fmt:'int', help:'Cups you make but don’t sell are wasted.'}],
+    {id:'price', label:'Price per cup', min:1, max:8, step:0.25, def:3, fmt:'money2', help:'Higher means fewer buyers.'},
+    {id:'prep', label:'Cups prepared per day', min:20, max:250, step:5, def:100, fmt:'int', help:'Unsold cups are poured away.'}],
   dec:[
-    {id:'price', label:'Average spend per customer', min:3, max:12, step:0.25, def:5.5, fmt:'money2', help:'Set by your menu prices. Higher means fewer customers.'},
-    {id:'staff', label:'Baristas', min:1, max:10, step:1, def:2, fmt:'int', help:'Each can serve about 80 customers a day and costs $2,600 a month.'},
-    {id:'mkt', label:'Marketing per month', min:0, max:5000, step:100, def:500, fmt:'money', help:'Each extra dollar brings fewer new customers than the last.'},
-    {id:'quality', kind:'select', lv:[3], label:'Coffee beans', def:'standard', opts:[['standard','Standard beans'],['premium','Premium beans (+$0.60 a customer)']], help:'Better beans raise your reputation over time.'}],
+    {id:'price', label:'Average spend per customer', min:3, max:12, step:0.25, def:5.5, fmt:'money2', help:'Higher means fewer customers.'},
+    {id:'staff', label:'Baristas', min:1, max:10, step:1, def:2, fmt:'int', help:'$2,600/month each · serves 80 a day.'},
+    {id:'mkt', label:'Marketing per month', min:0, max:5000, step:100, def:500, fmt:'money', help:'Each extra dollar brings a little less.'},
+    {id:'quality', kind:'select', lv:[3], label:'Coffee beans', def:'standard', opts:[['standard','Standard beans'],['premium','Premium beans (+$0.60 a customer)']], help:'Builds reputation.'}],
   init(g, F){ const R = rng(g.seed*13 + 5); g.st = {rep:1, rivalP:5.2, rivalAt:3 + Math.floor(R()*3), locs:1, loc2At:0, expanded:false, delivery:false}; },
   basic(g, d, E, R){
     const cupCost = 0.9*E.cost, permit = 450*E.cost;
@@ -78,17 +78,17 @@ BIZ.cafe = {
     const sold = Math.min(demand, d.prep), waste = d.prep - sold, lost = Math.max(0, demand - d.prep);
     const rev = d.price*sold*30, ingr = cupCost*d.prep*30, op = rev - ingr - permit;
     const why = [
-      {t:'How many people wanted coffee', p:`At ${money2(d.price)} a cup, about ${int(demand)} people a day wanted one. Fewer people buy as the price rises.`, f:`demand ≈ 220 × (1 − price ÷ 7) = ${int(220*E.demand*(1-d.price/7))} a day, give or take a little each month`, s:'micro'},
-      {t:'Profit is revenue minus costs', p:`You took ${money(rev)} and spent ${money(ingr + permit)}, so this month’s profit was ${money(op)}.`, f:`${money(rev)} − ${money(ingr)} ingredients − ${money(permit)} permit = ${money(op)}`, s:'finacct'}];
+      {t:'How many people wanted coffee', p:`At ${money2(d.price)}, about ${int(demand)} a day wanted one. Higher price, fewer buyers.`, f:`demand ≈ 220 × (1 − price ÷ 7) = ${int(220*E.demand*(1-d.price/7))} a day, give or take a little each month`, s:'micro'},
+      {t:'Profit is revenue minus costs', p:`${money(rev)} in − ${money(ingr + permit)} out = ${money(op)} profit.`, f:`${money(rev)} − ${money(ingr)} ingredients − ${money(permit)} permit = ${money(op)}`, s:'finacct'}];
     const flags = [];
-    if (waste > 2){ why.push({t:'Coffee poured away', p:`You made ${int(d.prep)} cups a day but sold ${int(sold)}. The ${int(waste)} unsold cups a day cost you ${money(waste*cupCost*30)} this month.`, f:`waste cost = ${int(waste)} cups × ${money2(cupCost)} × 30 days`, s:'excel'}); if (waste > 0.1*d.prep) flags.push('waste'); }
-    if (lost > 2){ why.push({t:'You ran out', p:`About ${int(lost)} people a day wanted coffee after you’d sold out. That’s about ${money(lost*d.price*30)} of sales missed.`, f:`missed sales = ${int(lost)} × ${money2(d.price)} × 30 days`, s:'micro'}); if (lost > 0.1*demand) flags.push('stockout'); }
+    if (waste > 2){ why.push({t:'Coffee poured away', p:`Made ${int(d.prep)} a day, sold ${int(sold)}. Waste cost ${money(waste*cupCost*30)}.`, f:`waste cost = ${int(waste)} cups × ${money2(cupCost)} × 30 days`, s:'excel'}); if (waste > 0.1*d.prep) flags.push('waste'); }
+    if (lost > 2){ why.push({t:'You ran out', p:`${int(lost)} a day came after you sold out: ${money(lost*d.price*30)} of sales missed.`, f:`missed sales = ${int(lost)} × ${money2(d.price)} × 30 days`, s:'micro'}); if (lost > 0.1*demand) flags.push('stockout'); }
     return {op, rev, rows:[['Sales', rev, 'rev'], ['Ingredients (every cup made)', -ingr, 'cost'], ['Cart permit', -permit, 'cost']],
       metrics:[['Customers who wanted coffee', int(demand)+' a day'], ['Cups sold', int(sold)+' a day'], ['Cups wasted', int(waste)+' a day'], ['Customers turned away', int(lost)+' a day']], why, flags};
   },
   hint(g){ const d = g.dec, E = g.env, F = FEAT(g.level); const vc = (((F.seg && d.quality==='premium') ? 2.2 : 1.6)*1.06 + 0.2)*E.cost;
     const fixed = (3500 + (g.st.locs>1?3200:0))*E.cost + 2600*E.cost*d.staff + 1000*E.cost*g.st.locs + d.mkt, unit = d.price - vc;
-    return unit <= 0 ? 'At this price you lose money on every customer.' : `<b>Break-even with these choices:</b> ${int(fixed/unit/30)} customers a day. Your baristas can serve up to ${int(d.staff*80)} a day.`; },
+    return unit <= 0 ? [{l:'Each customer', v:'Loses money', k:'red'}] : [{l:'Break-even', v:`${int(fixed/unit/30)} a day`, k:'blu'}, {l:'You can serve', v:`${int(d.staff*80)} a day`, k:'grn'}]; },
   model(g, d, E, R, F){
     const st = g.st, month = g.month + 1, moy = g.month % 12, M = k => modM(g, k), A = k => modA(g, k);
     const prem = F.seg && d.quality === 'premium';
@@ -122,13 +122,13 @@ BIZ.cafe = {
     if (unit < 1) flags.push('lowMargin');
     if (rivalOn && d.price > st.rivalP + 0.5) flags.push('rival');
     const why = [
-      {t:'Break-even point', p: unit > 0 ? `Each customer leaves ${money2(unit)} after ingredients and packaging. Your fixed costs were ${money(fixed)}, so you needed ${int(beDay)} customers a day to break even. You served ${int(served)}.` : `Your price is below what each customer costs you, so more customers means bigger losses.`, f:`break-even = fixed costs ÷ (price − variable cost per customer) = ${money(fixed)} ÷ ${money2(Math.max(unit, 0))} ÷ 30 days`, s:'unitecon'},
-      {t:'Food and wage costs', p:`Ingredients were ${rev > 0 ? pct(ingr/rev) : '—'} of sales and wages ${rev > 0 ? pct(wages/rev) : '—'}. Ingredients grow with every customer; rent and wages stay the same however busy you are.`, f:`variable ${money(ingr)} + fixed ${money(fixed)} = ${money(ingr + fixed)}`, s:'mgmtacct', b:BM.food}];
-    if (ramp < 1) why.push({t:'Still being discovered', p:`New cafés take time to find regulars. This month about ${Math.round(ramp*100)}% of your future regulars knew about you.`, f:`awareness = 50% in month 1, +10% a month, up to 100%`, s:'marketing', b: month === 1 ? BM.fail : undefined});
-    if (d.mkt > 0 && !F.seg) why.push({t:'What marketing did', p:`${money(d.mkt)} of marketing brought about ${Math.round(m*100)}% more customers. The next $1,000 would add less than the last.`, f:`extra customers = 45% × (1 − e^(−spend ÷ 2,000)) = ${Math.round(m*100)}%`, s:'marketing'});
-    if (lost > 2) why.push({t:'Queue out the door', p:`${d.staff} barista${d.staff > 1 ? 's' : ''} can serve ${int(cap)} customers a day. About ${int(lost)} more a day wanted to come in${F.seg ? ', and long queues hurt your reputation' : ''}.`, f:`capacity = baristas × 80 customers a day`, s:'ops'});
-    if (F.seg) why.push({t:'Different customers, different prices', p:`At ${money2(d.price)}: ${segOut.map(([n, v]) => `${n.toLowerCase()} ${int(v)} a day`).join(', ')}. Students care most about price; commuters care least.`, f:`each group: demand = base × (1 − price ÷ the most they’d pay)`, s:'pricing'});
-    if (rivalOn) why.push({t:'Your rival', p:`The café across the road charges about ${money2(st.rivalP)}. If you undercut them, they cut back, which can start a price war that hurts you both.`, f:`your share = 75% + 10% × (their price − yours) × price sensitivity, adjusted for reputation`, s:'game'});
+      {t:'Break-even point', p: unit > 0 ? `Needed ${int(beDay)} customers a day to break even; served ${int(served)}.` : `Each customer costs more than they pay.`, f:`break-even = fixed costs ÷ (price − variable cost per customer) = ${money(fixed)} ÷ ${money2(Math.max(unit, 0))} ÷ 30 days`, s:'unitecon'},
+      {t:'Food and wage costs', p:`Ingredients ${rev > 0 ? pct(ingr/rev) : '—'} of sales, wages ${rev > 0 ? pct(wages/rev) : '—'}. Only ingredients grow with customers.`, f:`variable ${money(ingr)} + fixed ${money(fixed)} = ${money(ingr + fixed)}`, s:'mgmtacct', b:BM.food}];
+    if (ramp < 1) why.push({t:'Still being discovered', p:`About ${Math.round(ramp*100)}% of your future regulars know you so far.`, f:`awareness = 50% in month 1, +10% a month, up to 100%`, s:'marketing', b: month === 1 ? BM.fail : undefined});
+    if (d.mkt > 0 && !F.seg) why.push({t:'What marketing did', p:`${money(d.mkt)} brought about ${Math.round(m*100)}% more customers. More spend adds less.`, f:`extra customers = 45% × (1 − e^(−spend ÷ 2,000)) = ${Math.round(m*100)}%`, s:'marketing'});
+    if (lost > 2) why.push({t:'Queue out the door', p:`${d.staff} barista${d.staff > 1 ? 's' : ''} serve ${int(cap)} a day; ${int(lost)} more were turned away${F.seg ? ', hurting your reputation' : ''}.`, f:`capacity = baristas × 80 customers a day`, s:'ops'});
+    if (F.seg) why.push({t:'Different customers, different prices', p:`At ${money2(d.price)}: ${segOut.map(([n, v]) => `${n.toLowerCase()} ${int(v)} a day`).join(', ')}. Students are most price-sensitive.`, f:`each group: demand = base × (1 − price ÷ the most they’d pay)`, s:'pricing'});
+    if (rivalOn) why.push({t:'Your rival', p:`They charge about ${money2(st.rivalP)}. Undercut them and they cut back.`, f:`your share = 75% + 10% × (their price − yours) × price sensitivity, adjusted for reputation`, s:'game'});
     if (st.delivery) why.push({t:'Delivery app orders', p:`App orders added customers, but the app kept ${money(commission)} (30% of those sales).`, f:`commission = app sales × 30%`, s:'innov'});
     const voices = [];
     if (F.voices){
@@ -154,26 +154,26 @@ BIZ.cafe = {
 /* ---------- Software ---------- */
 BIZ.saas = {
   ...DATA.businesses.saas,  // name, colour, money settings and levels: data/businesses.json
-  dec1:[{id:'price', label:'Price per month', min:1, max:120, step:1, def:15, fmt:'money', help:'Each paying customer is charged this every month.'}],
+  dec1:[{id:'price', label:'Price per month', min:1, max:120, step:1, def:15, fmt:'money', help:'Charged to each customer monthly.'}],
   dec:[
-    {id:'price', lv:[2,2], label:'Price per month', min:5, max:200, step:1, def:29, fmt:'money', help:'Business customers will pay more than individuals, up to a point.'},
-    {id:'pb', lv:[3], label:'Basic plan price', min:2, max:60, step:1, def:12, fmt:'money', help:'For individuals and freelancers. Very price-sensitive.'},
-    {id:'pp', lv:[3], label:'Pro plan price', min:10, max:400, step:1, def:49, fmt:'money', help:'For small businesses. Needs product quality of at least 1.15 to sell well.'},
-    {id:'mkt', label:'Marketing per month', min:0, max:40000, step:500, def:3000, fmt:'money', help:'Ads bring visitors. Each extra dollar brings fewer visitors than the last.'},
-    {id:'devs', label:'Developers', min:0, max:8, step:1, def:1, fmt:'int', help:'$6,000 a month each. They slowly improve the product.'},
-    {id:'support', lv:[3], label:'Support staff', min:0, max:4, step:1, def:0, fmt:'int', help:'$4,000 a month each. They reduce Pro customer cancellations.'},
-    {id:'annual', kind:'check', lv:[4], label:'Offer yearly plans (2 months free)', def:false, help:'About a third of new Pro customers pay a year up front. Cash arrives now; the service is still owed.'},
-    {id:'reps', lv:[5], when:g => g.st.expanded, label:'Enterprise sales reps', min:0, max:8, step:1, def:2, fmt:'int', help:'$8,000 a month each. Each wins about one large customer every three months.'},
-    {id:'pe', lv:[5], when:g => g.st.expanded, label:'Enterprise price per month', min:300, max:4000, step:50, def:1500, fmt:'money', help:'Large companies pay more but take longer to win.'}],
+    {id:'price', lv:[2,2], label:'Price per month', min:5, max:200, step:1, def:29, fmt:'money', help:'Businesses pay more, up to a point.'},
+    {id:'pb', lv:[3], label:'Basic plan price', min:2, max:60, step:1, def:12, fmt:'money', help:'For individuals. Very price-sensitive.'},
+    {id:'pp', lv:[3], label:'Pro plan price', min:10, max:400, step:1, def:49, fmt:'money', help:'For small businesses. Needs a good product.'},
+    {id:'mkt', label:'Marketing per month', min:0, max:40000, step:500, def:3000, fmt:'money', help:'Each extra dollar brings a little less.'},
+    {id:'devs', label:'Developers', min:0, max:8, step:1, def:1, fmt:'int', help:'$6,000/month each · improve the product.'},
+    {id:'support', lv:[3], label:'Support staff', min:0, max:4, step:1, def:0, fmt:'int', help:'$4,000/month each · fewer Pro cancellations.'},
+    {id:'annual', kind:'check', lv:[4], label:'Offer yearly plans (2 months free)', def:false, help:'A third pay a year up front: cash now, service owed.'},
+    {id:'reps', lv:[5], when:g => g.st.expanded, label:'Enterprise sales reps', min:0, max:8, step:1, def:2, fmt:'int', help:'$8,000/month each · 1 big client per 3 months.'},
+    {id:'pe', lv:[5], when:g => g.st.expanded, label:'Enterprise price per month', min:300, max:4000, step:50, def:1500, fmt:'money', help:'Pay more, slower to win.'}],
   init(g){ const R = rng(g.seed*17 + 3); g.st = {q:1, all:0, ind:0, smb:0, ann:0, ent:0, rivalP:59, rivalAt:4 + Math.floor(R()*3), head:0, expanded:false}; },
   basic(g, d, E, R){
     const st = g.st, visitors = 2000*E.demand*noise(R, E.vol), conv = 0.03*Math.max(0, 1 - d.price/120), signups = visitors*conv;
     const lostC = st.all*0.03, customers = st.all - lostC + signups;
     const mrr = customers*d.price, servers = (300 + 2*customers)*E.cost, op = mrr - servers;
     const why = [
-      {t:'Visitors who paid', p:`Of about ${int(visitors)} visitors, ${pct(conv)} signed up at ${money(d.price)} a month: ${int(signups)} new customers.`, f:`sign-up rate = 3% × (1 − price ÷ 120) = ${pct(conv)}`, s:'pricing'},
-      {t:'Subscriptions add up', p:`You kept 97% of last month’s customers and added ${int(signups)} new ones. That’s why monthly revenue grows even with the same number of visitors.`, f:`customers = ${int(st.all)} − ${int(lostC)} cancelled + ${int(signups)} new = ${int(customers)}`, s:'micro'},
-      {t:'Profit this month', p:`Revenue of ${money(mrr)} minus server costs of ${money(servers)} gave a profit of ${money(op)}.`, f:`MRR = customers × price = ${int(customers)} × ${money(d.price)}`, s:'finacct'}];
+      {t:'Visitors who paid', p:`${int(visitors)} visitors × ${pct(conv)} = ${int(signups)} new customers.`, f:`sign-up rate = 3% × (1 − price ÷ 120) = ${pct(conv)}`, s:'pricing'},
+      {t:'Subscriptions add up', p:`You kept 97% of customers and added ${int(signups)}. Revenue stacks up.`, f:`customers = ${int(st.all)} − ${int(lostC)} cancelled + ${int(signups)} new = ${int(customers)}`, s:'micro'},
+      {t:'Profit this month', p:`${money(mrr)} revenue − ${money(servers)} servers = ${money(op)} profit.`, f:`MRR = customers × price = ${int(customers)} × ${money(d.price)}`, s:'finacct'}];
     return {op, rev:mrr, mrr, rows:[['Subscription revenue (MRR)', mrr, 'rev'], ['Servers and hosting', -servers, 'cost']],
       metrics:[['Visitors', int(visitors)], ['New customers', int(signups)], ['Cancelled', int(lostC)], ['Paying customers', int(customers)], ['MRR', money(mrr)]], why, flags: d.price < 8 ? ['lowMargin'] : [], next:{all:customers}};
   },
@@ -181,7 +181,7 @@ BIZ.saas = {
     const head = d.devs + (F.seg ? d.support : 0) + (st.expanded ? d.reps || 0 : 0);
     const fixed = (500 + 50*head)*E.cost + 6000*E.cost*d.devs + (F.seg ? 4000*E.cost*d.support : 0) + (st.expanded ? 8000*E.cost*(d.reps||0) : 0) + d.mkt, unit = p*0.97 - 4*E.cost;
     const have = st.all + st.ind + st.smb + st.ann + st.ent;
-    return unit <= 0 ? 'At this price each customer costs more than they pay.' : `<b>Break-even with these choices:</b> about ${int(fixed/unit)} customers paying ${money(p)}. You have ${int(have)} customers in total.`; },
+    return unit <= 0 ? [{l:'Each customer', v:'Loses money', k:'red'}] : [{l:'Break-even', v:`${int(fixed/unit)} customers`, k:'blu'}, {l:'You have', v:`${int(have)} customers`, k:'grn'}]; },
   model(g, d, E, R, F){
     const st = g.st, month = g.month + 1, moy = g.month % 12, M = k => modM(g, k), A = k => modA(g, k);
     const q = clamp(st.q + 0.04*d.devs - (F.seg && d.devs === 0 ? 0.01 : 0) + A('q'), 0.7, F.seg ? 2 : 1.8);
@@ -232,13 +232,13 @@ BIZ.saas = {
     if (churn > 0.06) flags.push('churn');
     if (rivalOn && d.pp > st.rivalP + 10) flags.push('rival');
     const why = [
-      {t:'Cost to win a customer (CAC)', p: cac ? `Ads brought about ${int(paid)} visitors and ${int(newPaid)} paying customers, so each cost about ${money(cac)} to win.` : `You didn’t buy ads, so all ${int(newAll)} new customers found you on their own.`, f: cac ? `CAC = marketing ÷ customers from ads = ${money(d.mkt)} ÷ ${int(newPaid)}` : `organic visitors = 1,500 + half your customer count (word of mouth)`, s:'growth'},
-      {t:'What a customer is worth (LTV)', p:`A ${F.seg ? 'Pro ' : ''}customer brings ${money2(unit)} a month after costs and stays about ${(1/Math.max(0.005, main.churn)).toFixed(0)} months, so is worth about ${money(ltv)}.${cac ? ` That’s ${(ltv/cac).toFixed(1)}× CAC.` : ''}`, f:`LTV = monthly profit per customer ÷ churn = ${money2(unit)} ÷ ${pct(main.churn)}`, s:'saas', b:BM.ltv},
-      {t:'Customers who cancelled', p:`${int(lostAll)} customers left (${pct(churn)} of last month’s). Product quality is now ${q.toFixed(2)}. Developers raise it, which lifts sign-ups and lowers cancellations${F.seg ? '; support staff also keep Pro customers' : ''}.`, f:`churn = base ÷ √quality${F.seg ? ' − 0.4% per support person (Pro)' : ''}`, s:'product', b:BM.churn}];
-    if (d.mkt >= 15000) why.push({t:'Diminishing returns', p:`Doubling ad spend doesn’t double visitors. Above about $15,000 a month, each extra dollar buys far fewer visitors.`, f:`ad visitors = 6,000 × (1 − e^(−spend ÷ 12,000))`, s:'growth'});
-    if (F.seg) why.push({t:'Two plans', p:`Basic at ${money(d.pb)}: ${int(next.ind)} individuals. Pro at ${money(d.pp)}: ${int(next.smb + (next.ann || 0))} businesses.${q < 1.15 ? ' Pro sells poorly until quality reaches 1.15.' : ''}`, f:`each plan: sign-up rate = base × quality × (1 − price ÷ the most that group would pay)`, s:'pricing'});
-    if (rivalOn) why.push({t:'Your competitor', p:`A rival charges about ${money(st.rivalP)} for their Pro plan. Undercut them and they cut back; a better product (quality above 1.3) protects you.`, f:`your share = 80% + 0.4% × (their price − yours) + 25% × (quality − 1.3)`, s:'game'});
-    if (annualOn || st.ann > 0) why.push({t:'Yearly plans: cash now, service owed', p:`Yearly customers paid ${money(annCash)} up front this month, but only ${money(annRec)} counts as revenue. The rest is service you still owe, shown as a liability.`, f:`prepaid subscriptions change = cash received − revenue earned = ${money(dDef)}`, s:'fsa'});
+      {t:'Cost to win a customer (CAC)', p: cac ? `Ads won ${int(newPaid)} customers at about ${money(cac)} each.` : `No ads: all ${int(newAll)} new customers found you.`, f: cac ? `CAC = marketing ÷ customers from ads = ${money(d.mkt)} ÷ ${int(newPaid)}` : `organic visitors = 1,500 + half your customer count (word of mouth)`, s:'growth'},
+      {t:'What a customer is worth (LTV)', p:`${money2(unit)} a month × ${(1/Math.max(0.005, main.churn)).toFixed(0)} months ≈ ${money(ltv)}${cac ? ` (${(ltv/cac).toFixed(1)}× CAC)` : ''}.`, f:`LTV = monthly profit per customer ÷ churn = ${money2(unit)} ÷ ${pct(main.churn)}`, s:'saas', b:BM.ltv},
+      {t:'Customers who cancelled', p:`${int(lostAll)} left (${pct(churn)}). Quality ${q.toFixed(2)}: developers raise it${F.seg ? ', support keeps Pro customers' : ''}.`, f:`churn = base ÷ √quality${F.seg ? ' − 0.4% per support person (Pro)' : ''}`, s:'product', b:BM.churn}];
+    if (d.mkt >= 15000) why.push({t:'Diminishing returns', p:`Double the ads ≠ double the visitors. Above $15k a month, returns fall fast.`, f:`ad visitors = 6,000 × (1 − e^(−spend ÷ 12,000))`, s:'growth'});
+    if (F.seg) why.push({t:'Two plans', p:`Basic at ${money(d.pb)}: ${int(next.ind)} individuals. Pro at ${money(d.pp)}: ${int(next.smb + (next.ann || 0))} businesses.${q < 1.15 ? ' Pro needs quality 1.15+.' : ''}`, f:`each plan: sign-up rate = base × quality × (1 − price ÷ the most that group would pay)`, s:'pricing'});
+    if (rivalOn) why.push({t:'Your competitor', p:`Their Pro plan: about ${money(st.rivalP)}. Quality above 1.3 protects you.`, f:`your share = 80% + 0.4% × (their price − yours) + 25% × (quality − 1.3)`, s:'game'});
+    if (annualOn || st.ann > 0) why.push({t:'Yearly plans: cash now, service owed', p:`${money(annCash)} paid up front; only ${money(annRec)} counts as revenue. The rest is owed service.`, f:`prepaid subscriptions change = cash received − revenue earned = ${money(dDef)}`, s:'fsa'});
     const voices = [];
     if (F.voices){
       if (rivalOn && d.pp > st.rivalP) voices.push(['Small business', 'A competitor offered us the same for less.']);
@@ -265,15 +265,15 @@ BIZ.saas = {
 BIZ.shop = {
   ...DATA.businesses.shop,  // name, colour, money settings and levels: data/businesses.json
   dec1:[
-    {id:'price', label:'Price per bag', min:20, max:200, step:1, def:60, fmt:'money', help:'Each bag costs you $24. Higher prices mean fewer buyers.'},
-    {id:'order', label:'Bags to buy this month', min:0, max:1000, step:10, def:80, fmt:'int', help:'Paid for now. Unsold bags stay in stock for next month.'}],
+    {id:'price', label:'Price per bag', min:20, max:200, step:1, def:60, fmt:'money', help:'Bags cost $24. Higher means fewer buyers.'},
+    {id:'order', label:'Bags to buy this month', min:0, max:1000, step:10, def:80, fmt:'int', help:'Unsold bags stay in stock.'}],
   dec:[
-    {id:'price', label:'Price per bag', min:20, max:200, step:1, def:79, fmt:'money', help:'Higher prices mean fewer buyers.'},
-    {id:'order', label:'Bags to buy this month', min:0, max:3000, step:10, def:250, fmt:'int', help:'From Level IV, bags arrive next month and you pay the supplier next month.'},
-    {id:'ads', label:'Ads per month', min:0, max:20000, step:250, def:1500, fmt:'money', help:'Ads bring visitors. Each extra dollar brings fewer than the last.'},
-    {id:'packers', label:'Packing staff', min:0, max:8, step:1, def:0, fmt:'int', help:'You can pack 150 orders a month yourself. Each packer adds 500 and costs $2,400.'},
-    {id:'quality', kind:'select', lv:[3], label:'Supplier', def:'standard', opts:[['standard','Standard ($24 a bag)'],['premium','Premium ($32 a bag, fewer returns)']], help:'Better bags mean fewer returns and better ratings.'},
-    {id:'shipfee', kind:'check', lv:[3], label:'Charge customers for shipping', def:false, help:'Saves you $6 an order, but about 20% fewer visitors buy.'}],
+    {id:'price', label:'Price per bag', min:20, max:200, step:1, def:79, fmt:'money', help:'Higher means fewer buyers.'},
+    {id:'order', label:'Bags to buy this month', min:0, max:3000, step:10, def:250, fmt:'int', help:'Arrive and are paid for next month.'},
+    {id:'ads', label:'Ads per month', min:0, max:20000, step:250, def:1500, fmt:'money', help:'Each extra dollar brings a little less.'},
+    {id:'packers', label:'Packing staff', min:0, max:8, step:1, def:0, fmt:'int', help:'$2,400/month each · +500 orders.'},
+    {id:'quality', kind:'select', lv:[3], label:'Supplier', def:'standard', opts:[['standard','Standard ($24 a bag)'],['premium','Premium ($32 a bag, fewer returns)']], help:'Fewer returns, better ratings.'},
+    {id:'shipfee', kind:'check', lv:[3], label:'Charge customers for shipping', def:false, help:'Saves $6 an order, but 20% fewer buy.'}],
   init(g){ const R = rng(g.seed*19 + 7); g.st = {inv:0, pipe:0, list:0, rating:4.3, rivalP:65, rivalAt:4 + Math.floor(R()*3), expanded:false, line2At:0}; },
   basic(g, d, E, R){
     const st = g.st, c = 24*E.cost, visitors = 3000*E.demand*noise(R, E.vol), conv = 0.035*Math.max(0, 1 - d.price/160), orders = visitors*conv;
@@ -282,18 +282,18 @@ BIZ.shop = {
     const op = rev - cogs - fee, dInv = purch - cogs, left = avail - sold, missed = Math.max(0, orders - avail);
     const flags = []; if (missed > 0.1*orders) flags.push('stockout'); if (left > 2*Math.max(sold, 10)) flags.push('overstock');
     const why = [
-      {t:'Visitors who bought', p:`Of about ${int(visitors)} visitors, ${pct(conv)} wanted a bag at ${money(d.price)}: ${int(orders)} orders.`, f:`buying rate = 3.5% × (1 − price ÷ 160) = ${pct(conv)}`, s:'micro'},
-      {t:'Profit is not the same as cash', p:`Profit was ${money(op)}, but your cash changed by ${money(op - dInv)}. Bags you bought but haven’t sold still cost you cash now; they only count as a cost when sold.`, f:`cash change = sales − stock bought − fees = ${money(rev)} − ${money(purch)} − ${money(fee)}`, s:'finacct'}];
+      {t:'Visitors who bought', p:`${int(visitors)} visitors × ${pct(conv)} = ${int(orders)} orders.`, f:`buying rate = 3.5% × (1 − price ÷ 160) = ${pct(conv)}`, s:'micro'},
+      {t:'Profit is not the same as cash', p:`Profit ${money(op)}, cash change ${money(op - dInv)}. Unsold bags cost cash now, profit later.`, f:`cash change = sales − stock bought − fees = ${money(rev)} − ${money(purch)} − ${money(fee)}`, s:'finacct'}];
     if (buy < d.order) why.push({t:'Not enough cash for stock', p:`You wanted ${int(d.order)} bags but could only afford ${int(buy)}.`, f:`bags you can afford = cash ÷ ${money2(c)}`, s:'budget'});
-    if (missed > 1) why.push({t:'Sold out', p:`${int(missed)} more people wanted a bag after you’d sold out: about ${money(missed*(d.price - c))} of profit missed.`, f:`missed orders = orders − bags available`, s:'excel'});
-    if (left > 0) why.push({t:'Stock left over', p:`${int(left)} bags are left, worth ${money(g.bs.inv + dInv)} at cost. They can be sold next month, but that money isn’t in your bank account.`, f:`stock value = bags left × average cost`, s:'mgmtacct'});
+    if (missed > 1) why.push({t:'Sold out', p:`${int(missed)} more wanted one: ${money(missed*(d.price - c))} of profit missed.`, f:`missed orders = orders − bags available`, s:'excel'});
+    if (left > 0) why.push({t:'Stock left over', p:`${int(left)} bags left, ${money(g.bs.inv + dInv)} of cash tied up in stock.`, f:`stock value = bags left × average cost`, s:'mgmtacct'});
     return {op, rev, rows:[['Sales', rev, 'rev'], ['Cost of bags sold', -cogs, 'cost'], ['Platform fee', -fee, 'cost']], dInv,
       metrics:[['Visitors', int(visitors)], ['Orders wanted', int(orders)], ['Bags sold', int(sold)], ['Missed (sold out)', int(missed)], ['Bags left in stock', int(left)], ['Cash tied up in stock', money(g.bs.inv + dInv)]], why, flags, next:{inv:left}};
   },
   hint(g){ const d = g.dec, E = g.env, F = FEAT(g.level); const c = ((F.seg && d.quality === 'premium') ? 32 : 24)*E.cost;
     const unit = d.price*0.97*(1 - 0.08) - c*(1 - 0.08) - ((F.seg && d.shipfee) ? 0 : 6*E.cost);
     const fixed = 300*E.cost + 2400*E.cost*d.packers + d.ads;
-    return unit <= 0 ? 'At this price you lose money on every bag.' : `<b>Break-even with these choices:</b> about ${int(fixed/unit)} bags a month. You can pack up to ${int(150 + 500*d.packers)}.`; },
+    return unit <= 0 ? [{l:'Each bag', v:'Loses money', k:'red'}] : [{l:'Break-even', v:`${int(fixed/unit)} bags/month`, k:'blu'}, {l:'You can pack', v:`${int(150 + 500*d.packers)}/month`, k:'grn'}]; },
   model(g, d, E, R, F){
     const st = g.st, month = g.month + 1, moy = g.month % 12, M = k => modM(g, k), A = k => modA(g, k);
     const prem = F.seg && d.quality === 'premium', c = (prem ? 32 : 24)*E.cost*M('cost');
@@ -335,14 +335,14 @@ BIZ.shop = {
     if (F.seg && (next.rating || rating) < 3.9) flags.push('rating');
     if (rivalOn && d.price > st.rivalP + 10) flags.push('rival');
     const why = [
-      {t:'Visitors who bought', p:`${int(visitors)} visitors (${int(paid)} from ads) placed ${int(orders)} orders: ${pct(orders/Math.max(1, visitors))} of visitors.`, f:`buying rate = 5% × (1 − price ÷ the most a group would pay)${F.seg ? ' × star rating effect' : ''}`, s:'marketing', b:BM.conv},
-      {t:'Profit is not the same as cash', p:`Profit before other costs was ${money(op)}. Stock you bought (${money(purch)}) only becomes a cost when sold, so cash and profit differ.`, f:`stock value change = bought ${money(purch)} − cost of bags sold ${money(cogs)} = ${money(dInv)}`, s:'finacct'}];
+      {t:'Visitors who bought', p:`${int(visitors)} visitors (${int(paid)} from ads) → ${int(orders)} orders.`, f:`buying rate = 5% × (1 − price ÷ the most a group would pay)${F.seg ? ' × star rating effect' : ''}`, s:'marketing', b:BM.conv},
+      {t:'Profit is not the same as cash', p:`Profit ${money(op)}. Stock bought (${money(purch)}) is a cost only when sold.`, f:`stock value change = bought ${money(purch)} − cost of bags sold ${money(cogs)} = ${money(dInv)}`, s:'finacct'}];
     if (roas !== null) why.push({t:'Return on ad spend', p:`Ads brought about ${money(adRev)} of sales for ${money(d.ads)}: ${roas.toFixed(1)}× what they cost.`, f:`ROAS = sales from ads ÷ ad spend`, s:'growth', b:BM.roas});
     if (missed > 1) why.push({t:'Sold out', p:`${int(missed)} orders couldn’t be filled because you ran out of bags${F.credit ? '. Remember: stock you order now arrives next month' : ''}.`, f:`missed = orders − bags available`, s:'budget'});
     if (late > 1) why.push({t:'Packing bottleneck', p:`You could pack ${int(capOrders)} orders, so ${int(late)} were cancelled for being late${F.seg ? ', hurting your rating' : ''}.`, f:`packing capacity = 150 + 500 × packers`, s:'ops'});
-    if (retRate > 0) why.push({t:'Returns', p:`${pct(retRate)} of bags came back. You refund the price and lose the shipping, but the bag returns to stock.`, f:`sales after returns = shipped × (1 − ${pct(retRate)})`, s:'unitecon'});
-    if (F.seg) why.push({t:'Your star rating', p:`Your rating is ${(next.rating || rating).toFixed(1)}. Late orders, sell-outs and returns pull it down; premium bags push it up. Higher ratings turn more visitors into buyers.`, f:`buyers × (0.6 + 0.1 × rating)`, s:'marketing'});
-    if (rivalOn) why.push({t:'A rival seller', p:`A rival sells a similar bag for about ${money(st.rivalP)}. Bargain hunters switch easily; quality seekers care more about your rating.`, f:`your share = 82% + 2% × price sensitivity × (their price − yours) + 20% × (rating − 4.2)`, s:'game'});
+    if (retRate > 0) why.push({t:'Returns', p:`${pct(retRate)} came back: price refunded, shipping lost.`, f:`sales after returns = shipped × (1 − ${pct(retRate)})`, s:'unitecon'});
+    if (F.seg) why.push({t:'Your star rating', p:`Rating ${(next.rating || rating).toFixed(1)}. Sell-outs and returns pull it down; premium bags lift it.`, f:`buyers × (0.6 + 0.1 × rating)`, s:'marketing'});
+    if (rivalOn) why.push({t:'A rival seller', p:`A similar bag for about ${money(st.rivalP)}. Bargain hunters switch; quality seekers watch ratings.`, f:`your share = 82% + 2% × price sensitivity × (their price − yours) + 20% × (rating − 4.2)`, s:'game'});
     const voices = [];
     if (F.voices){
       if (late > 1) voices.push(['Customer', 'My order took weeks to ship.']);
@@ -365,25 +365,25 @@ BIZ.shop = {
 /* ---------- Service agency ---------- */
 BIZ.agency = {
   ...DATA.businesses.agency,  // name, colour, money settings and levels: data/businesses.json
-  dec1:[{id:'rate', label:'Hourly rate', min:30, max:250, step:5, def:50, fmt:'money', help:'You can bill about 120 hours a month.'}],
+  dec1:[{id:'rate', label:'Hourly rate', min:30, max:250, step:5, def:50, fmt:'money', help:'About 120 billable hours a month.'}],
   dec:[
-    {id:'rate', label:'Hourly rate', min:40, max:400, step:5, def:90, fmt:'money', help:'Higher rates bring fewer clients.'},
-    {id:'staff', label:'Designers', min:0, max:12, step:1, def:1, fmt:'int', help:'$5,500 a month each, for about 130 billable hours.'},
-    {id:'mkt', label:'Marketing per month', min:0, max:8000, step:100, def:800, fmt:'money', help:'Portfolio ads and events. Each extra dollar brings less than the last.'},
-    {id:'pricing', kind:'select', lv:[3], label:'How you charge', def:'hourly', opts:[['hourly','By the hour'],['fixed','Fixed price per project']], help:'Clients prefer fixed prices (about 15% more work), but if a project overruns, you absorb the extra hours.'}],
+    {id:'rate', label:'Hourly rate', min:40, max:400, step:5, def:90, fmt:'money', help:'Higher means fewer clients.'},
+    {id:'staff', label:'Designers', min:0, max:12, step:1, def:1, fmt:'int', help:'$5,500/month each · 130 billable hours.'},
+    {id:'mkt', label:'Marketing per month', min:0, max:8000, step:100, def:800, fmt:'money', help:'Each extra dollar brings a little less.'},
+    {id:'pricing', kind:'select', lv:[3], label:'How you charge', def:'hourly', opts:[['hourly','By the hour'],['fixed','Fixed price per project']], help:'Wins 15% more work; overruns are on you.'}],
   init(g){ const R = rng(g.seed*23 + 11); g.st = {rep:1, rivalR:70, rivalAt:3 + Math.floor(R()*3), ar1:0, ar2:0, studios:1, s2At:0, expanded:false, head:0, wo:0}; },
   basic(g, d, E, R){
     const demand = 260*E.demand*noise(R, E.vol)*Math.max(0, 1 - d.rate/220), cap = 120, billed = Math.min(demand, cap);
     const rev = d.rate*billed, tools = 200*E.cost, op = rev - tools;
     const why = [
-      {t:'How much work came in', p:`At ${money(d.rate)} an hour, clients wanted about ${int(demand)} hours this month. You can only bill ${cap}.`, f:`hours wanted ≈ 260 × (1 − rate ÷ 220)`, s:'micro'},
-      {t:'Price × hours = revenue', p:`You billed ${int(billed)} hours at ${money(d.rate)}: ${money(rev)}. After ${money(tools)} of software, profit was ${money(op)}.`, f:`revenue = billed hours × rate`, s:'finacct'}];
-    if (demand > cap*1.15) why.push({t:'You’re too cheap', p:`${int(demand - cap)} more hours were wanted than you can work. That usually means your rate can go up.`, f:`spare demand = hours wanted − 120`, s:'pricing'});
-    if (demand < cap*0.7) why.push({t:'Too many empty hours', p:`You were busy only ${pct(billed/cap, 0)} of your billable time. A lower rate would bring more work.`, f:`busy share = billed ÷ 120 hours`, s:'pricing'});
+      {t:'How much work came in', p:`At ${money(d.rate)}/hour, clients wanted ${int(demand)} hours. You can bill ${cap}.`, f:`hours wanted ≈ 260 × (1 − rate ÷ 220)`, s:'micro'},
+      {t:'Price × hours = revenue', p:`${int(billed)} hours × ${money(d.rate)} = ${money(rev)}. Profit ${money(op)}.`, f:`revenue = billed hours × rate`, s:'finacct'}];
+    if (demand > cap*1.15) why.push({t:'You’re too cheap', p:`${int(demand - cap)} hours more than you can work. Raise your rate.`, f:`spare demand = hours wanted − 120`, s:'pricing'});
+    if (demand < cap*0.7) why.push({t:'Too many empty hours', p:`Busy only ${pct(billed/cap, 0)} of the time. A lower rate brings work.`, f:`busy share = billed ÷ 120 hours`, s:'pricing'});
     return {op, rev, rows:[['Client fees', rev, 'rev'], ['Software', -tools, 'cost']], metrics:[['Hours wanted', int(demand)], ['Hours billed', int(billed)], ['Busy share', pct(billed/cap, 0)]], why, flags: billed/cap < 0.6 ? ['util'] : []};
   },
   hint(g){ const d = g.dec, E = g.env; const fixed = 5500*E.cost*d.staff + (1500 + (g.st.studios > 1 ? 2500 : 0))*E.cost + (200 + 100*d.staff)*E.cost + d.mkt;
-    return `<b>Break-even with these choices:</b> ${int(fixed/d.rate)} billed hours a month. Your team can bill up to ${int(120 + 130*d.staff)}.`; },
+    return [{l:'Break-even', v:`${int(fixed/d.rate)} hours/month`, k:'blu'}, {l:'You can bill', v:`${int(120 + 130*d.staff)} hours`, k:'grn'}]; },
   model(g, d, E, R, F){
     const st = g.st, month = g.month + 1, moy = g.month % 12, M = k => modM(g, k), A = k => modA(g, k);
     const ramp = Math.min(1, 0.6 + 0.08*(month - 1)), m = 0.5*(1 - Math.exp(-d.mkt/2500)), season = F.season ? SEASON.agency[moy] : 1;
@@ -420,13 +420,13 @@ BIZ.agency = {
     if (rivalOn && d.rate > st.rivalR + 60) flags.push('rival');
     const fixedCost = wages + rent + tools + d.mkt;
     const why = [
-      {t:'Billable time', p:`Your team could work ${int(capH)} billable hours. Clients bought ${int(sold)}${fixedP ? `, which took ${int(sold*overrun)} hours to deliver` : ''}: ${pct(util, 0)} busy.`, f:`busy share = hours worked ÷ hours available`, s:'ops', b:BM.util},
-      {t:'Break-even hours', p:`Your fixed costs were ${money(fixedCost)}, so at ${money(d.rate)} an hour you needed ${int(fixedCost/d.rate)} billed hours to break even.`, f:`break-even = fixed costs ÷ hourly rate`, s:'unitecon'}];
+      {t:'Billable time', p:`${int(sold)} of ${int(capH)} hours sold${fixedP ? ` (${int(sold*overrun)} worked)` : ''}: ${pct(util, 0)} busy.`, f:`busy share = hours worked ÷ hours available`, s:'ops', b:BM.util},
+      {t:'Break-even hours', p:`${money(fixedCost)} fixed ÷ ${money(d.rate)}/hour = ${int(fixedCost/d.rate)} hours to break even.`, f:`break-even = fixed costs ÷ hourly rate`, s:'unitecon'}];
     if (fixedP) why.push({t:'Fixed-price risk', p: overrun > 1 ? `Projects took ${pct(overrun - 1, 0)} longer than quoted. You absorbed those hours for free.` : `Projects finished ${pct(1 - overrun, 0)} faster than quoted, so you kept the extra margin.`, f:`hours worked = hours sold × overrun (${overrun.toFixed(2)})`, s:'pricing'});
-    if (F.seg) why.push({t:'Who hired you', p:`${segs.map(s => `${s.name.toLowerCase()} ${int((dem[s.id] || 0)*f)} hours`).join(', ')}. Corporate clients pay best but only hire studios with a good reputation (1.05+).`, f:`each group: hours = base × (1 − rate ÷ the most they’d pay)`, s:'pricing'});
+    if (F.seg) why.push({t:'Who hired you', p:`${segs.map(s => `${s.name.toLowerCase()} ${int((dem[s.id] || 0)*f)} h`).join(', ')}. Corporates need reputation 1.05+.`, f:`each group: hours = base × (1 − rate ÷ the most they’d pay)`, s:'pricing'});
     if (rivalOn) why.push({t:'Cheap freelancers', p:`Freelancers charging about ${money(st.rivalR)} an hour compete for small-business work.`, f:`small-business share falls as your rate rises above theirs`, s:'game'});
-    if (F.credit) why.push({t:'Waiting to be paid', p:`Clients owe you ${money(next.ar1 + next.ar2)}. Small businesses pay after about 30 days, startups 45, corporates 60. You can be profitable and still short of cash.`, f:`cash collected = last month’s invoices due now`, s:'fsa'});
-    if (wo) why.push({t:'Bad debt', p:`${money(wo)} of unpaid invoices will never be paid and was written off as a cost.`, f:`bad debt reduces both profit and money owed to you`, s:'finacct'});
+    if (F.credit) why.push({t:'Waiting to be paid', p:`Clients owe you ${money(next.ar1 + next.ar2)}. They pay 30–60 days late.`, f:`cash collected = last month’s invoices due now`, s:'fsa'});
+    if (wo) why.push({t:'Bad debt', p:`${money(wo)} will never be paid: written off as a cost.`, f:`bad debt reduces both profit and money owed to you`, s:'finacct'});
     const voices = [];
     if (F.voices){
       if (util > 0.92) voices.push(['Client', 'Deadlines keep slipping.']);
@@ -450,11 +450,11 @@ BIZ.agency = {
 BIZ.idea = {
   ...DATA.businesses.idea,  // name, colour, money settings and levels: data/businesses.json
   dec:[
-    {id:'price', label:'Price', min:1, max:1000, step:1, def:20, fmt:'money2', help:'Your price per sale.'},
-    {id:'mkt', label:'Marketing per month', min:0, max:20000, step:100, def:500, fmt:'money', help:'Each extra dollar brings fewer new customers than the last.'}],
+    {id:'price', label:'Price', min:1, max:1000, step:1, def:20, fmt:'money2', help:'Per sale.'},
+    {id:'mkt', label:'Marketing per month', min:0, max:20000, step:100, def:500, fmt:'money', help:'Each extra dollar brings a little less.'}],
   init(g){ g.st = {}; const I = g.idea; g.dec.price = I.price; },
   hint(g){ const I = g.idea, d = g.dec, unit = d.price - I.varCost*g.env.cost;
-    return unit <= 0 ? 'At this price you lose money on every sale.' : `<b>Break-even:</b> ${int((I.fixed*g.env.cost + d.mkt)/unit)} ${esc(I.unit)}s a month. You can serve up to ${int(I.capacity)}.`; },
+    return unit <= 0 ? [{l:'Each sale', v:'Loses money', k:'red'}] : [{l:'Break-even', v:`${int((I.fixed*g.env.cost + d.mkt)/unit)} ${I.unit}s/month`, k:'blu'}, {l:'You can serve', v:`${int(I.capacity)}/month`, k:'grn'}]; },
   model(g, d, E, R, F){
     const I = g.idea, month = g.month + 1, M = k => modM(g, k), A = k => modA(g, k);
     const el = {low:0.5, med:1.2, high:2.3}[I.sens] || 1.2;
@@ -466,8 +466,8 @@ BIZ.idea = {
     const be = unit > 0 ? (fixed + d.mkt)/unit : Infinity;
     const flags = []; if (unit < 0.2*d.price) flags.push('lowMargin'); if (lost > 0.05*demand) flags.push('capacity');
     const why = [
-      {t:'Break-even point', p: unit > 0 ? `Each ${I.unit} leaves ${money2(unit)} after variable costs. With ${money(fixed + d.mkt)} of fixed costs and marketing, you need ${int(be)} a month. You served ${int(served)}.` : `Your price is below your variable cost, so every sale loses money.`, f:`break-even = (fixed costs + marketing) ÷ (price − variable cost)`, s:'unitecon'},
-      {t:'Demand at your price', p:`You expected ${int(I.customers)} a month at ${money2(I.price)}. At ${money2(d.price)}${ramp < 1 ? ` and ${pct(ramp, 0)} awareness` : ''}, about ${int(demand)} wanted to buy.`, f:`demand = expected × (1 − ${el} × (price − your price) ÷ your price)`, s:'pricing'}];
+      {t:'Break-even point', p: unit > 0 ? `Need ${int(be)} a month to break even; served ${int(served)}.` : `Every sale loses money.`, f:`break-even = (fixed costs + marketing) ÷ (price − variable cost)`, s:'unitecon'},
+      {t:'Demand at your price', p:`At ${money2(d.price)}${ramp < 1 ? ` (${pct(ramp, 0)} known)` : ''}: ${int(demand)} wanted to buy.`, f:`demand = expected × (1 − ${el} × (price − your price) ÷ your price)`, s:'pricing'}];
     if (lost > 1) why.push({t:'At capacity', p:`You can serve ${int(I.capacity)} a month; ${int(lost)} more wanted to buy.`, f:`served = smaller of demand and capacity`, s:'ops'});
     return {op, rev, rows:[['Sales', rev, 'rev'], ['Variable costs', -varc, 'cost'], ['Gross profit', rev - varc, 'sub'], ['Fixed costs', -fixed, 'cost'], ['Marketing', -d.mkt, 'cost']],
       metrics:[[`${I.unit[0].toUpperCase() + I.unit.slice(1)}s served`, int(served)], ['Wanted to buy', int(demand)], ['Break-even', isFinite(be) ? int(be) + ' a month' : '—'], ['Gross margin', rev > 0 ? pct((rev - varc)/rev) : '—']], why, flags};
@@ -613,7 +613,7 @@ function acceptOffer(g, which){
   const o = g.offer; if (!o) return;
   if (which !== 'none'){ const t = o[which], post = t.pre + o.amt, share = o.amt/post;
     g.inv.forEach(x => x.pct *= t.pre/post); g.inv.push({amt:o.amt, pct:share, pref:o.amt*t.mult, mult:t.mult}); g.equityIn += o.amt;
-    g.news.push({t:'Investment agreed', p:`An investor will put in ${money(o.amt)} for ${pct(share)} of the company (valuing it at ${money(t.pre)} before the money). ${t.mult > 1 ? 'They get their money back twice over before you see anything in a sale.' : 'They get their money back first in a sale, then share as owners.'}`, s:'fund'});
+    g.news.push({t:'Investment agreed', p:`${money(o.amt)} for ${pct(share)} (value ${money(t.pre)}). ${t.mult > 1 ? 'In a sale, they get 2× back first.' : 'In a sale, they get their money back first.'}`, s:'fund'});
   } else g.news.push({t:'Offer declined', p:'You kept full control and ownership for now.', s:'fund'});
   g.offer = null;
 }
@@ -662,8 +662,8 @@ function stepMonth(g){
   if (g.st.expanded) d.expand = false;
   if (d.loan) d.loan = 'none';
   // Engine-level teaching cards
-  if (F.stmts) o.why.push({t:'Profit vs cash', p:`Net profit was ${money(ni)}, but cash changed by ${money(bs.cash - open.cash)}. The difference comes from depreciation, stock, money owed in and out, equipment and loans.`, f:`cash change = profit + depreciation − more owed to you − more stock + more owed by you ± equipment, loans and investment`, s:'fsa'});
-  if (interest > 0) o.why.push({t:'Your bank loan', p:`You owe ${money(bs.loan)}. This month you paid ${money(interest)} interest and repaid ${money(principal)} of the loan itself. Interest is a cost; repaying the loan is not.`, f:`interest = loan × ${pct(B.loanRate, 0)} ÷ 12`, s:'corpfin', b:BM.loan});
+  if (F.stmts) o.why.push({t:'Profit vs cash', p:`Profit ${money(ni)}, cash ${money(bs.cash - open.cash)}. See the cash flow tab for why.`, f:`cash change = profit + depreciation − more owed to you − more stock + more owed by you ± equipment, loans and investment`, s:'fsa'});
+  if (interest > 0) o.why.push({t:'Your bank loan', p:`You owe ${money(bs.loan)}. Paid ${money(interest)} interest (a cost) and ${money(principal)} back (not a cost).`, f:`interest = loan × ${pct(B.loanRate, 0)} ÷ 12`, s:'corpfin', b:BM.loan});
   g.month += 1; g.last = Object.assign(o, {ni, rows, cf, interest});
   // Flags for review
   (o.flags || []).forEach(f => g.flags[f] = (g.flags[f] || 0) + 1);
@@ -702,5 +702,5 @@ function goalKey(g){
 }
 
 
-function equityMetrics(g){ const v = valuation(g); return [['Company value', money(v.equity) + ' (' + v.label + ' + cash − loans)'], ['Your ownership', pct(ownership(g), 0)], ['Your share is worth', money(stake(g))]]; }
+function equityMetrics(g){ const v = valuation(g); return [['Company value', money(v.equity)], ['Your ownership', pct(ownership(g), 0)], ['Your share is worth', money(stake(g))]]; }
 /* ===== End of the engine ===== */

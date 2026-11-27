@@ -35,6 +35,7 @@ A 3D business game: walk around a small town and run your business from inside t
 - Business names are painted on each building's sign, and the café's menu board shows your price.
 - **City life:** neighbours fill the spare plots, a skyline rises past the edge of town, and people walk the pavements between doors, sit on benches and wait at the bus stop. A five-minute day turns to dusk and night, when lamps and windows light up (Menu can keep it daytime). From Level IV, trees follow the seasons, it snows in winter and rains in some spring and autumn months.
 - Lamps, benches, a bus stop and other street pieces dress the square.
+- **Running the month:** the green **Run** button (bottom right, or the space bar) runs the month with your current plan, shown just above it. Decisions are set at the stations inside your business, or all at once in the short **All decisions** list. The monthly report has three tabs: Summary, Statements and Why it happened (the maths is folded away until you ask for it).
 - **Controls:** WASD or arrow keys and E on a computer; an on-screen joystick and Enter button on a phone. The camera follows behind you as you walk; drag the view (or press Z and C) to turn it, X to put it back behind you, and it swings round to face a building when you stand at its door. The **Places** menu opens every building without walking.
 
 It uses Three.js (r128) from cdnjs and needs a browser with 3D graphics (WebGL).

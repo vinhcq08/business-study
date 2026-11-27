@@ -96,6 +96,8 @@ Also keep the **order** in which the engine draws random numbers. Each `R()` cal
 | `makeOffer(g)`, `acceptOffer(g, 'fair' \| 'rich' \| 'none')` | The investor pitch |
 | `goalKey(g)`, `valuation(g)`, `stake(g)`, `ownership(g)`, `loanLimit(g)` | Numbers for the HUD and report |
 
+`BIZ[biz].hint(g)` returns the break-even tiles for the decision windows as a list of `{l, v, k}` (label, value, colour); no HTML.
+
 After a month, `g.last` holds the report: `rows` (income statement), `cf` (cash flow), `metrics`, `why` (the "what happened and why" cards, each with a subject `s` that opens a lesson), `voices` (customer comments). The balance sheet is `g.bs`.
 
 ## 4. Checking the port

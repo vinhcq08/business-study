@@ -1,15 +1,15 @@
 {
-  "3": "Different customers value different things, and rivals react to your moves. A reputation built on good service is harder to copy than a low price.",
-  "4": "Profit and cash are not the same thing. Stock, unpaid invoices, supplier credit and loans all move cash without changing profit, so the cash flow statement matters as much as the income statement.",
-  "5": "Growth costs money before it pays back. A loan keeps your ownership but must be repaid; investor money doesn’t, but you give up part of the company and investors may be paid back first.",
-  "6": "Real businesses face everything at once. The steady habits win: know your break-even, protect your cash, listen to customers, and grow only as fast as your cash allows.",
-  "cafe-1": "Price sets how many people buy, and preparing too much or too little both cost money. Profit is simply what’s left of revenue after costs.",
-  "cafe-2": "Fixed costs must be covered before you make any profit. Break-even tells you how many customers that takes, and runway tells you how long you can wait for them.",
-  "saas-1": "Subscriptions stack up month after month, so even a small, steady flow of sign-ups builds large recurring revenue. The best price balances sign-ups against revenue per customer.",
-  "saas-2": "Software companies usually lose money while they grow. They succeed when each customer is worth well over what it cost to win them (LTV vs CAC), and cash lasts until that pays off.",
-  "shop-1": "Stock turns cash into goods before it turns back into cash. Profit only counts bags you sold, but your bank balance pays for every bag you bought.",
-  "shop-2": "Every order carries hidden costs: shipping, fees and returns. Ads only pay when the profit on the sales they bring is more than they cost.",
-  "agency-1": "In a service business you sell your time. The right rate fills most of your hours without leaving work on the table.",
-  "agency-2": "Salaries are paid whether or not there’s work. Keeping billable time high is how a studio covers its fixed costs.",
-  "idea": "Your own numbers decide whether the idea can work. Check the break-even point and how long your cash lasts before you commit real money."
+  "3": "Customers want different things, and rivals react. Good service is harder to copy than a low price.",
+  "4": "Profit isn't cash. Stock, unpaid invoices and loans move cash without changing profit.",
+  "5": "Growth costs money first. Loans must be repaid; investors take a share instead.",
+  "6": "Know your break-even, protect your cash, listen to customers, grow at your cash's pace.",
+  "cafe-1": "Price sets how many buy, and making too much or too little both cost money.",
+  "cafe-2": "Fixed costs come first. Break-even says how many customers you need; runway says how long you can wait.",
+  "saas-1": "Subscriptions stack up month after month. The best price balances sign-ups and revenue each.",
+  "saas-2": "Growing software loses money at first. It works when customers are worth well over their cost to win.",
+  "shop-1": "Stock turns cash into goods. Profit counts bags sold; your bank pays for every bag bought.",
+  "shop-2": "Every order has hidden costs. Ads pay only when their profit beats their cost.",
+  "agency-1": "You sell your time. The right rate fills your hours without leaving money on the table.",
+  "agency-2": "Salaries are paid either way. Keeping people busy covers your fixed costs.",
+  "idea": "Your numbers decide if the idea works. Check break-even and runway first."
 }

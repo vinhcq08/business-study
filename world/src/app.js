@@ -58,23 +58,6 @@ function statementTabs(g){
   return `<div class="tabs" role="tablist">${Object.entries(T).map(([k, [n]]) => `<button role="tab" data-tab="${k}" aria-selected="${tab===k}">${n}</button>`).join('')}</div>
     <h3 style="margin:6px 0 4px">Month ${g.month} · ${T[tab][0]}</h3>${ledger(T[tab][1])}${tab === 'balance' ? `<p class="small muted" style="margin-top:6px">Assets always equal liabilities plus equity: ${money(A)} = ${money(Li + Eq)}.</p>` : ''}`;
 }
-function chart(g){
-  const W = 640, H = 170, P = {l:58, r:10, t:12, b:22};
-  const pts = [{m:0, cash:g.start}].concat(g.hist), n = Math.max(g.months, 2);
-  const vals = pts.map(p => p.cash), lo = Math.min(0, ...vals), hi = Math.max(...vals, 1);
-  const x = m => P.l + (W - P.l - P.r)*m/n, y = v => P.t + (H - P.t - P.b)*(1 - (v - lo)/(hi - lo || 1));
-  const line = pts.map((p, i) => `${i?'L':'M'}${x(p.m).toFixed(1)} ${y(p.cash).toFixed(1)}`).join(' ');
-  const last = pts[pts.length-1], ticks = [hi, (hi + lo)/2, lo];
-  return `<figure class="chart" style="margin:0"><h3 style="margin-bottom:4px">Cash by month</h3>
-  <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Cash by month, now ${money(last.cash)}">
-    ${ticks.map(t => `<line x1="${P.l}" x2="${W-P.r}" y1="${y(t)}" y2="${y(t)}" stroke="var(--rule)" stroke-width="1"/><text x="${P.l-6}" y="${y(t)+3.5}" text-anchor="end">${money(t)}</text>`).join('')}
-    ${lo < 0 ? `<line x1="${P.l}" x2="${W-P.r}" y1="${y(0)}" y2="${y(0)}" stroke="var(--bad)" stroke-dasharray="4 4" stroke-width="1"/>` : ''}
-    <path d="${line} L${x(last.m)} ${y(lo)} L${x(0)} ${y(lo)} Z" fill="var(--accent)" fill-opacity=".08"/>
-    <path d="${line}" fill="none" stroke="var(--accent)" stroke-width="2"/>
-    <circle cx="${x(last.m)}" cy="${y(last.cash)}" r="4" fill="var(--accent)"/>
-    <text x="${x(0)}" y="${H-6}">Start</text><text x="${W-P.r}" y="${H-6}" text-anchor="end">Month ${n}</text>
-  </svg></figure>`;
-}
 
 
 
@@ -98,15 +81,16 @@ function render(){
 
 /* ---------- HUD ---------- */
 let prevCash = null;
-const kfmt = v => { const a = Math.abs(v), sgn = v < 0 ? '−' : ''; return a >= 1e6 ? sgn + '$' + (a/1e6).toFixed(a >= 1e7 ? 0 : 1) + 'M' : a >= 1000 ? sgn + '$' + (a/1000).toFixed(a >= 1e5 ? 0 : 1) + 'k' : money(v); };
+const kfmt = v => kfmt0(v).replace(/\.0(?=[kM])/, '');
+const kfmt0 = v => { const a = Math.abs(v), sgn = v < 0 ? '−' : ''; return a >= 1e6 ? sgn + '$' + (a/1e6).toFixed(a >= 1e7 ? 0 : 1) + 'M' : a >= 1000 ? sgn + '$' + (a/1000).toFixed(a >= 1e5 ? 0 : 1) + 'k' : money(v); };
 function updateHud(){
   const g = DB.game, top = $('#dTop'), mon = $('#dMoney'), badge = $('#badgeReport');
-  if (!g || g.status !== 'playing'){ top.innerHTML = `<span class="line ol">Start a Business</span>`; mon.innerHTML = ''; badge.hidden = true; prevCash = null; return; }
+  if (!g || g.status !== 'playing'){ top.innerHTML = `<span class="line ol">Start a Business</span>`; mon.innerHTML = ''; badge.hidden = true; prevCash = null; updatePlan(); return; }
   const F = FEAT(g.level), k = goalKey(g), p = Math.max(0, Math.min(1, k.value/k.target)), yr = Math.floor(g.month/12) + 1, small = innerWidth < 640;
   const when = F.season || g.biz === 'idea' ? (small ? `${MONTHS[g.month % 12].slice(0, 3)} · Y${yr}` : `${MONTHS[g.month % 12]}, Year ${yr}`) : `Month ${g.month + 1} of ${g.months}`;
-  const goalTxt = k.count ? `${k.value}/${k.target}` : `${kfmt(k.value)} / ${kfmt(k.target)}`;
+  const goalTxt = small ? (k.count ? `${k.value}/${k.target}` : `${kfmt(k.value)} / ${kfmt(k.target)}`) : goalText(g, k);
   top.innerHTML = `<span class="line ol">${esc(small ? when : bizName() + ' · ' + when)}</span>
-    <div class="d-goal" title="${esc(k.label)}"><span class="d-lvl shine ol">${['I','II','III','IV','V','R'][g.level - 1]}</span><div class="d-bar"><i style="width:${p*100}%"></i><span class="ol-sm">${esc(small ? goalTxt : 'Goal: ' + goalTxt)}</span></div></div>`;
+    <div class="d-goal" title="${esc(k.label)}"><span class="d-lvl shine ol">${['I','II','III','IV','V','R'][g.level - 1]}</span><div class="d-bar"><i style="width:${p*100}%"></i><span class="ol-sm">${esc(goalTxt)}</span></div></div>`;
   const cash = Math.round(g.bs.cash), ni = g.last ? g.last.ni : null;
   mon.innerHTML = `<div class="d-cash${cash < 0 ? ' neg' : ''}" id="dCash"><span class="d-coin shine ol">$</span><b class="ol">${cash.toLocaleString('en-US')}</b></div>
     ${ni === null ? '' : `<div class="d-last ${ni >= 0 ? 'up' : 'down'}"><i>${ni >= 0 ? '▲' : '▼'}</i><b class="ol-sm">${money(ni)} last month</b></div>`}`;
@@ -115,99 +99,351 @@ function updateHud(){
   prevCash = cash;
   badge.hidden = !(g.last && g.seenRep !== g.month);
   $('#bBank').classList.toggle('locked', !F.loan);
+  updatePlan();
 }
 
 /* ---------- Sheets (side panels) ---------- */
 const SHEETS = {
-  desk:    {title:() => bizName(), kicker:'Your business · decisions', needGame:true},
-  news:    {title:() => 'The Town Ledger', kicker:'Newspaper stand · monthly report', needGame:true},
-  bank:    {title:() => 'Bank', kicker:'Loans', needGame:true, need:F => F.loan, lock:'The bank lends from Level IV.'},
-  investor:{title:() => 'Investors’ tower', kicker:'Funding', needGame:true, need:F => F.equity, lock:'Investors meet you from Level V.'},
-  library: {title:() => 'Business School', kicker:'Lessons'},
-  places:  {title:() => 'Places', kicker:'Visit without walking'},
-  menu:    {title:() => 'Menu', kicker:'Start a Business'},
+  desk:    {title:() => 'All decisions', kicker:g => bizName() + ' · ' + cap1(whenLabel(g)), needGame:true, ic:['clip', 'blu']},
+  news:    {title:() => 'The Town Ledger', kicker:g => g && g.last ? cap1(whenLabel(g, g.month - 1)) : '', needGame:true, ic:['news', 'red']},
+  bank:    {title:() => 'Bank', kicker:g => pct(BIZ[g.biz].loanRate, 0) + ' a year · 3 years', needGame:true, need:F => F.loan, lock:'The bank lends from Level IV.', ic:['bank', 'grn']},
+  investor:{title:() => 'Investors’ tower', kicker:g => { const L = BIZ[g.biz].levels[g.level]; return L.kind === 'stake' ? 'Goal: your share worth ' + kfmt(L.t) : 'Funding'; }, needGame:true, need:F => F.equity, lock:'Investors meet you from Level V.', ic:['tower', 'pur']},
+  library: {title:() => 'Business School', kicker:'', ic:['book', 'sun']},
+  places:  {title:() => 'Places', kicker:'', ic:['map', 'blu']},
+  menu:    {title:() => 'Menu', kicker:'', ic:['menu', 'pur']},
 };
 function openPanel(id, keepLesson){
   if (id === 'library' && !keepLesson) lessonView = null;
   const S0 = SHEETS[id], g = DB.game;
   if (S0.needGame && (!g || g.status !== 'playing')){ toast('Start a business first'); showSetup(); return; }
   if (S0.need && !S0.need(FEAT(g.level))){ toast(S0.lock); return; }
-  panel = id; $('#sheet').hidden = false; renderPanel(); $('#sheetClose').focus();
+  panel = id; $('#sheet').hidden = false; document.body.classList.add('panel-open'); renderPanel(); $('#sheetClose').focus();
 }
-function closePanel(){ panel = null; $('#sheet').hidden = true; if (!modalKind) canvas.focus(); }
+function closePanel(){ panel = null; $('#sheet').hidden = true; document.body.classList.remove('panel-open'); if (!modalKind) canvas.focus(); }
 function renderPanel(){
   const g = DB.game, S0 = SHEETS[panel];
-  $('#sheetTitle').textContent = S0.title(); $('#sheetKicker').textContent = S0.kicker;
-  $('#sheet').style.setProperty('--c', g ? (g.biz === 'idea' ? 'var(--accent)' : BIZ[g.biz].color) : 'var(--ink)');
+  $('#sheetTitle').textContent = S0.title(); $('#sheetKicker').textContent = (typeof S0.kicker === 'function' ? S0.kicker(g) : S0.kicker) || '';
+  const ic = panel === 'station' ? (STN[curStation] || STN.price) : (S0.ic || ['clip', 'blu']);
+  $('#sheetIcon').innerHTML = svgIc(ic[0], 32); $('#sheet').style.setProperty('--c', HEX[ic[1]]);
   const body = $('#sheetBody'), view = panel + (panel === 'library' ? ':' + (lessonView || '') : ''), top = body.dataset.panel === view ? body.scrollTop : 0; body.dataset.panel = view; $('#sheet').dataset.panel = panel;
   if (panel === 'news' && g && g.last && g.seenRep !== g.month){ g.seenRep = g.month; save(); updateHud(); }
   body.innerHTML = ({desk:deskHtml, station:stationHtml, rival:rivalHtml, news:newsHtml, bank:bankHtml, investor:investorHtml, library:libraryHtml, places:placesHtml, menu:menuHtml})[panel](g);
   body.scrollTop = top;
 }
-function decHtml(g, decs){
-  return decs.map(x => {
-    if (x.kind === 'select') return `<div class="dec"><label for="d-${x.id}">${esc(x.label)}</label><select id="d-${x.id}" data-s="${x.id}">${x.opts.map(([v, l]) => `<option value="${v}" ${String(g.dec[x.id])===String(v)?'selected':''}>${esc(l)}</option>`).join('')}</select><span class="help">${esc(x.help)}</span></div>`;
-    if (x.kind === 'check') return `<div class="dec"><label class="chk" for="d-${x.id}"><input type="checkbox" id="d-${x.id}" data-k="${x.id}" ${g.dec[x.id]?'checked':''}>${esc(x.label)}</label><span class="help">${esc(x.help)}</span></div>`;
-    const idea = g.biz === 'idea' && x.id === 'price';
-    const min = idea ? Math.max(0.01, Math.round(g.idea.price*0.3*100)/100) : x.min, max = idea ? Math.round(g.idea.price*3*100)/100 : x.max, step = idea ? (g.idea.price < 20 ? 0.05 : 0.5) : x.step;
-    return `<div class="dec"><div class="top"><label for="d-${x.id}">${esc(x.label)}</label><input type="number" id="d-${x.id}" data-n="${x.id}" min="${min}" max="${max}" step="${step}" value="${g.dec[x.id]}"></div>
-      <input type="range" aria-label="${esc(x.label)}" data-r="${x.id}" min="${min}" max="${max}" step="${step}" value="${g.dec[x.id]}"><span class="help">${esc(x.help)}</span></div>`;
-  }).join('');
+/* =========================================================
+   The window kit (the approved "Overhaul" mockups): icons, tiles, chips,
+   decision rows, and every panel and modal built from them.
+   Text rule: labels 1-3 words, hints one short line, numbers do the talking.
+   ========================================================= */
+const IC = {
+  tag:'<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.6" fill="#1F2430"/>',
+  people:'<circle cx="9" cy="8" r="3.5"/><circle cx="16" cy="9" r="3"/><path d="M3 20c0-4 3-6 6-6s6 2 6 6z"/>',
+  box:'<path d="M3 8l9-4 9 4v9l-9 4-9-4z"/><path d="M3 8l9 4 9-4M12 12v9" fill="none"/>',
+  mega:'<path d="M3 10v4h4l7 5V5L7 10z"/><path d="M17 9a4 4 0 0 1 0 6" fill="none"/>',
+  bank:'<path d="M3 10l9-6 9 6z"/><path d="M5 10h14v9H5z"/><path d="M8 12v5M12 12v5M16 12v5" fill="none"/>',
+  tower:'<path d="M7 21V5l5-3 5 3v16z"/><path d="M10 8h4M10 12h4M10 16h4" fill="none"/>',
+  book:'<path d="M4 4h6a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2H4z"/><path d="M20 4h-6a2 2 0 0 0-2 2v14a2 2 0 0 1 2-2h6z"/>',
+  map:'<path d="M9 4l-6 2v14l6-2 6 2 6-2V4l-6 2z"/>',
+  news:'<path d="M4 5h13v14H6a2 2 0 0 1-2-2z"/><path d="M17 9h3v8a2 2 0 0 1-2 2" fill="none"/><path d="M7 9h7M7 13h7" fill="none"/>',
+  clip:'<path d="M6 4h12v17H6z"/><path d="M9 3h6v3H9z"/><path d="M9 11h6M9 15h4" fill="none"/>',
+  menu:'<path d="M5 7h14M5 12h14M5 17h14" fill="none" stroke-width="2.6" stroke-linecap="round"/>',
+  eye:'<circle cx="11" cy="11" r="6"/><path d="M20 20l-4-4" fill="none" stroke-width="2.4" stroke-linecap="round"/>',
+  cup:'<path d="M4 8h13v6a6 6 0 0 1-6 6h-1a6 6 0 0 1-6-6z"/><path d="M17 10h2a2.5 2.5 0 0 1 0 5h-2" fill="none"/><path d="M8 3v3M12 3v3" fill="none"/>',
+  laptop:'<path d="M4 5h16v11H4z"/><path d="M2 19h20" fill="none" stroke-width="2"/><path d="M8 10l2 2-2 2M12 14h4" fill="none"/>',
+  bag:'<path d="M5 8h14l-1 12H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2" fill="none"/>',
+  pen:'<path d="M4 20l3-1L19 7l-2-2L5 17z"/><path d="M15 7l2 2" fill="none"/>',
+  bulb:'<path d="M12 3a6 6 0 0 0-3.5 10.9V17h7v-3.1A6 6 0 0 0 12 3z"/><path d="M9.5 20h5" fill="none" stroke-width="2"/>',
+  up:'<path d="M12 19V5M6 11l6-6 6 6" fill="none" stroke="#FFFFFF" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>',
+  down:'<path d="M12 5v14M6 13l6 6 6-6" fill="none" stroke="#FFFFFF" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>',
+  coin:'<circle cx="12" cy="12" r="8"/><path d="M12 7v10M14.5 9.2c-.6-.8-1.5-1.2-2.5-1.2-1.4 0-2.5.8-2.5 2s1.1 1.6 2.5 2 2.5.8 2.5 2-1.1 2-2.5 2c-1 0-2-.4-2.6-1.2" fill="none"/>',
+  wrench:'<path d="M14 4a5 5 0 0 0-4.6 7L4 16.4 7.6 20l5.4-5.4A5 5 0 0 0 20 10l-3 3-3-1-1-3 3-3a5 5 0 0 0-2-2z"/>',
+  trophy:'<path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4" fill="none"/><path d="M10 13h4v3h-4z"/><path d="M8 16h8v3H8z"/>',
+  lock:'<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none"/>',
+  check:'<path d="M5 12l5 5 9-10" fill="none" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>',
+  home:'<path d="M3 11l9-7 9 7v9H3z"/><path d="M10 20v-5h4v5" fill="none"/>',
+  storm:'<path d="M6 15a4 4 0 0 1 .5-8A6 6 0 0 1 18 8a3.5 3.5 0 0 1 0 7z"/><path d="M12 15l-2 4h3l-2 3" fill="none" stroke-width="2"/>',
+  play:'<path d="M7 4l13 8-13 8z"/>',
+  ff:'<path d="M4 5l8 7-8 7z"/><path d="M12 5l8 7-8 7z"/>',
+};
+const svgIc = (k, size = 24) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="#FFFFFF" stroke="#1F2430" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true">${IC[k] || ''}</svg>`;
+const icon = (k, c = 'blu', cls = '') => `<span class="ico ${c}${cls ? ' ' + cls : ''}">${svgIc(k)}</span>`;
+const HEX = {sun:'#F0A80E', grn:'#20B25E', blu:'#2F6FE0', red:'#E5483A', pur:'#8645B0', ink:'#1F2430'};
+const BIZ_IC = {cafe:['cup','sun'], saas:['laptop','blu'], shop:['bag','red'], agency:['pen','pur'], idea:['bulb','grn']};
+const STN = {price:['tag','sun'], staff:['people','grn'], stock:['box','blu'], marketing:['mega','pur'], clients:['tag','sun']};
+const EV_IC = {viral:['mega','pur'], rivalpromo:['eye','pur'], recession:['down','red'], supplier:['box','sun'], breakdown:['wrench','red'], rent:['home','sun'],
+  inspection:['clip','blu'], grant:['coin','grn'], delivery:['bag','blu']};
+const tile = (l, v, k = '', sub = '') => `<div class="tile${k ? ' t-' + k : ''}"><span>${esc(l)}</span><b>${esc(v)}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</div>`;
+const chip = (t, k = '') => `<span class="chip${k ? ' t-' + k : ''}">${esc(t)}</span>`;
+const note = (html, k = 'blu') => `<div class="note t-${k}">${html}</div>`;
+const cap1 = s => s.charAt(0).toUpperCase() + s.slice(1);
+const whenLabel = (g, m = g.month) => FEAT(g.level).season || g.biz === 'idea' ? MONTHS[((m % 12) + 12) % 12] : 'month ' + (m + 1);
+const lessonBtn = (s, text) => SUBJ[s] ? `<button type="button" class="study" data-act="lesson" data-subj="${s}">${esc(text || 'Lesson: ' + SUBJ[s])}</button>` : '';
+function fmtVal(x, v){ return x.fmt === 'money2' ? money2(v) : x.fmt === 'money' ? money(v) : int(v); }
+function decStation(g, id){ const map = STATION_DECS[g.biz] || {}; for (const k in map) if (map[k].includes(id)) return k; return Object.keys(map)[0] || 'price'; }
+function decRange(g, x){
+  if (g.biz === 'idea' && x.id === 'price'){ const p = g.idea.price; return {min:Math.max(0.01, Math.round(p*0.3*100)/100), max:Math.round(p*3*100)/100, step:p < 20 ? 0.05 : 0.5}; }
+  return {min:x.min, max:x.max, step:x.step};
 }
+function decRow(g, x, slider){
+  const [ik, ic] = x.id === 'expand' ? ['up', 'grn'] : (STN[decStation(g, x.id)] || STN.price), v = g.dec[x.id];
+  const head = `${icon(ik, ic)}<span class="txt"><b>${esc(x.label)}</b>${x.help ? `<small>${esc(x.help)}</small>` : ''}</span>`;
+  if (x.kind === 'select'){
+    const opt = l => { const m = /^(.*?)\s*\((.*)\)$/.exec(l); return m ? `${esc(m[1])}<small>${esc(m[2])}</small>` : esc(l); };
+    const ctl = x.opts.length <= 3
+      ? `<div class="seg" role="group" aria-label="${esc(x.label)}">${x.opts.map(([ov, ol]) => `<button type="button" data-seg="${x.id}" data-v="${esc(ov)}" aria-pressed="${String(v) === String(ov)}">${opt(ol)}</button>`).join('')}</div>`
+      : `<select data-s="${x.id}" aria-label="${esc(x.label)}">${x.opts.map(([ov, ol]) => `<option value="${esc(ov)}" ${String(v) === String(ov) ? 'selected' : ''}>${esc(ol)}</option>`).join('')}</select>`;
+    return `<div class="drow multi t-${ic}">${head}${ctl}</div>`;
+  }
+  if (x.kind === 'check') return `<label class="drow t-${ic}">${head}<input type="checkbox" class="tog" data-k="${x.id}" ${v ? 'checked' : ''}></label>`;
+  const r = decRange(g, x), pre = /money/.test(x.fmt || '') ? '<i>$</i>' : '';
+  const ctl = `<span class="stepper"><button type="button" class="step" data-step="${x.id}" data-dir="-1" aria-label="Less">−</button><span class="pill">${pre}<input type="number" data-n="${x.id}" min="${r.min}" max="${r.max}" step="${r.step}" value="${x.fmt === 'money2' ? (+v).toFixed(2) : v}" aria-label="${esc(x.label)}"></span><button type="button" class="step" data-step="${x.id}" data-dir="1" aria-label="More">+</button></span>`;
+  if (!slider) return `<div class="drow t-${ic}">${head}${ctl}</div>`;
+  const p = (v - r.min)/((r.max - r.min) || 1)*100;
+  return `<div class="dslide t-${ic}"><div class="drow bare">${head}${ctl}</div>
+    <input type="range" data-r="${x.id}" min="${r.min}" max="${r.max}" step="${r.step}" value="${v}" style="--p:${p}%" aria-label="${esc(x.label)}">
+    <div class="ends"><span>${esc(fmtVal(x, r.min))}</span><span>${esc(fmtVal(x, r.max))}</span></div></div>`;
+}
+function hintInner(g){ const B = BIZ[g.biz]; return (g.level > 1 && B.hint && g.formulas ? B.hint(g) : []).map(t => tile(t.l, t.v, t.k)).join(''); }
+const runFoot = (g, second) => `<div class="foot"><button class="btn primary big" data-act="run" ${g.event || g.offer ? 'disabled' : ''}>Run ${esc(cap1(whenLabel(g)))}</button>${second || ''}</div>`;
+function newsCards(g){ return g.news.length ? `<div class="news">${g.news.map(n => `<div><b>${esc(n.t)}</b><span>${esc(n.p)}</span></div>`).join('')}</div>` : ''; }
+function rivalInfo(g){
+  const st = g.st, d = g.dec, b = g.biz, theirs = b === 'agency' ? st.rivalR : st.rivalP;
+  if (!theirs) return null;
+  const mine = b === 'agency' ? d.rate : b === 'saas' ? (d.pp || d.price) : d.price;
+  return {theirs, mine, f:b === 'cafe' ? money2 : money, unit:{saas:'/month', agency:'/hour'}[b] || '',
+    label:{cafe:['Their price', 'Yours'], saas:['Their Pro plan', 'Your Pro plan'], shop:['Their bag', 'Your bag'], agency:['Freelancers', 'Your rate']}[b] || ['Their price', 'Yours']};
+}
+const lockCard = (t, sub) => `<div class="card side locked">${icon('lock', 'ink')}<span><b>${esc(t)}</b><small>${esc(sub)}</small></span></div>`;
+
+/* ---------- Decisions: the short list at the desk, and one window per station ---------- */
 function deskHtml(g){
-  const B = BIZ[g.biz], F = FEAT(g.level), L = B.levels[g.level];
-  const decs = decList(g).filter(x => x.id !== 'loan'); decs.forEach(x => { if (g.dec[x.id] === undefined) g.dec[x.id] = x.def; });
-  const k = goalKey(g), p = Math.max(0, Math.min(1, k.value/k.target));
-  return `
-    <div class="goalbar"><span class="small"><b>Goal:</b> ${esc(L.text)}</span><div class="track" role="progressbar" aria-label="Goal progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(p*100)}"><div class="fill" style="width:${p*100}%"></div></div></div>
-    ${g.news.length ? `<div class="news">${g.news.map(n => `<div><b>${esc(n.t)}</b><br>${esc(n.p)}</div>`).join('')}</div>` : ''}
-    <h3>Decisions for ${F.season || g.biz === 'idea' ? MONTHS[g.month % 12] : 'month ' + (g.month + 1)}</h3>
-    ${decHtml(g, decs)}
-    ${g.level > 1 && B.hint && g.formulas ? `<div class="hint" id="hint">${B.hint(g)}</div>` : ''}
-    ${F.loan ? `<p class="small muted">Loans are arranged at the bank. Investors meet you in their tower from Level V.</p>` : ''}
-    <div class="row"><button class="btn primary" data-act="run" ${g.event || g.offer ? 'disabled' : ''}>Run ${F.season || g.biz === 'idea' ? MONTHS[g.month % 12] : 'month ' + (g.month + 1)}</button><button class="btn" data-act="go-news">Last month’s report</button></div>`;
+  const F = FEAT(g.level), all = decList(g), decs = all.filter(x => x.id !== 'loan');
+  decs.forEach(x => { if (g.dec[x.id] === undefined) g.dec[x.id] = x.def; });
+  const ld = F.loan ? all.find(x => x.id === 'loan') : null, lv = g.dec.loan || 'none';
+  const loan = ld ? `<button type="button" class="drow dash" data-act="go-bank">${icon('bank', 'ink')}<span class="txt"><b>Bank loan</b><small>${esc(lv === 'none' ? 'None this month' : (ld.opts.find(o => o[0] === lv) || ['', ''])[1])}</small></span><em>Bank ›</em></button>` : '';
+  const last = g.last ? tile('Last month', money(g.last.ni), g.last.ni >= 0 ? 'grn' : 'red') : '';
+  return `${newsCards(g)}<div class="rows">${decs.map(x => decRow(g, x, false)).join('')}${loan}</div>
+    <div class="tiles"><div id="hint" class="contents">${hintInner(g)}</div>${last}</div>
+    ${runFoot(g, `<button class="btn" data-act="go-news">Report</button>`)}`;
+}
+function stationHtml(g){
+  const id = curStation, decs = stationDecs(g, id), r = rivalInfo(g);
+  const rv = r && (id === 'price' || id === 'clients') && scouted(g)
+    ? note(`${icon('eye', 'pur', 'sm')}<span>${esc(RIVAL_NAME[g.biz])} charges <b>${esc(r.f(r.theirs) + r.unit)}</b> (you looked in ${esc(whenLabel(g, g.scout))})</span>`, 'pur') : '';
+  return `${decs.length ? `<div class="rows">${decs.map(x => decRow(g, x, true)).join('')}</div>` : `<p class="lede">${esc(STATION_NOTE[id] || 'Nothing to decide here yet.')}</p>`}
+    ${decs.length ? `<div class="tiles"><div id="hint" class="contents">${hintInner(g)}</div></div>` : ''}${rv}
+    ${runFoot(g, `<button class="btn" data-act="go-desk">All decisions</button>`)}`;
+}
+function rivalHtml(g){
+  g.scout = g.month; save();
+  const r = rivalInfo(g);
+  if (!r) return `<p class="lede">No rival yet.</p><div class="foot"><button class="btn primary big" data-act="go-desk">My decisions</button></div>`;
+  const gap = (r.mine - r.theirs)/r.theirs;
+  const read = gap > 0.1 ? 'You’re dearer. Price-sensitive customers may switch.' : gap < -0.1 ? 'You’re cheaper. Expect them to cut back.' : 'Close prices: customers choose on quality.';
+  return `<div class="tiles">${tile(r.label[0], r.f(r.theirs) + r.unit, 'pur')}${tile(r.label[1], r.f(r.mine) + r.unit, 'sun')}</div>
+    ${note(esc(read))}<div class="foot"><button class="btn primary big" data-act="go-desk">My decisions</button></div>`;
+}
+
+/* ---------- The monthly report: Summary, Statements, Why it happened ---------- */
+let rtab = 'sum';
+function profitBars(g){
+  const h = g.hist.slice(-6); if (!h.length) return '';
+  const mx = Math.max(1, ...h.map(x => Math.abs(x.profit))), F = FEAT(g.level);
+  const lab = x => F.season || g.biz === 'idea' ? MONTHS[(x.m - 1) % 12].slice(0, 3) : 'M' + x.m;
+  return `<div class="card bars-card"><b>Profit, last ${h.length === 1 ? 'month' : h.length + ' months'}</b>
+    <div class="bars" role="img" aria-label="${esc(h.map(x => lab(x) + ' ' + money(x.profit)).join(', '))}">${h.map(x => `<div class="bar"><i class="${x.profit >= 0 ? 'pos' : 'neg'}" style="height:${Math.max(2, Math.abs(x.profit)/mx*48)}%"></i></div>`).join('')}</div>
+    <div class="bar-l">${h.map(x => `<span>${esc(lab(x))}</span>`).join('')}</div></div>`;
 }
 function newsHtml(g){
   const o = g.last, F = FEAT(g.level);
-  if (!o) return `<p class="lede">Nothing to report yet. Set your decisions at your business and run your first month.</p><div class="row"><button class="btn primary" data-act="go-desk">Go to my business</button></div>`;
-  const when = F.season || g.biz === 'idea' ? MONTHS[(g.month - 1) % 12] : 'month ' + g.month;
-  const head = o.ni >= 0 ? `${bizName()} makes ${money(o.ni)} in ${when}` : `${bizName()} loses ${money(-o.ni)} in ${when}`;
-  return `
-    <p class="headline">${esc(head)}</p>
-    <div class="stats"><div><b class="${g.bs.cash < 0 ? 'neg' : ''}">${money(g.bs.cash)}</b><span>Cash</span></div><div><b class="${o.ni < 0 ? 'neg' : ''}">${money(o.ni)}</b><span>Net profit</span></div></div>
-    ${chart(g)}
-    <div>${F.stmts ? statementTabs(g) : `<h3 style="margin-bottom:8px">Income statement</h3>${ledger(o.rows)}`}</div>
-    <div><h3 style="margin-bottom:8px">Key numbers</h3><div class="metrics">${visibleMetrics(g, o.metrics).concat(F.equity ? equityMetrics(g) : []).map(([l, v]) => `<div><span>${esc(l)}</span><b>${esc(v)}</b></div>`).join('')}</div></div>
-    ${o.voices && o.voices.length && g.heard !== g.month ? `<div style="display:flex;flex-direction:column;gap:10px"><h3>Overheard in town</h3><p class="small muted">Customers at your business have opinions about last month. Walk over and ask one.</p></div>` : ''}
-    ${o.voices && o.voices.length && g.heard === g.month ? `<div style="display:flex;flex-direction:column;gap:10px"><h3>Overheard in town</h3><div class="voices">${o.voices.slice(0, 3).map(([w, q]) => `<div class="voice"><q>${esc(q)}</q><span>${esc(w)}</span></div>`).join('')}</div></div>` : ''}
-    <div style="display:flex;flex-direction:column;gap:10px"><h3>What happened and why</h3>
-      <div class="why">${visibleWhy(g, o.why).map(w => `<div class="card"><b>${esc(w.t)}</b><p>${esc(w.p)}</p>${g.formulas ? `<div class="f">${esc(w.f)}</div>` : ''}${w.b ? `<p class="bm">${esc(w.b)}</p>` : ''}${SUBJ[w.s] ? `<button class="study" data-act="lesson" data-subj="${w.s}">Lesson: ${esc(SUBJ[w.s])}</button>` : ''}</div>`).join('')}</div></div>
-    <div class="row"><button class="btn primary" data-act="go-desk">Back to my business</button></div>`;
+  if (!o) return `<p class="lede">No report yet.</p>${runFoot(g, '')}`;
+  const tabs = `<div class="tabs big" role="tablist">${[['sum', 'Summary'], ['stm', 'Statements'], ['why', 'Why it happened']].map(([k, n]) => `<button role="tab" data-rtab="${k}" aria-selected="${rtab === k}">${n}</button>`).join('')}</div>`;
+  const why = visibleWhy(g, o.why), foot = `<div class="foot"><button class="btn primary big" data-act="go-desk">Decisions</button><button class="btn" data-act="close">Close</button></div>`;
+  let body;
+  if (rtab === 'stm') body = `<div>${F.stmts ? statementTabs(g) : `<h3>Income statement</h3>${ledger(o.rows)}`}</div>
+    <h3>Key numbers</h3><div class="tiles">${visibleMetrics(g, o.metrics).concat(F.equity ? equityMetrics(g) : []).map(([l, v]) => tile(l, v)).join('')}</div>`;
+  else if (rtab === 'why') body = `<div class="why">${why.map(w => `<div class="card"><b>${esc(w.t)}</b><p>${esc(w.p)}</p>
+    ${g.formulas && (w.f || w.b) ? `<details class="more"><summary>Show the maths</summary>${w.f ? `<div class="f">${esc(w.f)}</div>` : ''}${w.b ? `<p class="bm">${esc(w.b)}</p>` : ''}</details>` : ''}${lessonBtn(w.s)}</div>`).join('')}</div>`;
+  else {
+    const up = o.ni >= 0, m0 = visibleMetrics(g, o.metrics)[0], r = F.rival ? rivalInfo(g) : null;
+    const rival = r ? (scouted(g) ? `<div class="card side">${icon('eye', 'pur', 'round')}<span><b>Rival: ${esc(r.f(r.theirs) + r.unit)}</b><small>You checked in ${esc(whenLabel(g, g.scout))}</small></span></div>` : lockCard('Rival prices', 'Walk over and look')) : '';
+    const v = o.voices && o.voices.length ? (g.heard === g.month ? `<div class="card side voices">${o.voices.slice(0, 2).map(([w, q]) => `<q>${esc(q)}</q><small>${esc(w)}</small>`).join('')}</div>` : lockCard('What customers said', 'Ask a customer at your door')) : '';
+    body = `<div class="headcard ${up ? 'up' : 'down'}">${icon(up ? 'up' : 'down', up ? 'grn' : 'red', 'round')}<span><b>${esc(bizName())} ${up ? 'made' : 'lost'} ${money(Math.abs(o.ni))} in ${esc(whenLabel(g, g.month - 1))}</b>${why[0] ? `<small>${esc(why[0].p)}</small>` : ''}</span></div>
+      <div class="tiles four">${tile('Money in', money(o.rev), 'grn')}${tile('Money out', money(o.rev - o.ni), 'red')}${m0 ? tile(m0[0], m0[1], 'blu') : ''}${tile('Cash now', money(g.bs.cash), 'sun')}</div>
+      <div class="sum-two">${profitBars(g)}<div class="side-col">${rival}${v}${newsCards(g)}</div></div>`;
+  }
+  return tabs + body + foot;
 }
+
+/* ---------- Bank and investors ---------- */
 function bankHtml(g){
-  const B = BIZ[g.biz], ld = decList(g).find(x => x.id === 'loan');
-  return `
-    <p class="lede">The bank lends up to about four months of your sales, repaid monthly over three years at ${pct(B.loanRate, 0)} a year.</p>
-    <div class="metrics"><div><span>You owe</span><b>${money(g.bs.loan)}</b></div><div><span>Monthly repayment</span><b>${g.bs.loan > 0 ? money(g.loanPay) : '—'}</b></div><div><span>Most the bank will lend in total</span><b>${money(loanLimit(g))}</b></div></div>
-    ${ld ? decHtml(g, [ld]) : ''}
-    <p class="small muted">Your choice is applied when you next run a month. ${esc(BM.loan)}</p>
-    <div class="row"><button class="btn primary" data-act="go-desk">Back to my business</button></div>`;
+  const B = BIZ[g.biz], bs = g.bs, r = B.loanRate/12, lim = loanLimit(g), cur = g.dec.loan || 'none';
+  const pay = P => P*r/(1 - Math.pow(1 + r, -36));
+  const opt = (v, big, small, dis) => `<button type="button" class="opt" data-seg="loan" data-v="${v}" aria-pressed="${cur === v}" ${dis ? 'disabled' : ''}><b>${esc(big)}</b><span>${esc(small)}</span></button>`;
+  const opts = [opt('none', 'No loan', 'This month', false)]
+    .concat(B.loanSizes.map((a, i) => { const over = bs.loan + a > lim; return opt('b' + i, money(a), over ? 'Over your limit' : money(pay(bs.loan + a)) + '/month', over); }))
+    .concat([opt('repay', 'Repay all', bs.loan > 0 ? money(bs.loan) : 'No loan', bs.loan <= 0 || bs.cash < bs.loan)]);
+  return `<div class="tiles">${tile('You owe', money(bs.loan))}${tile('Monthly repayment', bs.loan > 0 ? money(g.loanPay) : 'None')}${tile('Most you can borrow', money(lim), '', '≈ 4 months of sales')}</div>
+    <h3>Borrow</h3><div class="opts">${opts.join('')}</div>
+    <div class="notes">${note('Interest is a cost. Repaying isn’t, but it uses cash.')}${note('Real loans: 6–11% a year.', 'sun')}</div>
+    <div class="foot"><span class="foot-note">Happens when you run ${esc(cap1(whenLabel(g)))}. ${lessonBtn('corpfin', 'Lesson')}</span><button class="btn primary big" data-act="close">Done</button></div>`;
 }
+const pie = (p, big) => `<span class="pie${big ? ' big' : ''}" role="img" aria-label="You own ${pct(p, 0)}" style="--p:${(p*100).toFixed(1)}%"></span>`;
+const pctS = p => pct(p, Math.abs(p*100 - Math.round(p*100)) < 0.05 ? 0 : 1);
 function investorHtml(g){
-  const own = ownership(g);
-  return `
-    <p class="lede">Investors give you cash for part of your company. A loan must be repaid; investor money doesn’t, but they own a share and are often paid back first if the company is sold.</p>
-    <div class="metrics">${equityMetrics(g).map(([l, v]) => `<div><span>${esc(l)}</span><b>${esc(v)}</b></div>`).join('')}</div>
-    ${g.offer ? `<div class="evt offer" role="group" aria-label="Investor offer"><span class="tag">Investor offer</span><b>${money(g.offer.amt)} for part of your company</b>
-      <p>Company valued at about ${money(g.offer.pre)} before the investment.</p>
-      <div class="choices">
-        <button type="button" class="btn" data-act="of-fair">Fair terms: ${pct(g.offer.amt/(g.offer.fair.pre + g.offer.amt))} of the company<small>Value ${money(g.offer.fair.pre)}. In a sale they get their money back first (1×).</small></button>
-        <button type="button" class="btn" data-act="of-rich">Higher value: ${pct(g.offer.amt/(g.offer.rich.pre + g.offer.amt))} of the company<small>Value ${money(g.offer.rich.pre)}, but they get 2× their money back before you see anything.</small></button>
-        <button type="button" class="btn" data-act="of-none">Decline<small>Keep ${pct(own, 0)} of the company.</small></button>
-      </div></div>`
-    : `<div class="row"><button class="btn primary" data-act="pitch" ${g.month - g.lastPitch < 4 ? 'disabled' : ''}>Pitch for investment</button></div><p class="small muted">${g.month - g.lastPitch < 4 ? 'You can pitch again in ' + (4 - (g.month - g.lastPitch)) + ' months.' : 'You’ll get an offer based on your current value and can choose whether to accept.'} ${esc(BM[BIZ[g.biz].valBM] || '')}</p>`}
-    <div class="row"><button class="btn" data-act="go-desk">Back to my business</button></div>`;
+  const B = BIZ[g.biz], v = valuation(g), own = ownership(g), L = B.levels[g.level], stk = stake(g);
+  const tiles = `<div class="tiles">${tile('Company value', money(v.equity), '', B.valMult ? `${B.valMult}× yearly profit + cash` : 'Revenue-based + cash')}
+    <div class="tile pie-tile">${pie(own)}<span>You own</span><b>${pctS(own)}</b></div>
+    ${tile('Your share is worth', money(stk), '', L.kind === 'stake' ? pct(Math.min(1, stk/L.t), 0) + ' of goal' : '')}</div>`;
+  if (g.offer){
+    const o = g.offer, card = (k, name) => { const t = o[k], post = t.pre + o.amt, keep = own*(t.pre/post);
+      return `<button type="button" class="offer" data-act="of-${k}"><span class="offer-top">${pie(keep, 1)}<span><b>${esc(name)}</b><small>Value ${esc(kfmt(t.pre))}</small></span></span>
+        <span class="chips">${chip('You keep ' + pctS(keep), 'sun')}${chip('They get ' + pctS(o.amt/post), 'pur')}${chip(`Paid first: ${kfmt(o.amt*t.mult)} (${t.mult}×)`, t.mult > 1 ? 'red' : 'grn')}</span></button>`; };
+    return tiles + `<div class="offerbox"><div class="offer-head">${icon('coin', 'pur', 'round')}<span><b>An investor offers ${money(o.amt)}</b><small>Pick the terms</small></span></div>
+      <div class="offers">${card('fair', 'Fair terms')}${card('rich', 'Higher value')}</div>
+      <div class="foot"><span class="foot-note">No repayments, but they own a share. ${lessonBtn('fund', 'Lesson')}</span><button class="btn" data-act="of-none">No thanks</button></div></div>`;
+  }
+  const wait = 4 - (g.month - g.lastPitch);
+  return tiles + `<div class="foot"><span class="foot-note">${wait > 0 ? `Pitch again in ${wait} month${wait > 1 ? 's' : ''}.` : 'You’ll get an offer to accept or turn down.'}</span><button class="btn primary big" data-act="pitch" ${wait > 0 ? 'disabled' : ''}>Pitch for investment</button></div>`;
 }
+
+/* ---------- Business School ---------- */
+function lessonHtml(s){
+  const L = LESSONS[s];
+  return `<article class="lesson"><span class="kick">Lesson</span><h2>${esc(SUBJ[s])}</h2><p class="lede">${esc(L.idea)}</p>
+    ${L.formula ? `<div class="f">${esc(L.formula)}</div>` : ''}
+    <div class="lesson-two"><div><h3>Example</h3><p>${esc(L.example)}</p></div><div class="ingame"><h3>In the game</h3><p>${esc(L.tip)}</p></div></div></article>`;
+}
+function nextLesson(){ return Object.keys(SUBJ).find(s => lessonOpen(s) && !DB.read[s] && s !== lessonView) || null; }
+function libraryHtml(g){
+  const s = lessonView; if (s) markRead(s);
+  const all = Object.keys(SUBJ), n = all.filter(lessonOpen).length, first = g ? (BIZ[g.biz].levels[g.level].subjects || []) : [], next = nextLesson();
+  const tl = x => lessonOpen(x) ? `<button type="button" class="ls${s === x ? ' cur' : DB.read[x] ? '' : ' new'}" data-act="lesson" data-subj="${x}"><b>${esc(SUBJ[x])}</b><span>${s === x ? 'Reading' : DB.read[x] ? 'Read' : 'New'}</span></button>`
+    : `<div class="ls locked"><b>${esc(SUBJ[x])}</b><span>Not met yet</span></div>`;
+  const list = `<div class="school-list">${first.length ? `<h3>For this level</h3><div class="lessons">${first.map(tl).join('')}</div>` : ''}
+    <h3>${first.length ? 'All other lessons' : 'All lessons'}</h3><div class="lessons">${all.filter(x => !first.includes(x)).map(tl).join('')}</div></div>`;
+  const read = s ? lessonHtml(s) + `<div class="foot">${next ? `<button class="btn primary big" data-act="lesson" data-subj="${next}">Next new lesson</button>` : ''}<button class="btn" data-act="lessons">All lessons</button>${g && g.status === 'playing' ? `<button class="btn" data-act="go-news">Report</button>` : ''}</div>`
+    : `<div class="lesson empty">${icon('book', 'sun', 'round')}<b>Pick a lesson</b><small>${S().free ? 'Free play opens every lesson.' : 'Lessons open as you play.'}</small></div>`;
+  return `<div class="progress"><div class="pbar"><i style="width:${n/all.length*100}%"></i></div><b>${n} of ${all.length} lessons</b></div>
+    <div class="school${s ? ' has-lesson' : ''}">${list}<div class="school-read">${read}</div></div>`;
+}
+
+/* ---------- Places and Menu ---------- */
+function placesHtml(g){
+  const F = g ? FEAT(g.level) : null, bi = g ? BIZ_IC[g.biz] : BIZ_IC.cafe;
+  const P = [['desk', bizName(), 'Decisions', bi, true], ['news', 'Newspaper', 'Monthly report', ['news', 'red'], true],
+    ['bank', 'Bank', F && F.loan ? 'Loans' : 'From Level IV', ['bank', 'grn'], F && F.loan], ['investor', 'Investors', F && F.equity ? 'Funding' : 'From Level V', ['tower', 'pur'], F && F.equity],
+    ['library', 'Business School', 'Lessons', ['book', 'sun'], true], ['menu', 'Menu', 'Settings', ['menu', 'blu'], true]];
+  return `<div class="placegrid">${P.map(([id, nm, d, [ik, ic], ok]) => `<button type="button" data-act="go-${id}" class="${ok ? '' : 'locked'}">${icon(ok ? ik : 'lock', ok ? ic : 'ink', 'big')}<b>${esc(nm)}</b><span>${esc(d)}</span></button>`).join('')}</div>
+    <p class="small muted">Or walk there and press E.</p>`;
+}
+function menuHtml(g){
+  const st = S(), playing = g && g.status === 'playing';
+  return `<div class="row">${playing ? `<button class="btn primary" data-act="close">Continue</button>` : ''}<button class="btn ${playing ? '' : 'primary'}" data-act="new">New game</button></div>
+    <div class="field"><span class="lab">Difficulty (new games)</span><div class="seg" role="group" aria-label="Difficulty">${['easy', 'normal', 'hard'].map(k => `<button data-act="diff" data-diff="${k}" aria-pressed="${st.diff === k}">${DIFF[k].label}</button>`).join('')}</div></div>
+    <div class="field"><label class="switch" for="m-free"><input type="checkbox" id="m-free" data-set="free" ${st.free ? 'checked' : ''}><span>Free play: every level open</span></label>
+      <label class="switch" for="m-form"><input type="checkbox" id="m-form" data-set="formulas" ${st.formulas ? 'checked' : ''}><span>Hints and maths (new games)</span></label>
+      <label class="switch" for="m-day"><input type="checkbox" id="m-day" data-set="nightOff" ${st.nightOff ? 'checked' : ''}><span>Always daytime</span></label></div>
+    <div class="field"><span class="lab">Controls</span><div class="chips">${['WASD: walk', 'E: enter', 'Space: run month', 'Drag or Z/C: turn', 'X: reset view', 'Scroll: zoom', 'Esc: close'].map(c => chip(c)).join('')}</div></div>
+    <div class="field"><span class="lab">3D models</span><p class="help">${esc(modelSummary())}</p><div class="row"><a class="btn" href="${esc(CHECK_URL)}" target="_blank" rel="noopener">Model check ↗</a></div></div>
+    ${playing ? `<div class="row"><button class="btn danger" data-act="abandon">Abandon game</button></div>` : ''}`;
+}
+
+/* ---------- Modals: start screen, news card, results ---------- */
+const LV_SHORT = {1:'Basics', 2:'Costs', 3:'Customers', 4:'Finances', 5:'Growth', 6:'Real life'};
+function showSetup(){
+  const pk = DB.pick; if (!BIZ_ORDER.includes(pk.biz)) pk.biz = 'cafe'; if (!unlocked(pk.biz, pk.level)) pk.level = 1;
+  const g = DB.game, L = BIZ[pk.biz].levels[pk.level], won = prog(pk.biz);
+  const pips = b => `<span class="pips" aria-label="${prog(b) ? 'Won up to ' + lvName(prog(b)) : 'Not started'}">${[1, 2, 3, 4, 5, 6].map(n => `<i class="${prog(b) >= n ? 'on' : ''}"></i>`).join('')}</span>`;
+  const biz = k => { const [ik, ic] = BIZ_IC[k]; return `<button type="button" class="bizc" data-biz="${k}" aria-pressed="${pk.biz === k}"><span class="bizc-top" style="--c:${HEX[ic]}">${svgIc(ik, 52)}</span><span class="bizc-b"><b>${esc(BIZ[k].name)}</b>${pips(k)}</span></button>`; };
+  const node = n => { const ok = unlocked(pk.biz, n), done = won >= n, cur = pk.level === n;
+    return `<button type="button" class="lvn${cur ? ' cur' : done ? ' done' : ok ? '' : ' lock'}" data-lvl="${n}" ${ok ? '' : 'disabled'} aria-pressed="${cur}" aria-label="${esc(lvName(n) + ', ' + LEVELS[n - 1].name)}">
+      <span class="dot">${cur ? `<span class="ol">${ROMAN[n - 1]}</span>` : done ? svgIc('check', 30) : ok ? `<span class="ol">${ROMAN[n - 1]}</span>` : svgIc('lock', 26)}</span><span class="nm">${esc(n === 6 ? 'Real life' : ROMAN[n - 1] + ' · ' + LV_SHORT[n])}</span></button>`; };
+  const fill = Math.min(5, won)/5*100;
+  showModal('setup', `<h1>Start a <em>Business</em></h1>
+    <div class="setup">
+      <div class="setup-col"><h3>1. Choose a business</h3><div class="bizgrid">${BIZ_ORDER.map(biz).join('')}</div></div>
+      <div class="setup-col"><h3>2. Choose a level</h3>
+        <div class="lvpath" role="group" aria-label="Levels"><div class="track"><i style="width:${fill}%"></i></div>${[1, 2, 3, 4, 5, 6].map(node).join('')}</div>
+        <div class="story"><b>${esc(L.title)}</b>${L.story ? `<p>${esc(L.story)}</p>` : ''}
+          <div class="chips">${chip('Goal: ' + L.text, 'sun')}${chip(L.months + ' months', 'blu')}${chip(money(L.start) + ' to start', 'grn')}</div></div>
+        <div class="foot"><button class="btn primary big" data-m="start">${svgIc('play', 26)}Start ${esc(L.title.replace(/^The /, 'the '))}</button>
+          <button class="btn diffbtn" data-m="diff"><small>Difficulty</small>${esc(envFrom(S(), pk.level === 6).label)}</button>
+          ${g && g.status === 'playing' ? `<button class="btn" data-m="cont">Continue</button>` : ''}</div>
+      </div>
+    </div>`);
+}
+function showEvent(){
+  const g = DB.game, e = EV.find(x => x.id === g.event); if (!e || modalKind === 'event') return;
+  const [ik, ic] = EV_IC[e.id] || ['news', 'pur'], cols = ['sun', 'grn', 'blu'];
+  showModal('event', `<div class="mhead" style="--c:${HEX.pur}">${svgIc('news', 30)}<span class="ol">News · ${esc(cap1(whenLabel(g)))}</span></div>
+    <div class="mbody"><div class="ev-top">${icon(ik, ic, 'huge')}<span><h2>${esc(e.title)}</h2><p>${esc(e.text)}</p></span></div>
+      <div class="choices">${e.choices.map((c, i) => { const sub = typeof c.sub === 'object' ? (c.sub[g.biz] || '') : (c.sub || '');
+        const cm = /^(.*?)\s*\((\$[^)]*)\)$/.exec(c.l), name = cm ? cm[1] : c.l;
+        return `<button type="button" class="choice" data-m="ev" data-i="${i}"><span class="ch-top"><span class="ico ${cols[i % 3]}"><b class="ol">${'ABC'[i]}</b></span><b>${esc(name)}</b></span>
+          <span class="chips">${cm ? chip('−' + cm[2], 'red') : ''}${sub ? sub.split(/;\s*/).map(t => chip(t)).join('') : ''}</span>${SUBJ[c.s] ? `<small>Lesson: ${esc(SUBJ[c.s])}</small>` : ''}</button>`; }).join('')}</div>
+      <div class="cashline">${icon('coin', 'sun', 'sm')}Cash: <b>${money(g.bs.cash)}</b></div></div>`);
+}
+function showResult(){
+  const g = DB.game, B = BIZ[g.biz], won = g.status === 'won', F = FEAT(g.level), next = g.level + 1, L = B.levels[g.level];
+  if (modalKind === 'result') return;
+  const best = Math.max(...g.hist.map(h => h.profit)), review = Object.entries(g.flags).filter(([k]) => FLAGS[k]).sort((a, b) => b[1] - a[1]).slice(0, 3);
+  const lesson = LESSON[g.biz === 'idea' ? 'idea' : (LESSON[g.biz + '-' + g.level] ? g.biz + '-' + g.level : g.level)];
+  meetSubjects(review.map(([k]) => FLAGS[k].s)); save();
+  const k = goalKey(g), canNext = won && g.biz !== 'idea' && next <= 6;
+  const tiles = [won ? tile('Reached in', `Month ${g.month}`, '', `of ${g.months}`) : tile('Lasted', `${g.month} months`, '', `of ${g.months}`),
+    tile(k.count ? 'Months in a row' : k.label.replace(/ goal$/, ''), k.count ? String(k.value) : kfmt(k.value), '', 'goal ' + (k.count ? k.target : kfmt(k.target))), tile('Best month', money(best)),
+    L.kind === 'cash' ? tile('Profit', money(g.hist.reduce((t, h) => t + h.profit, 0))) : tile('Cash', money(g.bs.cash))];
+  showModal('result', `<div class="mhead center" style="--c:${won ? HEX.grn : HEX.red}"><div class="medal ${won ? 'won' : 'lost'}">${svgIc(won ? 'trophy' : 'storm', 60)}</div><h2 class="ol">${won ? 'Goal reached!' : 'Not this time'}</h2><span class="ol-sm">${esc(bizName())} · ${esc(g.biz === 'idea' ? 'Your idea' : lvName(g.level))} · ${esc(L.title)}</span></div>
+    <div class="mbody">${!won && g.reason ? note(esc(g.reason), 'red') : ''}<div class="tiles four">${tiles.join('')}</div>
+      <div class="res-two"><div class="teach"><span class="cap">What this level teaches</span><p>${esc(lesson)}</p></div>
+        <div class="revisit"><span class="cap">Lessons to revisit</span>${review.length ? review.map(([f, n]) => `<button type="button" class="rv" data-m="lesson" data-subj="${FLAGS[f].s}">${icon('book', 'sun')}<span><b>${esc(SUBJ[FLAGS[f].s])}</b><small>${esc(FLAGS[f].t)} · ${n} month${n > 1 ? 's' : ''}</small></span></button>`).join('') : '<p class="muted">No weak spots this time.</p>'}</div></div>
+      ${canNext ? note(`Unlocked: <b>${esc(next === 6 ? 'Real life' : lvName(next) + ' · ' + LEVELS[next - 1].name)}</b>`, 'grn') : ''}
+      <div class="foot">${canNext ? `<button class="btn primary big" data-m="next">Play ${esc(lvName(next))}</button>` : ''}<button class="btn${canNext ? '' : ' primary big'}" data-m="again" title="Same luck and events">Replay</button><button class="btn" data-m="new">New game</button></div></div>`);
+}
+
+/* ---------- HUD: goal in a few words, and the plan + Run button ---------- */
+function goalText(g, k){
+  const L = BIZ[g.biz].levels[g.level];
+  switch (L.kind){
+    case 'cash': return `Cash ${kfmt(k.value)} of ${kfmt(k.target)}`;
+    case 'netcash': return `Net cash ${kfmt(k.value)} of ${kfmt(k.target)}`;
+    case 'streak': return `${L.t > 0 ? kfmt(L.t) + '+ profit' : 'Profit'}: ${k.value} of ${k.target} months`;
+    case 'mrr': return `MRR ${kfmt(k.value)} of ${kfmt(k.target)}`;
+    case 'stake': return `Your share ${kfmt(k.value)} of ${kfmt(k.target)}`;
+  }
+  return k.label;
+}
+const PLAN_NOUN = {prep:'cups/day', staff:{cafe:'baristas', agency:'designers'}, devs:'developers', support:'support', reps:'sales reps', order:'bags', packers:'packers'};
+function planChips(g){
+  const out = [];
+  for (const x of decList(g)){
+    if (x.id === 'loan' || x.id === 'expand') continue;
+    const v = g.dec[x.id]; if (v === undefined) continue;
+    if (x.kind === 'select'){ const o = x.opts.find(o => String(o[0]) === String(v)); if (o) out.push(o[1].replace(/\s*\(.*\)$/, '')); continue; }
+    if (x.kind === 'check'){ if (v) out.push(x.label.replace(/\s*\(.*\)$/, '')); continue; }
+    const n = typeof PLAN_NOUN[x.id] === 'object' ? PLAN_NOUN[x.id][g.biz] : PLAN_NOUN[x.id];
+    out.push(n ? `${int(v)} ${n}` : x.id === 'rate' ? money(v) + '/hour' : x.id === 'pb' ? 'Basic ' + money(v) : x.id === 'pp' ? 'Pro ' + money(v) : x.id === 'pe' ? 'Enterprise ' + money(v)
+      : /mkt|ads/.test(x.id) ? money(v) + ' ads' : fmtVal(x, v));
+  }
+  return out.slice(0, 6);
+}
+function updatePlan(){
+  const g = DB.game, dock = $('#runDock'); if (!dock) return;
+  const on = !!(g && g.status === 'playing'); dock.hidden = !on; if (!on) return;
+  $('#plan').innerHTML = `<span class="plan-h"><b>Your plan</b><button type="button" data-plan="desk">Change</button></span><span class="chips">${planChips(g).map((c, i) => chip(c, ['sun', 'grn', 'pur', 'blu'][i % 4])).join('')}</span>`;
+  $('#runLabel').textContent = g.event ? 'Answer the news' : g.offer ? 'Answer the offer' : 'Run ' + cap1(whenLabel(g));
+}
+
+function syncDec(id, v){
+  const g = DB.game, el = sheetBody.querySelector(`[data-n="${id}"]`); if (!el) return;
+  v = Math.min(+el.max, Math.max(+el.min, +v)); if (isNaN(v)) return; v = Math.round(v*100)/100;
+  g.dec[id] = v; const x = decList(g).find(d => d.id === id); el.value = x && x.fmt === 'money2' ? v.toFixed(2) : v;
+  const r = sheetBody.querySelector(`[data-r="${id}"]`); if (r){ r.value = v; r.style.setProperty('--p', (v - r.min)/((r.max - r.min) || 1)*100 + '%'); }
+  const h = $('#hint'); if (h) h.innerHTML = hintInner(g);
+  save(); updatePlan();
+}
+
 /* ---------- Business School: a lesson card for each subject ---------- */
 let lessonView = null;
 function meetSubjects(list){ let n = 0; for (const s of list) if (s && SUBJ[s] && !DB.met[s]){ DB.met[s] = 1; n++; } if (n) updateSchoolBadge(); return n; }
@@ -215,47 +451,10 @@ function meetLevel(g){ meetSubjects(BIZ[g.biz].levels[g.level].subjects || []); 
 const lessonOpen = s => S().free || !!DB.met[s];
 function updateSchoolBadge(){ const b = $('#badgeSchool'); if (!b) return; const n = Object.keys(SUBJ).filter(s => DB.met[s] && !DB.read[s]).length; b.hidden = !n; b.textContent = n; }
 function markRead(s){ if (!DB.read[s]){ DB.read[s] = 1; save(); updateSchoolBadge(); } }
-function lessonHtml(s){
-  const L = LESSONS[s];
-  return `<article class="lesson"><span class="kick">Lesson</span><h2>${esc(SUBJ[s])}</h2><p class="lede">${esc(L.idea)}</p>
-    ${L.formula ? `<div class="f">${esc(L.formula)}</div>` : ''}
-    <h3>Example</h3><p>${esc(L.example)}</p>
-    <h3>In the game</h3><p>${esc(L.tip)}</p></article>`;
-}
 function openLesson(s){ meetSubjects([s]); lessonView = s; openPanel('library', true); }
-function libraryHtml(g){
-  if (lessonView){ markRead(lessonView); return lessonHtml(lessonView) + `<div class="row"><button class="btn primary" data-act="lessons">All lessons</button>${g && g.status === 'playing' ? `<button class="btn" data-act="go-news">Back to the report</button>` : ''}</div>`; }
-  const first = g ? (BIZ[g.biz].levels[g.level].subjects || []) : [], all = Object.keys(SUBJ), n = all.filter(lessonOpen).length;
-  const tile = s => lessonOpen(s) ? `<button class="ls${DB.read[s] ? '' : ' new'}" data-act="lesson" data-subj="${s}"><b>${esc(SUBJ[s])}</b><span>${DB.read[s] ? 'Read' : 'New'}</span></button>`
-    : `<div class="ls locked"><b>${esc(SUBJ[s])}</b><span>Not met yet</span></div>`;
-  return `
-    <p class="lede">Short lessons on the ideas behind the game. A lesson opens when its subject comes up in your business: in a report, on a level, or in your end-of-game review. You have opened ${n} of ${all.length}.</p>
-    ${first.length ? `<h3>For this level</h3><div class="lessons">${first.map(tile).join('')}</div>` : ''}
-    <h3>${first.length ? 'All other lessons' : 'All lessons'}</h3><div class="lessons">${all.filter(s => !first.includes(s)).map(tile).join('')}</div>
-    ${S().free ? '' : '<p class="small muted">Free play (in Menu) opens every lesson.</p>'}`;
-}
-function placesHtml(g){
-  const F = g ? FEAT(g.level) : null;
-  const P = [['desk', bizName(), 'Decisions and running the month'], ['news', 'Newspaper stand', 'The monthly report: statements, numbers and why'], ['bank', 'Bank', F && F.loan ? 'Borrow or repay' : 'Opens at Level IV'], ['investor', 'Investors’ tower', F && F.equity ? 'Pitch for investment' : 'Opens at Level V'], ['library', 'Business School', 'Lessons on the ideas behind the game'], ['menu', 'Menu', 'New game, settings and help']];
-  return `<div class="places">${P.map(([id, n, d]) => `<button data-act="go-${id}"><b>${esc(n)}</b><span>${esc(d)}</span><em>Open</em></button>`).join('')}</div>
-    <p class="small muted">You can also walk to each building and press E (or tap the Enter button).</p>`;
-}
-function menuHtml(g){
-  const st = S();
-  return `
-    <div class="row">${g && g.status === 'playing' ? `<button class="btn primary" data-act="close">Continue</button>` : ''}<button class="btn ${g && g.status === 'playing' ? '' : 'primary'}" data-act="new">New game</button></div>
-    <div class="field"><span class="lab">Difficulty (for new games)</span><div class="seg" role="group" aria-label="Difficulty">${['easy','normal','hard'].map(k => `<button data-act="diff" data-diff="${k}" aria-pressed="${st.diff===k}">${DIFF[k].label}</button>`).join('')}</div></div>
-    <div class="field"><label class="switch" for="m-free"><input type="checkbox" id="m-free" data-set="free" ${st.free?'checked':''}><span>Free play: open every level</span></label>
-      <label class="switch" for="m-form"><input type="checkbox" id="m-form" data-set="formulas" ${st.formulas?'checked':''}><span>Show formulas and hints (new games)</span></label>
-      <label class="switch" for="m-day"><input type="checkbox" id="m-day" data-set="nightOff" ${st.nightOff?'checked':''}><span>Always daytime (no night or dusk)</span></label></div>
-    <div class="field"><span class="lab">Controls</span><p class="help">Walk with WASD or the arrow keys, or the joystick on a touch screen. Press E or tap Enter beside a building. Drag the view (or press Z and C) to turn the camera, and X to put it back behind you. Scroll or pinch to zoom. Esc closes a panel. The Places button opens any building without walking.</p></div>
-    <div class="field"><span class="lab">3D models</span><p class="help">${esc(modelSummary())} Drop a .glb exported from Blender onto the town to try it until you reload.</p><div class="row" style="margin-top:8px"><a class="btn" href="${esc(CHECK_URL)}" target="_blank" rel="noopener">Model check ↗</a></div></div>
-    ${g && g.status === 'playing' ? `<div class="row"><button class="btn danger" data-act="abandon">Abandon game</button></div>` : ''}`;
-}
 
 /* Sheet events */
 const sheetBody = $('#sheetBody');
-function syncDec(id, v){ const g = DB.game, el = sheetBody.querySelector(`[data-n="${id}"]`); if (!el) return; v = Math.min(+el.max, Math.max(+el.min, +v)); if (isNaN(v)) return; g.dec[id] = v; el.value = v; const r = sheetBody.querySelector(`[data-r="${id}"]`); if (r) r.value = v; const h = $('#hint'); if (h && BIZ[g.biz].hint) h.innerHTML = BIZ[g.biz].hint(g); save(); }
 sheetBody.addEventListener('input', e => { const t = e.target; if (t.dataset.r) syncDec(t.dataset.r, t.value); });
 sheetBody.addEventListener('change', e => { const t = e.target, g = DB.game;
   if (t.dataset.n) syncDec(t.dataset.n, t.value);
@@ -263,8 +462,11 @@ sheetBody.addEventListener('change', e => { const t = e.target, g = DB.game;
   if (t.dataset.k && g){ g.dec[t.dataset.k] = t.checked; save(); }
   if (t.dataset.set){ S()[t.dataset.set] = t.checked; save(); toast('Saved'); if (t.dataset.set === 'free') updateSchoolBadge(); } });
 sheetBody.addEventListener('click', e => {
-  const t = e.target.closest('[data-act],[data-tab]'); if (!t) return; const g = DB.game, a = t.dataset.act;
+  const t = e.target.closest('[data-act],[data-tab],[data-rtab],[data-step],[data-seg]'); if (!t) return; const g = DB.game, a = t.dataset.act;
   if (t.dataset.tab){ tab = t.dataset.tab; renderPanel(); return; }
+  if (t.dataset.rtab){ rtab = t.dataset.rtab; renderPanel(); return; }
+  if (t.dataset.step){ const id = t.dataset.step, el = sheetBody.querySelector(`[data-n="${id}"]`); if (el){ syncDec(id, (+g.dec[id] || 0) + (+t.dataset.dir)*(+el.step || 1)); if (inside) schedIn(); } return; }
+  if (t.dataset.seg){ g.dec[t.dataset.seg] = t.dataset.v; save(); renderPanel(); updatePlan(); if (inside) schedIn(); return; }
   if (a === 'run') return doRun();
   if (a && a.startsWith('go-')) return openPanel(a.slice(3));
   if (a === 'pitch') return pitch(g);
@@ -277,6 +479,9 @@ sheetBody.addEventListener('click', e => {
   if (a === 'abandon'){ if (t.dataset.sure){ DB.game = null; save(); closePanel(); rebuildBusiness(); render(); showSetup(); } else { t.dataset.sure = '1'; t.textContent = 'Click again to abandon'; } }
 });
 $('#sheetClose').onclick = closePanel;
+sheetBody.addEventListener('change', () => updatePlan());
+$('#runBtn').onclick = () => doRun();
+$('#plan').addEventListener('click', e => { if (e.target.closest('[data-plan]')) openPanel('desk'); });
 $('#bPlaces').onclick = () => openPanel('places');
 $('#bReport').onclick = () => openPanel('news');
 $('#bBank').onclick = () => openPanel('bank');
@@ -296,43 +501,8 @@ function doRun(){
 }
 
 /* ---------- Modals: setup, event, result ---------- */
-function showModal(kind, html){ modalKind = kind; $('#modalBox').innerHTML = html; $('#modal').hidden = false; const b = $('#modalBox').querySelector('button'); if (b) b.focus(); }
-function hideModal(){ modalKind = null; $('#modal').hidden = true; }
-function showSetup(){
-  const pk = DB.pick; if (!BIZ_ORDER.includes(pk.biz)) pk.biz = 'cafe'; if (!unlocked(pk.biz, pk.level)) pk.level = 1;
-  const g = DB.game;
-  showModal('setup', `
-    <h1>Start a <em>Business</em></h1>
-    <p class="lede">Walk around a small town and run your business from the inside. Customers queue at your door, rivals open across the street, and the bank, investors and Business School are a short walk away.</p>
-    <h3>Choose a business</h3>
-    <div class="pick">${BIZ_ORDER.map(k => `<button data-biz="${k}" style="--c:${BIZ[k].color}" aria-pressed="${pk.biz===k}"><b>${esc(BIZ[k].name)}</b><span>${prog(k) ? 'Completed up to ' + lvName(prog(k)) : esc(BIZ[k].blurb.split('.')[0])}</span></button>`).join('')}</div>
-    <h3>Choose a level</h3>
-    <div class="pick">${LEVELS.map(L => `<button data-lvl="${L.n}" style="--c:var(--ink)" aria-pressed="${pk.level===L.n}" ${unlocked(pk.biz, L.n) ? '' : 'disabled'}><b>${L.n === 6 ? 'Real life' : 'Level ' + ROMAN[L.n-1]}</b><span>${esc(L.name)}${unlocked(pk.biz, L.n) ? '' : ' · locked'}</span></button>`).join('')}</div>
-    <p class="small muted">${esc(BIZ[pk.biz].levels[pk.level].story)}</p>
-    <div class="row"><button class="btn primary" data-m="start">Start ${esc(BIZ[pk.biz].levels[pk.level].title.replace(/^The /, 'the '))}</button>${g && g.status === 'playing' ? `<button class="btn" data-m="cont">Continue current game</button>` : ''}</div>
-    <p class="small muted">Difficulty: ${esc(envFrom(S(), pk.level === 6).label)}. Change it, or turn on free play, in Menu.${S().free ? '' : ' Win a level to unlock the next.'}</p>`);
-}
-function showEvent(){
-  const g = DB.game, e = EV.find(x => x.id === g.event); if (!e) return;
-  if (modalKind === 'event') return;
-  showModal('event', `<div class="evt"><span class="tag">News just in</span><b>${esc(e.title)}</b><p>${esc(e.text)}</p>
-    <div class="choices">${e.choices.map((c, i) => `<button type="button" class="btn" data-m="ev" data-i="${i}">${esc(c.l)}<small>${esc(typeof c.sub === 'object' ? (c.sub[g.biz] || '') : (c.sub || ''))}</small></button>`).join('')}</div></div>`);
-}
-function showResult(){
-  const g = DB.game, B = BIZ[g.biz], won = g.status === 'won', F = FEAT(g.level), next = g.level + 1;
-  const best = Math.max(...g.hist.map(h => h.profit)), review = Object.entries(g.flags).filter(([k]) => FLAGS[k]).sort((a, b) => b[1] - a[1]).slice(0, 4);
-  const lesson = LESSON[g.biz === 'idea' ? 'idea' : (LESSON[g.biz + '-' + g.level] ? g.biz + '-' + g.level : g.level)];
-  if (modalKind === 'result') return;
-  meetSubjects(review.map(([k]) => FLAGS[k].s)); save();
-  showModal('result', `
-    <span class="kicker">${esc(bizName())} · ${g.biz === 'idea' ? 'Your idea' : lvName(g.level)}</span>
-    <h1 style="color:${won ? 'var(--good)' : 'var(--bad)'}">${won ? 'Goal reached.' : 'Not this time.'}</h1>
-    <p class="lede">${won ? `You reached the goal in month ${g.month} of ${g.months}.` : esc(g.reason || '')} You finished with ${money(g.bs.cash)} in cash. Your best month made ${money(best)}.${F.equity ? ` You own ${pct(ownership(g), 0)}, worth ${money(stake(g))}.` : ''}</p>
-    <div class="goal"><h3>What this level teaches</h3><b style="font-size:19px">${esc(lesson)}</b></div>
-    <h3>Subjects to revisit</h3>
-    ${review.length ? `<div class="review">${review.map(([k, n]) => `<div><span>${esc(FLAGS[k].t)} <span class="muted small">(${n} month${n > 1 ? 's' : ''})</span></span><button class="study" data-m="lesson" data-subj="${FLAGS[k].s}">Lesson: ${esc(SUBJ[FLAGS[k].s])}</button></div>`).join('')}</div>` : `<p class="muted">No clear weak spots this time.</p>`}
-    <div class="row">${won && g.biz !== 'idea' && next <= 6 ? `<button class="btn primary" data-m="next">Play ${lvName(next)}</button>` : ''}<button class="btn" data-m="again">Play again with the same luck</button><button class="btn" data-m="new">Choose another game</button></div>`);
-}
+function showModal(kind, html){ modalKind = kind; document.body.classList.add('modal-open'); $('#modalBox').className = 'modal-box k-' + kind; $('#modalBox').innerHTML = html; $('#modal').hidden = false; const b = $('#modalBox').querySelector('button'); if (b) b.focus(); }
+function hideModal(){ modalKind = null; document.body.classList.remove('modal-open'); $('#modal').hidden = true; }
 $('#modalBox').addEventListener('click', e => {
   const t = e.target.closest('[data-m],[data-biz],[data-lvl]'); if (!t) return; const pk = DB.pick, g = DB.game;
   if (t.dataset.biz){ pk.biz = t.dataset.biz; if (!unlocked(pk.biz, pk.level)) pk.level = 1; save(); modalKind = null; showSetup(); return; }
@@ -344,6 +514,7 @@ $('#modalBox').addEventListener('click', e => {
   if (m === 'next'){ DB.pick = {biz:g.biz, level:g.level + 1}; save(); modalKind = null; showSetup(); }
   if (m === 'again'){ DB.pick = {biz:g.biz, level:g.level}; S().seed = g.seed; save(); hideModal(); startGame(); }
   if (m === 'new'){ modalKind = null; showSetup(); }
+  if (m === 'diff'){ const order = ['easy', 'normal', 'hard']; S().diff = order[(order.indexOf(S().diff) + 1) % 3]; save(); modalKind = null; showSetup(); }
   if (m === 'lesson'){ const s = t.dataset.subj; markRead(s); showModal('lesson', lessonHtml(s) + `<div class="row"><button class="btn primary" data-m="back-result">Back to results</button></div>`); }
   if (m === 'back-result'){ modalKind = null; showResult(); }
 });
@@ -545,6 +716,7 @@ addEventListener('keydown', e => {
   if (e.key === 'Escape'){ if (modalKind === 'setup' && DB.game && DB.game.status === 'playing'){ hideModal(); } else if (panel) closePanel(); return; }
   const busy = panel || modalKind; const tag = (e.target.tagName || '').toLowerCase(); if (busy || tag === 'input' || tag === 'select' || tag === 'textarea') return;
   const k = e.key.toLowerCase();
+  if (k === ' ' && DB.game && DB.game.status === 'playing'){ e.preventDefault(); doRun(); return; }
   if (['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright','z','c'].includes(k)){ keys.add(k); e.preventDefault(); }
   if (k === 'x' && !inside){ camYaw = player.rotation.y + Math.PI; camManual = -9; }
   if ((k === 'e' || k === 'enter') && nearTarget) interact();
@@ -921,8 +1093,8 @@ const STATION_HELP = {price:'Your shop shows the change straight away. Customers
 const STATION_NOTE = {staff:'You do all the work yourself at this level. Hiring opens at Level II.', stock:'Nothing to order at this level.', marketing:'Marketing opens at Level II.'};
 let curStation = null, talkIdx = 0, inPend = false;
 SHEETS.station = {title:() => STATION_VERB[curStation] || 'Decisions', kicker:'', needGame:true};
-SHEETS.rival = {title:() => RIVAL_NAME[DB.game.biz], kicker:'Your rival · across the road', needGame:true};
-function openStation(id){ curStation = id; SHEETS.station.kicker = bizName() + ' · decisions'; openPanel('station'); }
+SHEETS.rival = {title:() => RIVAL_NAME[DB.game.biz], kicker:'Your rival', needGame:true, ic:['eye', 'pur']};
+function openStation(id){ curStation = id; SHEETS.station.kicker = g => bizName() + ' · ' + cap1(whenLabel(g)); openPanel('station'); }
 function stationDecs(g, id){
   const all = decList(g).filter(x => x.id !== 'loan'), map = STATION_DECS[g.biz] || {};
   all.forEach(x => { if (g.dec[x.id] === undefined) g.dec[x.id] = x.def; });
@@ -930,33 +1102,10 @@ function stationDecs(g, id){
   if (id === Object.keys(map)[0]) mine.push(...all.filter(x => !claimed.has(x.id)));   // decisions without a station live at the first one
   return mine;
 }
-function stationHtml(g){
-  const id = curStation, decs = stationDecs(g, id), F = FEAT(g.level), B = BIZ[g.biz], when = F.season ? MONTHS[g.month % 12] : 'month ' + (g.month + 1);
-  return `<p class="small muted">${esc(STATION_HELP[id] || '')}</p>
-    ${decs.length ? decHtml(g, decs) : `<p class="lede">${esc(STATION_NOTE[id] || 'Nothing to decide here yet.')}</p>`}
-    ${decs.length && g.level > 1 && B.hint && g.formulas ? `<div class="hint" id="hint">${B.hint(g)}</div>` : ''}
-    <div class="row"><button class="btn primary" data-act="run" ${g.event || g.offer ? 'disabled' : ''}>Run ${when}</button><button class="btn" data-act="go-desk">All decisions</button></div>`;
-}
 function schedIn(){ if (inPend) return; inPend = true; requestAnimationFrame(() => { inPend = false; syncInterior(); }); }
 sheetBody.addEventListener('input', () => { if (inside) schedIn(); });
 sheetBody.addEventListener('change', () => { if (inside) schedIn(); });
 
-function rivalHtml(g){
-  const st = g.st, d = g.dec, b = g.biz;
-  g.scout = g.month; save();
-  const theirs = b === 'agency' ? st.rivalR : st.rivalP, mine = b === 'agency' ? d.rate : b === 'saas' ? (d.pp || d.price) : d.price;
-  const f = b === 'cafe' ? money2 : money, unit = {saas:' a month', agency:' an hour'}[b] || '';
-  const label = {cafe:['Their average spend', 'Yours'], saas:['Their Pro plan', 'Your Pro plan'], shop:['Their price per bag', 'Yours'], agency:['Freelancers charge', 'Your rate']}[b] || ['Their price', 'Yours'];
-  const gap = theirs ? (mine - theirs)/theirs : 0;
-  const read = gap > 0.1 ? 'You are noticeably dearer. Price-sensitive customers will drift to them unless you give them a reason to stay.'
-    : gap < -0.1 ? 'You are cheaper. Expect them to cut their price in response, which can start a price war that hurts you both.'
-    : 'Your prices are close, so customers choose on quality and convenience.';
-  return `<p class="lede">You walk past ${esc(RIVAL_NAME[b])} and take a good look.</p>
-    <div class="metrics"><div><span>${esc(label[0])}</span><b>${esc(f(theirs) + unit)}</b></div><div><span>${esc(label[1])}</span><b>${esc(f(mine) + unit)}</b></div></div>
-    <p>${esc(read)}</p>
-    <p class="small muted">Your monthly report includes the rival's numbers only for months when you came to look.</p>
-    <div class="row"><button class="btn primary" data-act="go-desk">Back to my decisions</button></div>`;
-}
 const RIVAL_RE = /rival|competitor|freelancer/i;
 function scouted(g){ return g.scout !== undefined && g.scout >= g.month - 1; }
 function visibleMetrics(g, list){ return scouted(g) ? list : list.filter(([l]) => !RIVAL_RE.test(l)); }
@@ -1176,6 +1325,6 @@ if (!webgl){
   if (!DB.game || DB.game.status !== 'playing') showSetup();
   requestAnimationFrame(t => { last = t; frame(t); });
 }
-window.__town = {city:() => ({npcs, sitters, DOORS, weatherKind, lampGlows, skyline, setDay:v => { dayT = v; }, setWeather}), cam:() => ({yaw:camYaw, pitch:camPitch, pos:camera.position.clone()}), DB:() => DB, runMonth, chooseEvent:answerEvent, startGame, openPanel, closePanel, openLesson, player:() => player, targets, MODELS, tryModelFile, slots:() => ({bldgs, bizSlot, people, trees, props}),
+window.__town = {city:() => ({npcs, sitters, DOORS, weatherKind, lampGlows, skyline, setDay:v => { dayT = v; }, setWeather}), cam:() => ({yaw:camYaw, pitch:camPitch, pos:camera.position.clone()}), DB:() => DB, runMonth, chooseEvent:answerEvent, startGame, openPanel, closePanel, openLesson, openStation, showEvent, showResult, showSetup, player:() => player, targets, MODELS, tryModelFile, slots:() => ({bldgs, bizSlot, people, trees, props}),
   interior:() => ({inside, iRoom, iPeople, iDyn, inTargets, iBounds, iObstacles}), enterInterior, exitInterior, streetPlaced, interact, near:() => nearTarget};
 })();
