@@ -56,7 +56,9 @@ A 3D town built on the same Runway engine, numbers, levels and events. Walk arou
 - **Your business** is a building on the main street. Customers queue at the door, the online store's stock piles up outside, a rival opens across the street from Level III, and a second location appears when you expand. Step inside to make decisions and run the month.
 - **The newspaper stand** prints *The Runway Ledger*: your statements, key numbers, what people in town are saying, and why things happened.
 - **The bank** (Level IV+) arranges loans. **The investors' tower** (Level V+) makes offers. **The library** tracks your study progress, shared with the Skill Tree on GitHub Pages.
-- Trees change with the seasons from Level IV.
+- **Walk inside your business.** The café, software company, online store and design studio each have a room, seen from the front and above like a dollhouse. What's inside follows your numbers: baristas behind the counter and customers at the tables, a desk for every developer and server racks that grow with your users, parcels on the shelves and packers at the benches, designers at their desks and jobs pinned on the board. Green rings on the floor are stations that open your decisions; the door takes you back outside. More of each room opens at Levels III and V.
+- Business names are painted on each building's sign, and the café's menu board shows your price.
+- Trees change with the seasons from Level IV. Lamps, benches, a bus stop and other street pieces dress the square.
 - **Controls:** WASD or arrow keys and E on a computer; an on-screen joystick and Enter button on a phone. The **Places** menu opens every building without walking.
 
 It uses Three.js (r128) from cdnjs. If 3D graphics aren't available, it links to Classic Runway instead. The town keeps its own save, separate from Classic Runway. "Use my idea" is only in Classic Runway for now.
@@ -82,6 +84,9 @@ The rules (scale, facing, names, budgets) are section 13 of the game design docu
 | `rival:cafe` … | The rival | Falls back to the business model with grey `swap_wall` and `swap_roof`. |
 | `kiosk`, `bank`, `library`, `investors`, `house` | Town buildings | Houses keep their own wall and roof colours through `swap_wall` and `swap_roof`. |
 | `tree`, `bench`, `crate` | Props | `swap_leaves` follows the seasons. |
+| `interior:cafe` … `interior:agency` | The room you walk into | `wall_front` and `ceiling` are hidden; numbered slot markers and `station_*` markers; `rt_level` unlocks by level. |
+| `staff:<business>`, `furniture:<name>` | Staff and furniture placed in the room | Furniture carries its own `seat_*` or `stock_*` markers. |
+| `street:<name>` | Lamps, bins, bus stop and other street pieces | Placed around the square. Road tiles are exported but not used yet. |
 
 ## Privacy
 

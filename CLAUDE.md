@@ -33,7 +33,7 @@ Base Color in Blender is linear: convert hex with the sRGB-to-linear formula (th
 
 ### Roles (what each model replaces in the town)
 
-`avatar`, `townsperson` (several files become variants), `business:cafe|saas|shop|agency|idea`, `rival:<same>`, `kiosk`, `bank`, `library`, `investors`, `house`, `tree`, `bench`, `crate`, `interior:<business>`, `staff:<business>`, `furniture:<file name>` (role **Furniture** in the add-on).
+`avatar`, `townsperson` (several files become variants), `business:cafe|saas|shop|agency|idea`, `rival:<same>`, `kiosk`, `bank`, `library`, `investors`, `house`, `tree`, `bench`, `crate`, `interior:<business>`, `staff:<business>`, `furniture:<file name>` and `street:<file name>` (roles **Furniture** and **Street piece** in the add-on).
 
 Interiors use extra markers: numbered slots (`table_1`, `staff_1`, `desk_1`, `shelf_1`, `bench_1`, `rack_1`, `support_1`, `equip_1`, `stock_1`), stations (`station_price`, `station_staff`, `station_stock`, `station_marketing`, `station_clients`, `station_desk`), `wall_front` and `ceiling` objects the game hides, and an `rt_level` custom property for things that unlock at a level.
 

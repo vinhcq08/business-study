@@ -89,7 +89,8 @@ ROLES = {
                  ("investors", "Investors' tower", ""), ("house", "House", "Six houses; recoloured with swap_wall and swap_roof")],
     "prop": [("tree", "Tree", "Leaves use swap_leaves for seasons"), ("bench", "Bench", ""),
              ("crate", "Crate", "Stock crates for the online store"),
-             ("furniture", "Furniture (named by file)", "Interior furniture; exported as furniture:<file name>")],
+             ("furniture", "Furniture (named by file)", "Interior furniture; exported as furniture:<file name>"),
+             ("street", "Street piece (named by file)", "Lamps, bins, bus stop, road tiles; exported as street:<file name>")],
     "interior": [("interior:" + k, "Interior: " + n, "The room you walk into") for k, n in BUSINESSES],
 }
 TYPES = [("person", "Person", "A character, 2 m tall"), ("prop", "Prop", "Tree, bench, crate"),
@@ -110,13 +111,15 @@ def hex_to_linear(hx):
 
 
 def full_role(role, name):
-    """Furniture is identified by its file name, e.g. furniture:cafe-table."""
-    return "furniture:" + name if role == "furniture" else role
+    """Furniture and street pieces are identified by file name, e.g. furniture:cafe-table, street:bin."""
+    return role + ":" + name if role in ("furniture", "street") else role
 
 
 def default_name(role):
     if role == "furniture":
         return "cafe-table"
+    if role == "street":
+        return "street-lamp"
     base = role.replace(":", "-")
     if role.startswith("business:"):
         base = role.split(":")[1] + "-exterior"

@@ -199,9 +199,9 @@ table.ledger{width:100%;border-collapse:collapse;font-size:14.5px}
 .form label span{font:400 12.5px/1.4 var(--f-body);color:var(--muted)}
 .biz.idea{border-top-style:dashed}
 /* ===== Runway Town: full-screen 3D world with an editorial HUD and side sheets ===== */
-:root{ --sky:#CFDCE0; --hud:rgba(251,248,242,.94); }
-@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --sky:#2A3138; --hud:rgba(34,30,24,.94); } }
-:root[data-theme="dark"]{ --sky:#2A3138; --hud:rgba(34,30,24,.94); }
+:root{ --sky:#8FD3FF; --hud:rgba(251,248,242,.94); }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --sky:#4F94CF; --hud:rgba(34,30,24,.94); } }
+:root[data-theme="dark"]{ --sky:#4F94CF; --hud:rgba(34,30,24,.94); }
 html,body{height:100%;overflow:hidden}
 #app{position:fixed;inset:0;background:var(--sky)}
 #c{display:block;width:100%;height:100%;touch-action:none;outline:none}
@@ -265,6 +265,7 @@ html,body{height:100%;overflow:hidden}
   .hud-stats .goalmini{min-width:84px}
   .hud-btns .btn{padding:8px 9px;min-height:40px;font-size:10.5px}
 }
+.toast{bottom:calc(92px + env(safe-area-inset-bottom, 0px))}
 .drophint{position:fixed;inset:12px;display:flex;align-items:center;justify-content:center;border:3px dashed var(--ink);background:color-mix(in srgb, var(--paper) 82%, transparent);z-index:30;pointer-events:none;text-align:center}
 .drophint div{display:flex;flex-direction:column;gap:6px;padding:20px}
 .drophint b{font:500 26px/1.2 var(--f-display)}
@@ -1395,7 +1396,12 @@ const obstacles = [], targets = [], npcs = [], customers = [], trees = [], crate
 const bldgs = [], people = [], props = [];  // everything a Blender model can replace
 let bizSlot = null, rivalSlot = null, loc2Slot = null, bubble = null, bubbleText = '';
 const keys = new Set(); let joy = {x:0, y:0};
-const C = {grass:0x9DAA74, road:0x6B6459, pave:0xC4B79C, walk:0xC9BCA2, ink:0x23201A, door:0x3A2E24, glass:0xBFD1D6, skin:[0xE8C4A0, 0xC99A70, 0x8D5B3C, 0xF1D3B8]};
+// Bright blocky palette (see CLAUDE.md). Clothes and hair are what the game paints onto swap_ materials.
+const SHIRTS = [0xE74C3C, 0x3A86FF, 0xF4C430, 0x9B59B6, 0x2ECC71, 0xFF6B5A, 0x7CC8FF, 0xFFFFFF];
+const PANTS = [0x1F2430, 0x4A4F59, 0x3A86FF, 0x2C3E66, 0xFFF1D6];
+const HAIRS = [0x3B2A20, 0x1F2430, 0xE8C05A, 0xC0392B, 0x8C5A2B];
+const SKINS = [0xF1C9A5, 0xD9A066, 0x8D5B3C, 0xFFDDC1];
+const C = {grass:0x5DBB4A, road:0x4A4F59, pave:0xD9D5CC, walk:0xD9D5CC, ink:0x1F2430, door:0x3A2E24, glass:0xBFE6FF, skin:SKINS};
 const mat = c => new THREE.MeshLambertMaterial({color:c});
 
 function textTexture(lines, opts = {}){
@@ -1424,7 +1430,7 @@ function makeBuilding(o){
   const swap = o.face === 'e' || o.face === 'w', hw = (swap ? d : w)/2, hd = (swap ? w : d)/2;
   const box = {minX:o.x - hw, maxX:o.x + hw, minZ:o.z - hd, maxZ:o.z + hd, on:true}; obstacles.push(box);
   const v = new THREE.Vector3(0, 0, d/2 + 1.7).applyAxisAngle(new THREE.Vector3(0, 1, 0), ROT[o.face]);
-  const slot = {group:g, box, door:{x:o.x + v.x, z:o.z + v.z}, face:o.face, roles:[].concat(o.role || []), variant:o.variant || 0, tint:o.tint || null, stand:g.children.filter(c => c !== sign), extras:[]};
+  const slot = {group:g, box, door:{x:o.x + v.x, z:o.z + v.z}, face:o.face, roles:[].concat(o.role || []), variant:o.variant || 0, tint:o.tint || null, stand:g.children.filter(c => c !== sign), extras:[], signLines:[].concat(o.sign)};
   bldgs.push(slot); dressBuilding(slot); return slot;
 }
 function makePerson(shirt, pants, skin, hair, role = 'townsperson', variant = 0){
@@ -1456,14 +1462,14 @@ function initWorld(){
   const sky = getComputedStyle(document.documentElement).getPropertyValue('--sky').trim() || '#CFDCE0';
   scene.background = new THREE.Color(sky); scene.fog = new THREE.Fog(sky, 60, 120);
   camera = new THREE.PerspectiveCamera(50, 1, 0.1, 300);
-  scene.add(new THREE.HemisphereLight(0xF4EEDF, 0x7F8B5E, 0.75));
-  const sun = new THREE.DirectionalLight(0xFFF3DD, 0.75); sun.position.set(-30, 50, 25); sun.castShadow = big;
+  scene.add(new THREE.HemisphereLight(0xFFFFFF, 0xA9C98A, 0.58));
+  const sun = new THREE.DirectionalLight(0xFFF6E5, 0.5); sun.position.set(-30, 50, 25); sun.castShadow = big;
   Object.assign(sun.shadow.camera, {left:-60, right:60, top:60, bottom:-60}); sun.shadow.mapSize.set(2048, 2048); scene.add(sun);
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(160, 160), mat(C.grass)); ground.rotation.x = -Math.PI/2; ground.receiveShadow = true; scene.add(ground);
   const flat = (w, d, color, x, z, y = 0.02) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), mat(color)); m.rotation.x = -Math.PI/2; m.position.set(x, y, z); m.receiveShadow = true; scene.add(m); };
   flat(100, 4.5, C.road, 0, -14); flat(100, 4.5, C.road, 0, 14); flat(4.5, 100, C.road, -16, 0); flat(4.5, 100, C.road, 16, 0);
   flat(27.5, 23.5, C.pave, 0, 0, 0.03);
-  for (const z of [-11.2, 11.2]) for (let x = -13; x <= 13; x += 2) flat(1.2, 0.25, 0xF2EDE3, x, z === -11.2 ? -14 : 14, 0.04);
+  for (const z of [-11.2, 11.2]) for (let x = -13; x <= 13; x += 2) flat(1.2, 0.25, 0xFFFFFF, x, z === -11.2 ? -14 : 14, 0.04);
   // Kiosk (newspaper stand)
   const kiosk = makeBuilding({x:0, z:-2, w:3, d:2.4, h:2.8, color:0x2F5D3A, roofColor:0x23201A, face:'s', sign:'The Ledger', window:0xF2EDE3, role:'kiosk'});
   targets.push({id:'news', name:'the newspaper stand', door:kiosk.door, r:2.8});
@@ -1482,13 +1488,13 @@ function initWorld(){
   [[-8, -8], [8, -8], [-8, 8], [8, 8], [-22, 22], [22, 20], [-22, -20], [24, -16], [-38, 4], [38, 10], [6, 40], [-6, -40], [40, -36], [-40, 34], [36, 36], [-36, -38]].forEach(([x, z], i) => makeTree(x, z, i < 4 ? 0.8 : 1 + (i % 3)*0.15));
   for (let i = 0; i < 6; i++){ const b = addBox(scene, 2, 0.45, 0.6, 0x6A4B32, i < 3 ? -5 : 5, 0.45, -6 + (i % 3)*6); addProp(b, 'bench', 0.45, i); obstacles.push({minX:b.position.x - 1, maxX:b.position.x + 1, minZ:b.position.z - 0.3, maxZ:b.position.z + 0.3, on:true}); }
   // Player
-  player = makePerson(0x2F5D3A, 0x23201A, C.skin[0], 0x3A2E24, 'avatar'); player.position.set(0, 0, 6);
+  player = makePerson(0x3A86FF, 0x1F2430, C.skin[0], 0x3B2A20, 'avatar'); player.position.set(0, 0, 6);
   // Pedestrians
   const loop = [[-11, -9.5], [11, -9.5], [11, 9.5], [-11, 9.5]], outer = [[-19, -17], [19, -17], [19, 17], [-19, 17]];
-  const shirts = [0xA6532E, 0x4A6274, 0x87661C, 0x93424F, 0x6A4A62, 0x2E6A63, 0xC9BCA2, 0x6B6355];
-  for (let i = 0; i < 12; i++){ const path = i % 2 ? loop : outer, n = makePerson(shirts[i % shirts.length], i % 3 ? 0x3A3A33 : 0x4A6274, C.skin[i % 4], [0x3A2E24, 0x23201A, 0x8C6A3E, 0xB9A58A][i % 4], 'townsperson', i);
+  const shirts = SHIRTS;
+  for (let i = 0; i < 12; i++){ const path = i % 2 ? loop : outer, n = makePerson(shirts[i % shirts.length], PANTS[i % PANTS.length], C.skin[i % 4], HAIRS[i % HAIRS.length], 'townsperson', i);
     npcs.push({g:n, path:i % 4 === 0 ? path.slice().reverse() : path, s:i*7.3, speed:1.6 + (i % 3)*0.35}); }
-  for (let i = 0; i < 16; i++){ const n = makePerson(shirts[(i + 3) % shirts.length], 0x3A3A33, C.skin[(i + 1) % 4], [0x3A2E24, 0x23201A, 0x8C6A3E][i % 3], 'townsperson', i + 12); n.visible = false; customers.push(n); }
+  for (let i = 0; i < 16; i++){ const n = makePerson(shirts[(i + 3) % shirts.length], PANTS[(i + 2) % PANTS.length], C.skin[(i + 1) % 4], HAIRS[(i + 3) % HAIRS.length], 'townsperson', i + 12); n.visible = false; customers.push(n); }
   for (let i = 0; i < 30; i++){ const b = addBox(scene, 0.8, 0.6, 0.8, 0xB58B55, 0, 0.3, 0); b.visible = false; crates.push(b); addProp(b, 'crate', 0.3, i); }
   bubble = makeSprite('…'); bubble.visible = false;
   camPos = new THREE.Vector3(0, 14, 20);
@@ -1531,13 +1537,14 @@ function syncWorld(){
   // Customers queue
   const per = {cafe:1800, saas:1500, shop:1400, agency:2600, idea:1500};
   const n = g && g.last ? clamp(Math.round(g.last.rev/(per[g.biz] || 1500)), 0, 16) : 0;
-  customers.forEach((c, i) => { c.visible = i < n; if (bizSlot){ c.position.set(bizSlot.door.x + 2.4 + (i % 8)*0.95, 0, bizSlot.door.z - 0.6 + Math.floor(i/8)*1.1); c.rotation.y = -Math.PI/2; } });
+  customers.forEach((c, i) => { c.visible = i < n; if (bizSlot){ c.position.set(bizSlot.door.x + 2.6 + (i % 6)*1.3, 0, bizSlot.door.z - 0.6 + Math.floor(i/6)*1.4); c.rotation.y = -Math.PI/2; } });
   // Crates for stock (online store)
   const units = g && g.biz === 'shop' ? (g.st.inv || 0) + (g.st.pipe || 0) : 0, nc = clamp(Math.round(units/40), 0, 30);
   crates.forEach((b, i) => { b.visible = i < nc; if (bizSlot){ b.position.set(bizSlot.door.x - 3 - (i % 4)*0.9, 0.3 + Math.floor(i/12)*0.6, bizSlot.door.z - 1.2 - (Math.floor(i/4) % 3)*0.9); } });
   // Seasons
-  const moy = g ? g.month % 12 : 4, col = !g || !F.season ? 0x5E8A44 : [0xC9D3C2, 0xC9D3C2, 0x7FA65A, 0x7FA65A, 0x6E9A4C, 0x4E7D3A, 0x4E7D3A, 0x5A7F3C, 0xB8893A, 0xC07A32, 0xA6532E, 0xC9D3C2][moy];
+  const moy = g ? g.month % 12 : 4, col = !g || !F.season ? 0x5DBB4A : [0xE8F1F2, 0xE8F1F2, 0x8EDB5E, 0x8EDB5E, 0x6CCB4F, 0x5DBB4A, 0x5DBB4A, 0x58B043, 0xF4C430, 0xF39C12, 0xE74C3C, 0xE8F1F2][moy];
   trees.forEach(t => { t.season = col; t.mats.forEach(m => m.color.setHex(col)); });
+  syncInterior();
   bubbleText = g && g.last && g.last.voices && g.last.voices.length ? g.last.voices[0][1] : '';
   if (bubbleText && bubble.userData.text !== bubbleText){ bubble.material.map.dispose(); bubble.material.map = textTexture(['“' + bubbleText + '”'], {w:900, h:150, size:40}); bubble.material.needsUpdate = true; bubble.scale.set(9, 1.5, 1); bubble.userData.text = bubbleText; }
 }
@@ -1566,8 +1573,11 @@ canvas.addEventListener('touchmove', e => { if (e.touches.length === 2 && pinch)
 
 let nearTarget = null;
 function interact(){ const t = nearTarget; if (!t) return;
+  if (t.exit) return exitInterior();
+  if (t.station) return openPanel('desk');
   if (t.rival) return toast(`${RIVAL_NAME[DB.game.biz]} is your rival. Their prices show in your monthly report.`);
   if (t.loc2) return openPanel('desk');
+  if (t.id === 'desk' && interiorModel()) return enterInterior();
   openPanel(t.id); }
 $('#bAct').onclick = interact;
 function collide(p){
@@ -1583,24 +1593,29 @@ function frame(now){
   let mx = 0, mz = 0;
   if (!busy){ if (keys.has('w') || keys.has('arrowup')) mz -= 1; if (keys.has('s') || keys.has('arrowdown')) mz += 1; if (keys.has('a') || keys.has('arrowleft')) mx -= 1; if (keys.has('d') || keys.has('arrowright')) mx += 1; mx += joy.x; mz += joy.y; }
   const m = Math.hypot(mx, mz), moving = m > 0.1;
-  if (moving){ const sp = 7*Math.min(1, m)/m; const p = player.position; p.x += mx*sp*dt; p.z += mz*sp*dt; collide(p); player.rotation.y = Math.atan2(mx, mz); }
+  if (moving){ const sp = 7*Math.min(1, m)/m; const p = player.position; p.x += mx*sp*dt; p.z += mz*sp*dt; if (inside) collideIn(p); else collide(p); player.rotation.y = Math.atan2(mx, mz); }
   animatePerson(player, T, moving);
   // pedestrians
   for (const n of npcs){ n.s += n.speed*dt; const path = n.path; let segs = [], tot = 0; for (let i = 0; i < path.length; i++){ const a = path[i], b = path[(i + 1) % path.length], l = Math.hypot(b[0]-a[0], b[1]-a[1]); segs.push([a, b, l]); tot += l; }
     let s = n.s % tot; for (const [a, b, l] of segs){ if (s <= l){ const f = s/l; n.g.position.set(a[0] + (b[0]-a[0])*f, 0, a[1] + (b[1]-a[1])*f); n.g.rotation.y = Math.atan2(b[0]-a[0], b[1]-a[1]); break; } s -= l; }
     animatePerson(n.g, T + n.speed, true); }
   customers.forEach((c, i) => { if (c.visible) c.position.y = Math.abs(Math.sin(T*2 + i))*0.05; });
+  if (inside) iPeople.forEach(g => { if (!g.userData.seated) g.position.y = Math.abs(Math.sin(T*1.6 + g.userData.t))*0.03; });
   // camera
-  const p = player.position, want = new THREE.Vector3(p.x, 13*zoom + 1, p.z + 15*zoom);
-  camPos.lerp(want, 1 - Math.pow(0.001, dt)); camera.position.copy(camPos); camera.lookAt(p.x, 1.2, p.z - 1.5);
+  const p = player.position;
+  if (inside){ const cz = (iBounds.minZ + iBounds.maxZ)/2, span = Math.max(iBounds.maxX - iBounds.minX, (iBounds.maxZ - iBounds.minZ)*1.4);
+    camPos.lerp(new THREE.Vector3(p.x*0.35, span*0.62*zoom + 2, iBounds.maxZ + span*0.5*zoom + 2), 1 - Math.pow(0.001, dt)); camera.position.copy(camPos); camera.lookAt(p.x*0.35, 0.6, cz + (p.z - cz)*0.3); }
+  else { const want = new THREE.Vector3(p.x, 13*zoom + 1, p.z + 15*zoom);
+    camPos.lerp(want, 1 - Math.pow(0.001, dt)); camera.position.copy(camPos); camera.lookAt(p.x, 1.2, p.z - 1.5); }
   // nearest building
   let best = null, bd = 1e9;
-  for (const t of targets){ if ((t.rival && !(rivalSlot && rivalSlot.group.visible)) || (t.loc2 && !(loc2Slot && loc2Slot.group.visible))) continue; const d = Math.hypot(t.door.x - p.x, t.door.z - p.z); if (d < t.r && d < bd){ best = t; bd = d; } }
-  if (best !== nearTarget){ nearTarget = best; const pr = $('#prompt'); pr.hidden = !best || busy; if (best) $('#bAct').textContent = best.rival ? 'Look at ' + best.name : 'Enter ' + best.name; }
+  for (const t of (inside ? inTargets : targets)){ if (!inside && (t.rival && !(rivalSlot && rivalSlot.group.visible)) || (t.loc2 && !(loc2Slot && loc2Slot.group.visible))) continue; const d = Math.hypot(t.door.x - p.x, t.door.z - p.z); if (d < t.r && d < bd){ best = t; bd = d; } }
+  if (best !== nearTarget){ nearTarget = best; const pr = $('#prompt'); pr.hidden = !best || busy; if (best) $('#bAct').textContent = best.verb || (best.rival ? 'Look at ' + best.name : 'Enter ' + best.name); }
   else $('#prompt').hidden = !best || busy;
   // speech bubble near your business
-  if (bubble && bizSlot){ const near = bubbleText && customers[0].visible && Math.hypot(bizSlot.door.x - p.x, bizSlot.door.z - p.z) < 14; bubble.visible = !!near; if (near) bubble.position.set(customers[0].position.x + 1.5, 3.4, customers[0].position.z); }
-  renderer.render(scene, camera);
+  if (bubble && bizSlot && inside) bubble.visible = false;
+  else if (bubble && bizSlot){ const near = bubbleText && customers[0].visible && Math.hypot(bizSlot.door.x - p.x, bizSlot.door.z - p.z) < 14; bubble.visible = !!near; if (near) bubble.position.set(customers[0].position.x + 1.5, 3.4, customers[0].position.z); }
+  renderer.render(inside && iScene ? iScene : scene, camera);
   requestAnimationFrame(frame);
 }
 
@@ -1628,11 +1643,12 @@ function convertMaterials(root){
 }
 function analyse(root, file, role){
   convertMaterials(root); root.updateMatrixWorld(true);
-  const info = {root, file, role, box: new THREE.Box3(), col: null, markers: {}, parts: {}};
+  const info = {root, file, role, box: new THREE.Box3(), col: null, markers: {}, parts: {}, boards: {}};
   root.traverse(o => {
     const n = baseName(o.name);
     if (isCol(o) && o.isMesh){ o.geometry.computeBoundingBox(); info.col = o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld); return; }
     if (o.isMesh){ o.geometry.computeBoundingBox(); info.box.union(o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld)); }
+    if (['sign_board', 'menu_board', 'pinboard'].includes(n) && o.isMesh && !info.boards[n]){ const bb = o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld); info.boards[n] = {box:bb, color:[].concat(o.material)[0].color.getHex()}; }
     if (['door', 'sign', 'counter', 'queue_start', 'stock_spot', 'seat_1', 'seat_2'].includes(n) && !info.markers[n]) info.markers[n] = o.getWorldPosition(new THREE.Vector3());
     if (['head', 'body', 'arm_L', 'arm_R', 'leg_L', 'leg_R'].includes(n)) info.parts[n] = true;
   });
@@ -1653,6 +1669,7 @@ function dressBuilding(slot){
   slot.model = cloneModel(m, slot.tint); slot.group.add(slot.model); slot.dressed = m;
   const sign = slot.group.userData.sign, sp = m.markers.sign;
   if (sp) sign.position.set(sp.x, sp.y, sp.z + 0.03); else sign.position.set(0, Math.min(m.box.max.y - 0.8, 3.6), m.box.max.z + 0.06);
+  sign.visible = !m.boards.sign_board; if (m.boards.sign_board) paintBoard(slot.model, m.boards.sign_board, slot.signLines);
   slot.group.updateMatrixWorld(true);
   const wb = (m.col || m.box).clone().applyMatrix4(slot.group.matrixWorld);
   Object.assign(slot.box, {minX: wb.min.x, maxX: wb.max.x, minZ: wb.min.z, maxZ: wb.max.z});
@@ -1680,7 +1697,7 @@ function dressProp(pr){
   pr.mesh.material.visible = false; pr.mesh.castShadow = false;
   pr.model = cloneModel(m, null); pr.model.position.y = -pr.lift; pr.mesh.add(pr.model); pr.dressed = m;
 }
-function applyModels(){ if (!scene) return; bldgs.forEach(dressBuilding); people.forEach(dressPerson); trees.forEach(dressTree); props.forEach(dressProp); syncWorld(); }
+function applyModels(){ if (!scene) return; bldgs.forEach(dressBuilding); people.forEach(dressPerson); trees.forEach(dressTree); props.forEach(dressProp); placeStreet(); syncWorld(); }
 function modelCount(){ return Object.values(MODELS).reduce((n, a) => n + a.length, 0); }
 function modelSummary(){
   const n = modelCount(); if (!n) return 'The town uses code-built stand-ins; no Blender models are loaded.';
@@ -1726,6 +1743,160 @@ function tryModelFile(f){
   }, () => { toast('Could not read ' + f.name); res(null); })));
 }
 
+
+/* =========================================================
+   Interiors: walk into your business. The room is a Blender model; furniture,
+   staff and customers fill its numbered slots to match this month's numbers.
+   Green rings mark stations that open your decisions.
+   ========================================================= */
+let inside = false, iScene = null, iRoom = null, iDyn = null, iModel = null, iLevel = 0, iBounds = null, iTip = false;
+const iObstacles = [], inTargets = [], iPeople = [];
+const STATION_VERB = {price:'Set prices', staff:'Staff and hiring', stock:'Stock and suppliers', marketing:'Marketing', clients:'Meet clients', desk:'Your desk'};
+const MARK_RE = /^(door|queue_start|stock_spot|returns_spot|client_seat|(?:seat|table|staff|desk|shelf|bench|rack|support|equip|stock)_\d+|station_[a-z]+)$/;
+function interiorModel(){ const g = DB.game; return g && g.status === 'playing' && g.biz !== 'idea' ? pickModel(['interior:' + g.biz], 0) : null; }
+function ensureIScene(){
+  if (iScene) return;
+  iScene = new THREE.Scene(); iScene.background = new THREE.Color(0xBFE6FF);
+  iScene.add(new THREE.HemisphereLight(0xFFFFFF, 0xC9B79C, 0.8));
+  const s = new THREE.DirectionalLight(0xFFF6E5, 0.6); s.position.set(-6, 12, 10); s.castShadow = renderer.shadowMap.enabled;
+  Object.assign(s.shadow.camera, {left:-12, right:12, top:12, bottom:-12}); s.shadow.mapSize.set(1024, 1024); s.shadow.bias = -0.0006; s.shadow.normalBias = 0.03; iScene.add(s);
+}
+// Markers under a model, grouped by kind (table_3 -> table), in order, skipping ones above this level.
+function markersOf(root, lvl){
+  root.updateMatrixWorld(true); const out = {};
+  root.traverse(o => { if (o.isMesh) return; const n = baseName(o.name); if (!MARK_RE.test(n)) return;
+    if ((o.userData.rt_level || 0) > lvl) return;
+    const k = n.replace(/_\d+$/, ''), m = /_(\d+)$/.exec(n);
+    (out[k] = out[k] || []).push({name:n, i:m ? +m[1] : 0, p:o.getWorldPosition(new THREE.Vector3()), q:o.getWorldQuaternion(new THREE.Quaternion())}); });
+  Object.values(out).forEach(a => a.sort((x, y) => x.i - y.i)); return out;
+}
+// Paint text (or a drawing) onto a board mesh found in the model (sign_board, menu_board, pinboard).
+function paintBoard(root, bd, lines, draw){
+  const b = bd.box, w = b.max.x - b.min.x, h = b.max.y - b.min.y; if (w < 0.05 || h < 0.05) return null;
+  const W = 1024, H = Math.max(64, Math.round(W*h/w)), hex = '#' + bd.color.toString(16).padStart(6, '0');
+  const lum = (((bd.color >> 16) & 255)*0.299 + ((bd.color >> 8) & 255)*0.587 + (bd.color & 255)*0.114)/255, fg = lum < 0.55 ? '#FFFFFF' : '#1F2430';
+  let tex;
+  if (draw){ const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const x = cv.getContext('2d'); x.fillStyle = hex; x.fillRect(0, 0, W, H); draw(x, W, H, fg); tex = new THREE.CanvasTexture(cv); }
+  else tex = textTexture(lines, {w:W, h:H, bg:hex, fg, border:false, size:Math.min(H*(lines.length > 1 ? 0.46 : 0.62), 170)});
+  tex.anisotropy = 4;
+  const pl = new THREE.Mesh(new THREE.PlaneGeometry(w*0.96, h*0.9), new THREE.MeshBasicMaterial({map:tex}));
+  pl.position.set((b.min.x + b.max.x)/2, (b.min.y + b.max.y)/2, b.max.z + 0.012); root.add(pl); return pl;
+}
+function buildInterior(m){
+  const g = DB.game; ensureIScene();
+  if (iRoom) iScene.remove(iRoom); if (iDyn) iScene.remove(iDyn);
+  iRoom = cloneModel(m, null); iModel = m; iLevel = g.level;
+  iRoom.traverse(o => { const n = baseName(o.name);
+    if (n === 'wall_front' || n === 'ceiling' || isCol(o)) o.visible = false;
+    if ((o.userData.rt_level || 0) > g.level) o.visible = false; });
+  iScene.add(iRoom); iRoom.updateMatrixWorld(true);
+  iDyn = new THREE.Group(); iScene.add(iDyn);
+  const M = markersOf(iRoom, g.level); iRoom.userData.M = M;
+  // What you can't walk through: the room's walls, plus fittings standing on the floor.
+  iObstacles.length = 0; let walls = null;
+  iRoom.traverse(o => { if (!o.isMesh || !o.visible) return; const n = baseName(o.name);
+    const b = new THREE.Box3().setFromObject(o);
+    if (n === 'walls'){ walls = b; return; }
+    if (['floor', 'ceiling', 'wall_front'].includes(n) || isCol(o)) return;
+    if (b.min.y < 0.5 && b.max.y > 0.4 && (b.max.x - b.min.x)*(b.max.z - b.min.z) < 12) iObstacles.push({minX:b.min.x, maxX:b.max.x, minZ:b.min.z, maxZ:b.max.z, on:true}); });
+  const rb = walls || m.box; iBounds = {minX:rb.min.x + 0.55, maxX:rb.max.x - 0.55, minZ:rb.min.z + 0.55, maxZ:rb.max.z - 0.3};
+  inTargets.length = 0;
+  for (const [k, arr] of Object.entries(M)) if (k.startsWith('station_')){ const e = arr[0], id = k.slice(8);
+    inTargets.push({station:id, name:STATION_VERB[id] || id, verb:STATION_VERB[id] || 'Make decisions', door:{x:e.p.x, z:e.p.z}, r:1.2});
+    const ring = new THREE.Mesh(new THREE.RingGeometry(0.42, 0.56, 28), new THREE.MeshBasicMaterial({color:0x2ECC71, transparent:true, opacity:0.9}));
+    ring.rotation.x = -Math.PI/2; ring.position.set(e.p.x, 0.02, e.p.z); iRoom.add(ring); }
+  const dm = (M.door || [])[0]; iRoom.userData.door = {x:dm ? dm.p.x : 0, z:dm ? dm.p.z : iBounds.maxZ};
+  inTargets.push({exit:true, name:'outside', verb:'Go outside', door:{x:iRoom.userData.door.x, z:iRoom.userData.door.z - 0.6}, r:1.3});
+}
+function syncInterior(){
+  if (!inside || !iRoom) return;
+  const g = DB.game, m = interiorModel(); if (!g || !m){ leaveInterior(); return; }
+  if (m !== iModel || g.level !== iLevel) buildInterior(m);
+  iDyn.clear(); iPeople.length = 0;
+  const M = iRoom.userData.M, d = g.dec, L = g.last, lvl = g.level, st = g.st || {};
+  const take = (k, n) => (M[k] || []).slice(0, Math.max(0, n));
+  const put = (role, e) => { const pm = pickModel([role], e.i || 0); if (!pm) return null; const o = cloneModel(pm, null);
+    o.position.copy(e.p); o.quaternion.copy(e.q); iDyn.add(o); o.updateMatrixWorld(true); o.userData.M = markersOf(o, 99); return o; };
+  let pv = 0;
+  const person = (roles, e, seated) => { pv++;
+    const grp = new THREE.Group(); grp.userData.look = {shirt:SHIRTS[(pv*3) % SHIRTS.length], pants:PANTS[pv % PANTS.length], skin:SKINS[(pv*5) % SKINS.length], hair:HAIRS[(pv*7) % HAIRS.length], roles, variant:pv*5 + lvl};
+    dressPerson(grp); if (!grp.children.length) return null;
+    grp.position.copy(e.p); grp.quaternion.copy(e.q);
+    if (seated){ const P = grp.userData.p, hip = P.legL.position.y || 0.62; grp.position.y = e.p.y + 0.05 - hip;
+      P.legL.rotation.x = P.legR.rotation.x = -Math.PI/2; P.armL.rotation.x = P.armR.rotation.x = -0.7; }
+    grp.userData.seated = !!seated; grp.userData.t = pv; iDyn.add(grp); iPeople.push(grp); return grp; };
+  const seatOf = o => o && o.userData.M.seat ? o.userData.M.seat[0] : null;
+  const turn = q => q.clone().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI));
+  if (iRoom.userData.boardPlane){ iRoom.remove(iRoom.userData.boardPlane); iRoom.userData.boardPlane = null; }
+  if (g.biz === 'cafe'){
+    take('staff', lvl === 1 ? 1 : d.staff).forEach(e => person(['staff:cafe', 'townsperson'], e, false));
+    (M.equip || []).forEach((e, i) => put(i === 0 && lvl >= 4 ? 'furniture:espresso-pro' : 'furniture:espresso-basic', e));
+    const seats = []; (M.table || []).forEach(e => { const t = put('furniture:cafe-table', e); if (t && t.userData.M.seat) seats.push(...t.userData.M.seat); });
+    const perDay = L ? (L.rev/30)/Math.max(1, d.price || 3) : 0, n = clamp(Math.round(perDay/12), 0, seats.length + 6);
+    seats.slice(0, n).forEach(e => person(['townsperson'], e, true));
+    const q = (M.queue_start || [])[0];
+    if (q){ const dir = new THREE.Vector3(0, 0, 1).applyQuaternion(q.q); for (let i = 0; i < Math.min(6, n - seats.length); i++) person(['townsperson'], {p:q.p.clone().addScaledVector(dir, i*1.15), q:turn(q.q)}, false); }
+    const mb = iModel.boards.menu_board; if (mb) iRoom.userData.boardPlane = paintBoard(iRoom, mb, ['Menu', (lvl === 1 ? 'Coffee ' : 'Average spend ') + money2(d.price)]);
+  } else if (g.biz === 'saas'){
+    const team = (lvl === 1 ? 0 : d.devs || 0) + (st.expanded ? d.reps || 0 : 0);
+    take('desk', Math.max(1, team)).forEach((e, i) => { const s = seatOf(put('furniture:office-desk', e)); if (s && i < team) person(['staff:saas', 'townsperson'], s, true); });
+    take('support', d.support || 0).forEach(e => { const s = seatOf(put('furniture:office-desk', e)); if (s) person(['staff:saas', 'townsperson'], s, true); });
+    take('rack', clamp(Math.ceil((st.all || 0)/250), 1, 99)).forEach(e => put('furniture:server-rack', e));
+  } else if (g.biz === 'shop'){
+    const spots = []; (M.shelf || []).forEach(e => { const s = put('furniture:warehouse-shelf', e); if (s && s.userData.M.stock) spots.push(...s.userData.M.stock); });
+    spots.slice(0, clamp(Math.ceil((st.inv || 0)/15), 0, spots.length)).forEach(e => put('furniture:parcel', e));
+    const ss = (M.stock_spot || [])[0];
+    if (ss) for (let i = 0; i < clamp(Math.ceil((st.pipe || 0)/40), 0, 9); i++) put('furniture:parcel', {p:ss.p.clone().add(new THREE.Vector3(((i % 3) - 1)*0.45, Math.floor(i/3)*0.42, 0)), q:ss.q, i});
+    const packers = lvl === 1 ? 0 : d.packers || 0;
+    take('bench', Math.max(1, packers)).forEach((e, i) => { const s = seatOf(put('furniture:packing-bench', e)); if (s && i < packers) person(['staff:shop', 'townsperson'], s, s.p.y > 0.3); });
+  } else if (g.biz === 'agency'){
+    const designers = lvl === 1 ? 0 : d.staff || 0;
+    take('desk', Math.max(1, designers)).forEach((e, i) => { const s = seatOf(put('furniture:design-desk', e)); if (s && i < designers) person(['staff:agency', 'townsperson'], s, true); });
+    const c = (M.client_seat || [])[0]; if (c && L && L.rev > 0) person(['townsperson'], c, c.p.y > 0.3);
+    const pb = iModel.boards.pinboard, jobs = L ? clamp(Math.round(L.rev/Math.max(40, d.rate || 90)/40), 0, 12) : 0;
+    if (pb) iRoom.userData.boardPlane = paintBoard(iRoom, pb, null, (x, W, H) => {
+      const cols = ['#FFF1D6', '#F4C430', '#7CC8FF', '#FF6B5A', '#2ECC71', '#FFFFFF'], cw = W/5, ch = H/3;
+      for (let i = 0; i < jobs; i++){ const cx = (i % 4)*cw*1.2 + cw*0.25, cy = Math.floor(i/4)*ch + ch*0.15; x.save(); x.translate(cx + cw*0.4, cy + ch*0.35); x.rotate(((i*37) % 9 - 4)*0.02);
+        x.fillStyle = cols[i % cols.length]; x.fillRect(-cw*0.4, -ch*0.35, cw*0.8, ch*0.7); x.fillStyle = '#1F2430'; x.beginPath(); x.arc(0, -ch*0.26, Math.max(4, W*0.008), 0, 7); x.fill();
+        x.fillRect(-cw*0.28, -ch*0.08, cw*0.56, ch*0.06); x.fillRect(-cw*0.28, ch*0.06, cw*0.4, ch*0.06); x.restore(); } });
+  }
+}
+function fadeThen(text, fn){ if (reduceMotion()){ fn(); return; } const f = $('#fade'); f.textContent = text; f.classList.add('on'); setTimeout(() => { fn(); f.classList.remove('on'); }, 380); }
+function enterInterior(){
+  const m = interiorModel(); if (!m){ openPanel('desk'); return; }
+  fadeThen(bizName(), () => {
+    buildInterior(m); inside = true; nearTarget = null; iScene.add(player);
+    const dr = iRoom.userData.door; player.position.set(dr.x, 0, dr.z - 1.4); player.rotation.y = Math.PI;
+    camPos.set(player.position.x*0.4, 9.5, iBounds.maxZ + 8); syncInterior();
+    if (!iTip){ iTip = true; toast('Walk to a green ring to make decisions. The door takes you outside.'); }
+  });
+}
+function leaveInterior(){
+  inside = false; nearTarget = null; scene.add(player);
+  const d = bizSlot ? bizSlot.door : {x:0, z:6}; player.position.set(d.x, 0, d.z + 0.8); player.rotation.y = 0; camPos.set(d.x, 14, d.z + 16);
+}
+function exitInterior(){ fadeThen('Outside', leaveInterior); }
+function collideIn(p){
+  for (const b of iObstacles){ const cx = clamp(p.x, b.minX, b.maxX), cz = clamp(p.z, b.minZ, b.maxZ), dx = p.x - cx, dz = p.z - cz, d2 = dx*dx + dz*dz, r = 0.4;
+    if (d2 < r*r){ if (d2 > 1e-6){ const dd = Math.sqrt(d2); p.x = cx + dx/dd*r; p.z = cz + dz/dd*r; } else { const opts = [[b.minX - r, p.z], [b.maxX + r, p.z], [p.x, b.minZ - r], [p.x, b.maxZ + r]]; opts.sort((a, c) => Math.hypot(a[0]-p.x, a[1]-p.z) - Math.hypot(c[0]-p.x, c[1]-p.z)); p.x = opts[0][0]; p.z = opts[0][1]; } } }
+  p.x = clamp(p.x, iBounds.minX, iBounds.maxX); p.z = clamp(p.z, iBounds.minZ, iBounds.maxZ);
+}
+
+/* Street pieces from Blender (role street:<file name>) placed around the square. */
+const STREET_SPOTS = [
+  ['street-lamp', 0, -11.1, 0], ['street-lamp', 0, 11.1, Math.PI], ['street-lamp', -13.1, 0, Math.PI/2], ['street-lamp', 13.1, 0, -Math.PI/2],
+  ['traffic-light', 13.3, -11.3, 0], ['traffic-light', -13.3, 11.3, Math.PI], ['street-sign', -13.3, -11.3, 0], ['street-sign', 13.3, 11.3, Math.PI],
+  ['bus-stop', -7, -17.9, 0], ['bin', -6.6, -6, 0], ['bin', 6.6, 6, Math.PI], ['planter', -10.5, -4, Math.PI/2], ['planter', 10.5, 4, -Math.PI/2],
+  ['bollard', -3, -11.2, 0], ['bollard', 3, -11.2, 0], ['hydrant', 9.5, -11.2, 0], ['mailbox', -9.5, 11.2, Math.PI], ['bike-rack', 9, 11.2, Math.PI]];
+const streetPlaced = [];
+function placeStreet(){
+  streetPlaced.forEach(s => { scene.remove(s.o); s.box.on = false; }); streetPlaced.length = 0;
+  for (const [name, x, z, ry] of STREET_SPOTS){ const m = pickModel(['street:' + name], 0); if (!m) continue;
+    const o = cloneModel(m, null); o.position.set(x, 0, z); o.rotation.y = ry; scene.add(o); o.updateMatrixWorld(true);
+    const b = (m.col || m.box).clone().applyMatrix4(o.matrixWorld), box = {minX:b.min.x, maxX:b.max.x, minZ:b.min.z, maxZ:b.max.z, on:true};
+    if (name !== 'bus-stop') obstacles.push(box); streetPlaced.push({o, box}); }
+}
+
 /* ---------- Start ---------- */
 let webgl = typeof THREE !== 'undefined';
 if (webgl){ try { initWorld(); } catch(e){ webgl = false; } }
@@ -1738,7 +1909,8 @@ if (!webgl){
   if (!DB.game || DB.game.status !== 'playing') showSetup();
   requestAnimationFrame(t => { last = t; frame(t); });
 }
-window.__town = {DB:() => DB, runMonth, chooseEvent, startGame, openPanel, player:() => player, targets, MODELS, tryModelFile, slots:() => ({bldgs, bizSlot, people, trees, props})};
+window.__town = {DB:() => DB, runMonth, chooseEvent, startGame, openPanel, closePanel, player:() => player, targets, MODELS, tryModelFile, slots:() => ({bldgs, bizSlot, people, trees, props}),
+  interior:() => ({inside, iRoom, iPeople, iDyn, inTargets, iBounds, iObstacles}), enterInterior, exitInterior, streetPlaced, interact, near:() => nearTarget};
 })();
 </script>
 </body>

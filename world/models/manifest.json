@@ -242,6 +242,110 @@
       "updated": "2026-11-27"
     },
     {
+      "id": "bike-rack",
+      "file": "props/bike-rack.glb",
+      "role": "street:bike-rack",
+      "type": "prop",
+      "tris": 132,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "bin",
+      "file": "props/bin.glb",
+      "role": "street:bin",
+      "type": "prop",
+      "tris": 132,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "bollard",
+      "file": "props/bollard.glb",
+      "role": "street:bollard",
+      "type": "prop",
+      "tris": 68,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "bus-stop",
+      "file": "props/bus-stop.glb",
+      "role": "street:bus-stop",
+      "type": "prop",
+      "tris": 292,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "hydrant",
+      "file": "props/hydrant.glb",
+      "role": "street:hydrant",
+      "type": "prop",
+      "tris": 208,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "mailbox",
+      "file": "props/mailbox.glb",
+      "role": "street:mailbox",
+      "type": "prop",
+      "tris": 144,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "planter",
+      "file": "props/planter.glb",
+      "role": "street:planter",
+      "type": "prop",
+      "tris": 156,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "road-crosswalk",
+      "file": "props/road-crosswalk.glb",
+      "role": "street:road-crosswalk",
+      "type": "prop",
+      "tris": 228,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "road-intersection",
+      "file": "props/road-intersection.glb",
+      "role": "street:road-intersection",
+      "type": "prop",
+      "tris": 204,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "road-straight",
+      "file": "props/road-straight.glb",
+      "role": "street:road-straight",
+      "type": "prop",
+      "tris": 156,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "street-lamp",
+      "file": "props/street-lamp.glb",
+      "role": "street:street-lamp",
+      "type": "prop",
+      "tris": 232,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "street-sign",
+      "file": "props/street-sign.glb",
+      "role": "street:street-sign",
+      "type": "prop",
+      "tris": 104,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "traffic-light",
+      "file": "props/traffic-light.glb",
+      "role": "street:traffic-light",
+      "type": "prop",
+      "tris": 304,
+      "updated": "2026-11-27"
+    },
+    {
       "id": "townsperson-backpack",
       "file": "characters/townsperson-backpack.glb",
       "role": "townsperson",

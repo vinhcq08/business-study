@@ -164,10 +164,10 @@ const ROLES = {
   person:[['avatar', 'Avatar (the player)'], ['townsperson', 'Townsperson']].concat(BIZ.filter(b => b[0] !== 'idea').map(([k, n]) => ['staff:' + k, 'Staff: ' + n])),
   building:BIZ.map(([k, n]) => ['business:' + k, 'Business: ' + n]).concat(BIZ.map(([k, n]) => ['rival:' + k, 'Rival: ' + n]),
     [['kiosk', 'Newspaper stand'], ['bank', 'Bank'], ['library', 'Library'], ['investors', 'Investors’ tower'], ['house', 'House']]),
-  prop:[['tree', 'Tree'], ['bench', 'Bench'], ['crate', 'Crate'], ['furniture', 'Furniture (named by file)']],
+  prop:[['tree', 'Tree'], ['bench', 'Bench'], ['crate', 'Crate'], ['furniture', 'Furniture (named by file)'], ['street', 'Street piece (named by file)']],
   interior:BIZ.map(([k, n]) => ['interior:' + k, 'Interior: ' + n]),
 };
-const typeOfRole = r => /^furniture/.test(r || '') ? 'prop' : (Object.keys(ROLES).find(t => ROLES[t].some(x => x[0] === r)) || null);
+const typeOfRole = r => /^(furniture|street)/.test(r || '') ? 'prop' : (Object.keys(ROLES).find(t => ROLES[t].some(x => x[0] === r)) || null);
 function roleFromName(name){
   const n = name.toLowerCase().replace(/\.(glb|gltf)$/, '');
   let k = /^(?:business-)?(cafe|saas|shop|agency|idea)(?:-exterior)?$/.exec(n); if (k) return 'business:' + k[1];
@@ -209,7 +209,7 @@ function loadBuffer(buf, name){
     const extras = gl.scene.userData || {};
     const role = extras.rt_role || roleFromName(name) || null;
     const type = extras.rt_type && RULES[extras.rt_type] ? extras.rt_type : (role ? typeOfRole(role) : null) || guessType(gl.scene);
-    typeSel.value = type; fillRoles(type, /^furniture:/.test(role || '') ? 'furniture' : role);
+    typeSel.value = type; fillRoles(type, /^(furniture|street):/.test(role || '') ? role.split(':')[0] : role);
     cur = {name, size:buf.byteLength, scene:gl.scene, extras, anims:gl.animations || [], roleKnown:!!role};
     runChecks(); show(gl.scene);
   }, err => {
@@ -269,7 +269,7 @@ function runChecks(){
   else add('warn', `File name ${cur.name} should be lowercase words joined by hyphens, for example cafe-exterior.glb.`);
   if (!cur.roleKnown) add('info', 'The file does not say what it replaces. Pick it above, or export with the Runway add-on so the town knows by itself.');
   if (type !== typeOfRole(role)) add('warn', 'The role does not match the type.');
-  const fullRole = role === 'furniture' ? 'furniture:' + cur.name.replace(/\.glb$/i, '') : role;
+  const fullRole = role === 'furniture' || role === 'street' ? role + ':' + cur.name.replace(/\.glb$/i, '') : role;
 
   if (meshes.length){
     const t = stats.tris;
