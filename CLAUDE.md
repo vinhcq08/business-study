@@ -1,6 +1,6 @@
 # business-study
 
-Three static pages, no build step: `index.html` (Business Skill Tree), `game/index.html` (Runway, a business simulation) and `world/index.html` (Runway Town, the same game as a 3D town in Three.js r128). The user is learning business and building these for themselves. Write plainly; they are not a professional 3D artist or programmer.
+Two static pages, no build step: `index.html` (Business Skill Tree) and `world/index.html` (Runway Town, a business simulation played in a 3D town, Three.js r128). Classic Runway (`game/`) was removed. The user is learning business and building these for themselves. Write plainly; they are not a professional 3D artist or programmer.
 
 ## Current job: rebuild the Runway Town models in Blender
 
@@ -53,4 +53,4 @@ Commit each approved model (.blend, .glb and manifest.json) with a short message
 
 ### Page code
 
-`world/index.html`, `game/index.html` and `index.html` are built single files. If you change them, keep the existing look unless asked, test in a browser, and do not break the shared save key `biz-skill-tree-v1`.
+`world/index.html` and `index.html` are built single files. If you change them, keep the existing look unless asked, test in a browser, and do not break the shared save key `biz-skill-tree-v1`.

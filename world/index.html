@@ -1152,7 +1152,6 @@ let tab = 'income', panel = null, modalKind = null;
 const BIZ_ORDER = ['cafe','saas','shop','agency'];
 const prog = b => DB.progress[b] || 0;
 function unlocked(b, n){ return S().free || n === 1 || prog(b) >= n - 1; }
-const CLASSIC_URL = /github\.io$/.test(location.hostname) ? '../game/' : 'https://claude.ai/artifact/HzLzFXMYf3X44QqsEYkBpL';
 const CHECK_URL = /github\.io$/.test(location.hostname) ? 'model-check.html' : 'https://claude.ai/artifact/7SbgsLtiTZPxiqPTBjU82j';
 const bizName = () => { const g = DB.game; return !g ? 'Your business' : g.biz === 'idea' ? g.idea.name : BIZ[g.biz].name; };
 const RIVAL_NAME = {cafe:'Bean Counter Café', saas:'Rival Software Ltd', shop:'Discount Bags', agency:'Freelancers Hub', idea:'The competition'};
@@ -1299,8 +1298,7 @@ function menuHtml(g){
       <label class="switch" for="m-form"><input type="checkbox" id="m-form" data-set="formulas" ${st.formulas?'checked':''}><span>Show formulas and hints (new games)</span></label></div>
     <div class="field"><span class="lab">Controls</span><p class="help">Walk with WASD or the arrow keys, or the joystick on a touch screen. Press E or tap Enter beside a building. Drag the view (or press Z and C) to turn the camera, and X to put it back behind you. Scroll or pinch to zoom. Esc closes a panel. The Places button opens any building without walking.</p></div>
     <div class="field"><span class="lab">3D models</span><p class="help">${esc(modelSummary())} Drop a .glb exported from Blender onto the town to try it until you reload.</p><div class="row" style="margin-top:8px"><a class="btn" href="${esc(CHECK_URL)}" target="_blank" rel="noopener">Model check ↗</a></div></div>
-    <div class="row"><a class="btn" href="${esc(CLASSIC_URL)}" target="_blank" rel="noopener">Classic Runway ↗</a><a class="btn" href="${esc(TREE_URL)}" target="_blank" rel="noopener">Skill Tree ↗</a>${g && g.status === 'playing' ? `<button class="btn danger" data-act="abandon">Abandon game</button>` : ''}</div>
-    <p class="small muted">Classic Runway also has the “Use my idea” mode. The town has its own save, separate from Classic Runway.</p>`;
+    <div class="row"><a class="btn" href="${esc(TREE_URL)}" target="_blank" rel="noopener">Skill Tree ↗</a>${g && g.status === 'playing' ? `<button class="btn danger" data-act="abandon">Abandon game</button>` : ''}</div>`;
 }
 function treeSet(id, st){ try { const v = JSON.parse(localStorage.getItem('biz-skill-tree-v1') || 'null') || {prog:{}, apply:{}}; v.prog = v.prog || {}; if (st === 'none') delete v.prog[id]; else v.prog[id] = st; localStorage.setItem('biz-skill-tree-v1', JSON.stringify(v)); } catch(e){} }
 
@@ -2058,7 +2056,7 @@ let webgl = typeof THREE !== 'undefined';
 if (webgl){ try { initWorld(); } catch(e){ webgl = false; } }
 if (!webgl){
   const d = document.createElement('div'); d.className = 'nogl';
-  d.innerHTML = `<div><p>Runway Town needs 3D graphics (WebGL), which this browser or device didn’t provide.</p><p style="margin-top:12px"><a class="btn primary" href="${esc(CLASSIC_URL)}" target="_blank" rel="noopener">Play Classic Runway instead ↗</a></p></div>`;
+  d.innerHTML = `<div><p>Runway Town needs 3D graphics (WebGL), which this browser or device didn’t provide.</p><p style="margin-top:12px">Try a recent version of Chrome, Edge, Firefox or Safari, or another device.</p></div>`;
   document.body.appendChild(d);
 } else {
   rebuildBusiness(); render(); loadModels();
