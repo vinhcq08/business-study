@@ -281,10 +281,13 @@ function runChecks(){
     if (size.y >= h0 && size.y <= h1) add('ok', `Height ${size.y.toFixed(2)} m (a ${R.label.toLowerCase()} should be ${h0}–${h1} m).`);
     else add('error', `Height ${size.y.toFixed(2)} m, expected ${h0}–${h1} m. Check that 1 Blender unit is 1 metre and the scale is applied.`);
     if (Math.max(size.x, size.z) > (role === 'skyline' ? 30 : R.w)) add('warn', `Footprint ${size.x.toFixed(1)} × ${size.z.toFixed(1)} m is wider than ${R.w} m.`);
-    if (Math.abs(box.min.y) <= 0.05) add('ok', 'Stands on the ground: its base is at 0 m.');
+    let legs = false; scene.traverse(o => { if (/^leg_/.test(o.name || '')) legs = true; });
+    const held = role === 'extra' && !legs;
+    if (held) add('info', 'Hand-held prop: the origin is the grip, so it may reach below the ground.');
+    else if (Math.abs(box.min.y) <= 0.05) add('ok', 'Stands on the ground: its base is at 0 m.');
     else add('error', `The base is at ${box.min.y.toFixed(2)} m, so it will ${box.min.y > 0 ? 'float' : 'sink into the ground'}. Put the origin at the base and the base at Z = 0 in Blender.`);
     const c = box.getCenter(new THREE.Vector3()), tol = Math.max(0.15, 0.2*Math.max(size.x, size.z));
-    if (Math.abs(c.x) <= tol && Math.abs(c.z) <= tol) add('ok', 'Centred on the origin.');
+    if (held || (Math.abs(c.x) <= tol && Math.abs(c.z) <= tol)) add('ok', 'Centred on the origin.');
     else add('warn', `The centre is ${Math.hypot(c.x, c.z).toFixed(2)} m from the origin, so it will sit off its plot.`);
   }
   if (scaled.length) add('warn', `Unapplied scale on ${scaled.slice(0, 4).join(', ')}. In Blender press Ctrl+A › Scale.`);

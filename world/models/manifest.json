@@ -14,7 +14,7 @@
       "file": "buildings/bank.glb",
       "role": "bank",
       "type": "building",
-      "tris": 1300,
+      "tris": 1708,
       "updated": "2026-11-27"
     },
     {
@@ -30,7 +30,7 @@
       "file": "buildings/agency-exterior.glb",
       "role": "business:agency",
       "type": "building",
-      "tris": 908,
+      "tris": 1168,
       "updated": "2026-11-27"
     },
     {
@@ -38,7 +38,7 @@
       "file": "buildings/cafe-exterior.glb",
       "role": "business:cafe",
       "type": "building",
-      "tris": 1178,
+      "tris": 1438,
       "updated": "2026-11-27"
     },
     {
@@ -46,7 +46,7 @@
       "file": "buildings/idea-exterior.glb",
       "role": "business:idea",
       "type": "building",
-      "tris": 916,
+      "tris": 1304,
       "updated": "2026-11-27"
     },
     {
@@ -54,7 +54,7 @@
       "file": "buildings/saas-exterior.glb",
       "role": "business:saas",
       "type": "building",
-      "tris": 1076,
+      "tris": 1336,
       "updated": "2026-11-27"
     },
     {
@@ -62,7 +62,7 @@
       "file": "buildings/shop-exterior.glb",
       "role": "business:shop",
       "type": "building",
-      "tris": 888,
+      "tris": 1344,
       "updated": "2026-11-27"
     },
     {
@@ -71,6 +71,102 @@
       "role": "crate",
       "type": "prop",
       "tris": 104,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "coffee-cup",
+      "file": "props/coffee-cup.glb",
+      "role": "extra:coffee-cup",
+      "type": "prop",
+      "tris": 96,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "dog",
+      "file": "props/dog.glb",
+      "role": "extra:dog",
+      "type": "prop",
+      "tris": 292,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "shopping-bag",
+      "file": "props/shopping-bag.glb",
+      "role": "extra:shopping-bag",
+      "type": "prop",
+      "tris": 116,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "umbrella",
+      "file": "props/umbrella.glb",
+      "role": "extra:umbrella",
+      "type": "prop",
+      "tris": 112,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "apartment-block",
+      "file": "buildings/apartment-block.glb",
+      "role": "filler:apartment-block",
+      "type": "building",
+      "tris": 1492,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "apartment-tall",
+      "file": "buildings/apartment-tall.glb",
+      "role": "filler:apartment-tall",
+      "type": "building",
+      "tris": 1388,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "bakery",
+      "file": "buildings/bakery.glb",
+      "role": "filler:bakery",
+      "type": "building",
+      "tris": 1448,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "corner-shop",
+      "file": "buildings/corner-shop.glb",
+      "role": "filler:corner-shop",
+      "type": "building",
+      "tris": 1484,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "launderette",
+      "file": "buildings/launderette.glb",
+      "role": "filler:launderette",
+      "type": "building",
+      "tris": 1504,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "office-block",
+      "file": "buildings/office-block.glb",
+      "role": "filler:office-block",
+      "type": "building",
+      "tris": 1000,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "pharmacy",
+      "file": "buildings/pharmacy.glb",
+      "role": "filler:pharmacy",
+      "type": "building",
+      "tris": 1496,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "terrace-houses",
+      "file": "buildings/terrace-houses.glb",
+      "role": "filler:terrace-houses",
+      "type": "building",
+      "tris": 1468,
       "updated": "2026-11-27"
     },
     {
@@ -146,11 +242,43 @@
       "updated": "2026-11-27"
     },
     {
+      "id": "house-cottage",
+      "file": "buildings/house-cottage.glb",
+      "role": "house",
+      "type": "building",
+      "tris": 1596,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "house-flats",
+      "file": "buildings/house-flats.glb",
+      "role": "house",
+      "type": "building",
+      "tris": 1944,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "house-home",
+      "file": "buildings/house-home.glb",
+      "role": "house",
+      "type": "building",
+      "tris": 1508,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "house-workshop",
+      "file": "buildings/house-workshop.glb",
+      "role": "house",
+      "type": "building",
+      "tris": 1332,
+      "updated": "2026-11-27"
+    },
+    {
       "id": "house",
       "file": "buildings/house.glb",
       "role": "house",
       "type": "building",
-      "tris": 944,
+      "tris": 956,
       "updated": "2026-11-27"
     },
     {
@@ -190,7 +318,7 @@
       "file": "buildings/investors.glb",
       "role": "investors",
       "type": "building",
-      "tris": 654,
+      "tris": 914,
       "updated": "2026-11-27"
     },
     {
@@ -198,7 +326,7 @@
       "file": "buildings/kiosk.glb",
       "role": "kiosk",
       "type": "building",
-      "tris": 572,
+      "tris": 1900,
       "updated": "2026-11-27"
     },
     {
@@ -206,7 +334,55 @@
       "file": "buildings/library.glb",
       "role": "library",
       "type": "building",
-      "tris": 1656,
+      "tris": 1916,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "skyline-crane",
+      "file": "buildings/skyline-crane.glb",
+      "role": "skyline:skyline-crane",
+      "type": "building",
+      "tris": 260,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "skyline-dome",
+      "file": "buildings/skyline-dome.glb",
+      "role": "skyline:skyline-dome",
+      "type": "building",
+      "tris": 392,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "skyline-slab",
+      "file": "buildings/skyline-slab.glb",
+      "role": "skyline:skyline-slab",
+      "type": "building",
+      "tris": 252,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "skyline-stepped",
+      "file": "buildings/skyline-stepped.glb",
+      "role": "skyline:skyline-stepped",
+      "type": "building",
+      "tris": 240,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "skyline-tower",
+      "file": "buildings/skyline-tower.glb",
+      "role": "skyline:skyline-tower",
+      "type": "building",
+      "tris": 226,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "skyline-twin",
+      "file": "buildings/skyline-twin.glb",
+      "role": "skyline:skyline-twin",
+      "type": "building",
+      "tris": 312,
       "updated": "2026-11-27"
     },
     {
@@ -242,11 +418,35 @@
       "updated": "2026-11-27"
     },
     {
+      "id": "atm",
+      "file": "props/atm.glb",
+      "role": "street:atm",
+      "type": "prop",
+      "tris": 376,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "bicycle-parked",
+      "file": "props/bicycle-parked.glb",
+      "role": "street:bicycle-parked",
+      "type": "prop",
+      "tris": 416,
+      "updated": "2026-11-27"
+    },
+    {
       "id": "bike-rack",
       "file": "props/bike-rack.glb",
       "role": "street:bike-rack",
       "type": "prop",
       "tris": 132,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "billboard",
+      "file": "props/billboard.glb",
+      "role": "street:billboard",
+      "type": "prop",
+      "tris": 476,
       "updated": "2026-11-27"
     },
     {
@@ -270,7 +470,47 @@
       "file": "props/bus-stop.glb",
       "role": "street:bus-stop",
       "type": "prop",
-      "tris": 292,
+      "tris": 304,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "cafe-parasol-set",
+      "file": "props/cafe-parasol-set.glb",
+      "role": "street:cafe-parasol-set",
+      "type": "prop",
+      "tris": 452,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "construction-set",
+      "file": "props/construction-set.glb",
+      "role": "street:construction-set",
+      "type": "prop",
+      "tris": 494,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "flower-bed",
+      "file": "props/flower-bed.glb",
+      "role": "street:flower-bed",
+      "type": "prop",
+      "tris": 404,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "fountain",
+      "file": "props/fountain.glb",
+      "role": "street:fountain",
+      "type": "prop",
+      "tris": 312,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "hedge",
+      "file": "props/hedge.glb",
+      "role": "street:hedge",
+      "type": "prop",
+      "tris": 440,
       "updated": "2026-11-27"
     },
     {
@@ -282,6 +522,14 @@
       "updated": "2026-11-27"
     },
     {
+      "id": "ice-cream-cart",
+      "file": "props/ice-cream-cart.glb",
+      "role": "street:ice-cream-cart",
+      "type": "prop",
+      "tris": 382,
+      "updated": "2026-11-27"
+    },
+    {
       "id": "mailbox",
       "file": "props/mailbox.glb",
       "role": "street:mailbox",
@@ -290,11 +538,59 @@
       "updated": "2026-11-27"
     },
     {
+      "id": "market-stall",
+      "file": "props/market-stall.glb",
+      "role": "street:market-stall",
+      "type": "prop",
+      "tris": 468,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "newspaper-box",
+      "file": "props/newspaper-box.glb",
+      "role": "street:newspaper-box",
+      "type": "prop",
+      "tris": 266,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "park-gate",
+      "file": "props/park-gate.glb",
+      "role": "street:park-gate",
+      "type": "prop",
+      "tris": 468,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "phone-booth",
+      "file": "props/phone-booth.glb",
+      "role": "street:phone-booth",
+      "type": "prop",
+      "tris": 364,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "picnic-table",
+      "file": "props/picnic-table.glb",
+      "role": "street:picnic-table",
+      "type": "prop",
+      "tris": 272,
+      "updated": "2026-11-27"
+    },
+    {
       "id": "planter",
       "file": "props/planter.glb",
       "role": "street:planter",
       "type": "prop",
       "tris": 156,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "playground",
+      "file": "props/playground.glb",
+      "role": "street:playground",
+      "type": "prop",
+      "tris": 452,
       "updated": "2026-11-27"
     },
     {
@@ -322,6 +618,14 @@
       "updated": "2026-11-27"
     },
     {
+      "id": "rooftop-set",
+      "file": "props/rooftop-set.glb",
+      "role": "street:rooftop-set",
+      "type": "prop",
+      "tris": 422,
+      "updated": "2026-11-27"
+    },
+    {
       "id": "street-lamp",
       "file": "props/street-lamp.glb",
       "role": "street:street-lamp",
@@ -343,6 +647,22 @@
       "role": "street:traffic-light",
       "type": "prop",
       "tris": 304,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "tree-blossom",
+      "file": "props/tree-blossom.glb",
+      "role": "street:tree-blossom",
+      "type": "prop",
+      "tris": 252,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "tree-pine",
+      "file": "props/tree-pine.glb",
+      "role": "street:tree-pine",
+      "type": "prop",
+      "tris": 114,
       "updated": "2026-11-27"
     },
     {
@@ -471,6 +791,54 @@
       "role": "tree",
       "type": "prop",
       "tris": 232,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "city-bus",
+      "file": "vehicles/city-bus.glb",
+      "role": "vehicle:city-bus",
+      "type": "vehicle",
+      "tris": 716,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "delivery-van",
+      "file": "vehicles/delivery-van.glb",
+      "role": "vehicle:delivery-van",
+      "type": "vehicle",
+      "tris": 672,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "food-truck",
+      "file": "vehicles/food-truck.glb",
+      "role": "vehicle:food-truck",
+      "type": "vehicle",
+      "tris": 770,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "hatchback",
+      "file": "vehicles/hatchback.glb",
+      "role": "vehicle:hatchback",
+      "type": "vehicle",
+      "tris": 544,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "sedan",
+      "file": "vehicles/sedan.glb",
+      "role": "vehicle:sedan",
+      "type": "vehicle",
+      "tris": 544,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "taxi",
+      "file": "vehicles/taxi.glb",
+      "role": "vehicle:taxi",
+      "type": "vehicle",
+      "tris": 792,
       "updated": "2026-11-27"
     }
   ]

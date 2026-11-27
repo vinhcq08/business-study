@@ -360,13 +360,18 @@ def check_objects(context, objs, mtype, role, name):
     if max(size.x, size.y) > R["width"]:
         warn("Footprint %.1f × %.1f m is wider than %.0f m." % (size.x, size.y, R["width"]))
 
-    if abs(lo.z) <= 0.05:
+    held = role == "extra" and not any(base_name(o.name).startswith("leg_") for o in objs)
+    if held:
+        info("Hand-held prop: the origin is the grip, so it may reach below Z = 0.")
+    elif abs(lo.z) <= 0.05:
         ok("Stands on the ground (lowest point %.2f m)." % lo.z)
     else:
         err("Lowest point is at %.2f m. Move the model so its base sits at Z = 0." % lo.z)
     cx, cy = (lo.x + hi.x) / 2, (lo.y + hi.y) / 2
     tol = max(0.15, 0.2 * max(size.x, size.y))
-    if abs(cx) <= tol and abs(cy) <= tol:
+    if held:
+        pass
+    elif abs(cx) <= tol and abs(cy) <= tol:
         ok("Centred on the origin.")
     else:
         warn("Centre is at X %.2f, Y %.2f. Put the base centre at the world origin." % (cx, cy))
