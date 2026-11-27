@@ -1,0 +1,5 @@
+{
+  "easy": {"label": "Easy", "cash": 1.3, "demand": 1.15, "cost": 0.9, "vol": 0.05},
+  "normal": {"label": "Normal", "cash": 1, "demand": 1, "cost": 1, "vol": 0.1},
+  "hard": {"label": "Hard", "cash": 0.8, "demand": 0.85, "cost": 1.1, "vol": 0.18}
+}

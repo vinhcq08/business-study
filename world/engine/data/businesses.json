@@ -1,0 +1,358 @@
+{
+  "cafe": {
+    "name": "Café",
+    "color": "var(--cafe)",
+    "blurb": "Food and drink. Daily customers, ingredients, rent, staff and a rival down the road.",
+    "equip": 30000,
+    "loanSizes": [10000, 25000, 50000],
+    "loanRate": 0.1,
+    "loanMin": 20000,
+    "minPre": 80000,
+    "valMult": 2.2,
+    "valBM": "cafeVal",
+    "expand": {
+      "label": "Open a second café ($60,000)",
+      "cost": 60000,
+      "help": "Fit-out and equipment for a second location. It takes a few months to find regulars."
+    },
+    "levels": {
+      "1": {
+        "title": "The coffee cart",
+        "months": 6,
+        "start": 500,
+        "kind": "cash",
+        "t": 35000,
+        "story": "You run a coffee cart outside a busy train station. Each morning you decide your price and how many cups to prepare. Coffee you don’t sell is poured away.",
+        "text": "Have $35,000 in cash by the end of the last month.",
+        "subjects": ["micro", "finacct", "excel"]
+      },
+      "2": {
+        "title": "Your first café",
+        "months": 12,
+        "start": 25000,
+        "kind": "streak",
+        "t": 0,
+        "n": 3,
+        "story": "You’ve opened a small café with rent, staff and a menu. New cafés take a few months to be discovered, so expect early losses.",
+        "text": "Make a profit three months in a row before the last month ends, without running out of cash.",
+        "subjects": ["mgmtacct", "unitecon", "budget", "marketing"]
+      },
+      "3": {
+        "title": "The café across the road",
+        "months": 18,
+        "start": 30000,
+        "kind": "streak",
+        "t": 3000,
+        "n": 3,
+        "rival": true,
+        "story": "Commuters, office workers and students all want different things. A few months in, a rival café opens across the road and will react to your prices.",
+        "text": "After the rival opens, make at least $3,000 profit three months in a row.",
+        "subjects": ["pricing", "game", "ops", "lead", "sales"]
+      },
+      "4": {
+        "title": "Running the books",
+        "months": 24,
+        "start": 30000,
+        "kind": "netcash",
+        "t": 60000,
+        "story": "Now you see the full picture: equipment that wears out, suppliers you pay a month later, seasons, a bank that will lend, and things that go wrong.",
+        "text": "Reach $60,000 in net cash (cash minus any loan) before the last month ends.",
+        "subjects": ["fsa", "corpfin", "macro", "law"]
+      },
+      "5": {
+        "title": "A second café",
+        "months": 36,
+        "start": 40000,
+        "kind": "stake",
+        "t": 300000,
+        "needExpand": true,
+        "story": "Your café works. Can you grow it into two? You can borrow, bring in an investor, or grow from your own profits.",
+        "text": "Open a second café and make your share of the business worth $300,000.",
+        "subjects": ["valuation", "fund", "strategy", "innov", "nego"]
+      },
+      "6": {
+        "title": "Your café, for real",
+        "months": 36,
+        "start": 30000,
+        "kind": "stake",
+        "t": 230000,
+        "story": "Everything is switched on: rivals, seasons, events, loans and investors, with bigger month-to-month swings.",
+        "text": "Make your share of the business worth $230,000.",
+        "subjects": ["unitecon", "fsa", "valuation", "strategy"]
+      }
+    }
+  },
+  "saas": {
+    "name": "Software subscription",
+    "color": "var(--saas)",
+    "blurb": "Monthly subscriptions. Sign-ups, cancellations, developers, marketing and investors.",
+    "equip": 8000,
+    "loanSizes": [25000, 50000, 100000],
+    "loanRate": 0.12,
+    "loanMin": 50000,
+    "minPre": 400000,
+    "valBM": "saasVal",
+    "expand": {
+      "label": "Build an enterprise sales team ($15,000)",
+      "cost": 15000,
+      "help": "Unlocks sales reps who win large companies on bigger contracts."
+    },
+    "levels": {
+      "1": {
+        "title": "Your first app",
+        "months": 12,
+        "start": 2000,
+        "kind": "mrr",
+        "t": 12000,
+        "story": "You’ve built a small app that people pay for monthly. About 2,000 people visit your site each month. Choose a price: cheaper wins more sign-ups, but each pays less.",
+        "text": "Reach $12,000 in monthly recurring revenue (MRR) by the last month.",
+        "subjects": ["micro", "finacct", "pricing"]
+      },
+      "2": {
+        "title": "Growing the startup",
+        "months": 18,
+        "start": 80000,
+        "kind": "mrr",
+        "t": 25000,
+        "profit": true,
+        "story": "Now you can buy ads and hire developers to improve the product. Better products win more sign-ups and lose fewer customers, but developers are expensive and slow to pay off.",
+        "text": "Have a profitable month with at least $25,000 MRR before the last month ends, without running out of cash.",
+        "subjects": ["unitecon", "budget", "marketing", "saas"]
+      },
+      "3": {
+        "title": "Two plans, one rival",
+        "months": 18,
+        "start": 120000,
+        "kind": "mrr",
+        "t": 30000,
+        "churnMax": 0.045,
+        "story": "Individuals want cheap; small businesses pay more but expect a better product and support. A few months in, a competitor launches and reacts to your Pro price.",
+        "text": "Reach $30,000 MRR while losing fewer than 4.5% of customers a month.",
+        "subjects": ["pricing", "game", "product", "lead"]
+      },
+      "4": {
+        "title": "Cash is not revenue",
+        "months": 24,
+        "start": 120000,
+        "kind": "mrr",
+        "t": 50000,
+        "profit": true,
+        "story": "Yearly plans bring cash early but you still owe the service. Seasons, outages, contracts and resignations test you. A bank will lend.",
+        "text": "Reach $50,000 MRR in a profitable month before the last month ends.",
+        "subjects": ["fsa", "corpfin", "law", "macro"]
+      },
+      "5": {
+        "title": "Raise or bootstrap",
+        "months": 36,
+        "start": 120000,
+        "kind": "stake",
+        "t": 3000000,
+        "story": "Investors value software on recurring revenue and growth. Raise money to grow faster, or keep more of the company and grow on profits.",
+        "text": "Make your share of the company worth $3,000,000.",
+        "subjects": ["valuation", "fund", "sales", "innov"]
+      },
+      "6": {
+        "title": "Your software company, for real",
+        "months": 36,
+        "start": 100000,
+        "kind": "stake",
+        "t": 4000000,
+        "story": "Everything is switched on, with bigger swings and more surprises.",
+        "text": "Make your share of the company worth $4,000,000.",
+        "subjects": ["saas", "fsa", "valuation", "strategy"]
+      }
+    }
+  },
+  "shop": {
+    "name": "Online store",
+    "color": "var(--shop)",
+    "blurb": "Selling backpacks online. Stock bought ahead, shipping, returns, ads and ratings.",
+    "equip": 10000,
+    "startInv": 200,
+    "loanSizes": [10000, 25000, 50000],
+    "loanRate": 0.1,
+    "loanMin": 20000,
+    "minPre": 100000,
+    "valMult": 3.4,
+    "valBM": "shopVal",
+    "expand": {
+      "label": "Launch a second product line ($25,000)",
+      "cost": 25000,
+      "help": "Design and samples for a new range. Brings more visitors once it’s known."
+    },
+    "levels": {
+      "1": {
+        "title": "Your first stock order",
+        "months": 6,
+        "start": 5000,
+        "kind": "cash",
+        "t": 15000,
+        "story": "You sell backpacks online. Each month you choose a price and how many bags to buy at $24 each. Bags you don’t sell stay in stock, still holding your cash.",
+        "text": "Have $15,000 in cash by the end of the last month.",
+        "subjects": ["micro", "finacct", "excel"]
+      },
+      "2": {
+        "title": "Ads, shipping and returns",
+        "months": 12,
+        "start": 15000,
+        "kind": "streak",
+        "t": 0,
+        "n": 3,
+        "story": "Now you pay for shipping, card fees, storage and returns, and you can buy ads and hire packers. New stores take a few months to be found.",
+        "text": "Make a profit three months in a row before the last month ends, without running out of cash.",
+        "subjects": ["mgmtacct", "unitecon", "budget", "marketing"]
+      },
+      "3": {
+        "title": "Ratings and rivals",
+        "months": 18,
+        "start": 20000,
+        "kind": "streak",
+        "t": 2500,
+        "n": 3,
+        "rival": true,
+        "rating": 4,
+        "story": "Bargain hunters and quality seekers want different things. Your star rating decides how many visitors buy. A rival seller appears and fights on price.",
+        "text": "After the rival appears, make at least $2,500 profit three months in a row with a rating of 4.0 or more.",
+        "subjects": ["pricing", "game", "ops", "marketing"]
+      },
+      "4": {
+        "title": "The holiday rush",
+        "months": 24,
+        "start": 20000,
+        "kind": "netcash",
+        "t": 55000,
+        "story": "Stock now takes a month to arrive, and you pay your supplier a month later. The holiday season brings huge demand if you have the stock.",
+        "text": "Reach $55,000 in net cash (cash minus any loan) before the last month ends.",
+        "subjects": ["fsa", "budget", "corpfin", "macro"]
+      },
+      "5": {
+        "title": "Scaling the store",
+        "months": 36,
+        "start": 30000,
+        "kind": "stake",
+        "t": 250000,
+        "story": "Grow with a new product line, a loan or an investor. Online stores sell for roughly 3.4× a year’s earnings.",
+        "text": "Make your share of the business worth $250,000.",
+        "subjects": ["valuation", "fund", "strategy", "growth"]
+      },
+      "6": {
+        "title": "Your store, for real",
+        "months": 36,
+        "start": 20000,
+        "kind": "stake",
+        "t": 220000,
+        "story": "Everything is switched on, with bigger swings and more surprises.",
+        "text": "Make your share of the business worth $220,000.",
+        "subjects": ["unitecon", "fsa", "valuation", "growth"]
+      }
+    }
+  },
+  "agency": {
+    "name": "Service agency",
+    "color": "var(--agency)",
+    "blurb": "A design studio. Billable hours, hourly or fixed prices, and clients who pay late.",
+    "equip": 6000,
+    "startAR": 15000,
+    "loanSizes": [10000, 25000, 50000],
+    "loanRate": 0.1,
+    "loanMin": 20000,
+    "minPre": 80000,
+    "valMult": 2.5,
+    "valBM": "agencyVal",
+    "expand": {
+      "label": "Open a second studio ($30,000)",
+      "cost": 30000,
+      "help": "A second studio in another city. Brings new clients once it’s known."
+    },
+    "levels": {
+      "1": {
+        "title": "Going freelance",
+        "months": 6,
+        "start": 1000,
+        "kind": "cash",
+        "t": 50000,
+        "story": "You’re a freelance designer with about 120 billable hours a month. Set your hourly rate: too low and you’re fully booked but poorly paid; too high and the work dries up.",
+        "text": "Have $50,000 in cash by the end of the last month.",
+        "subjects": ["micro", "finacct", "pricing"]
+      },
+      "2": {
+        "title": "Hiring your first designers",
+        "months": 12,
+        "start": 10000,
+        "kind": "streak",
+        "t": 0,
+        "n": 3,
+        "story": "You rent a studio and can hire designers. Each costs a salary whether or not they have work, so keeping them busy is everything.",
+        "text": "Make a profit three months in a row before the last month ends, without running out of cash.",
+        "subjects": ["mgmtacct", "unitecon", "budget", "lead"]
+      },
+      "3": {
+        "title": "Clients and competitors",
+        "months": 18,
+        "start": 15000,
+        "kind": "streak",
+        "t": 12000,
+        "n": 3,
+        "rival": true,
+        "story": "Small businesses, startups and corporates want different things. You can charge by the hour or by the project. Cheap freelancers compete for small clients.",
+        "text": "After the rival freelancers appear, make at least $12,000 profit three months in a row.",
+        "subjects": ["pricing", "game", "law", "sales"]
+      },
+      "4": {
+        "title": "Waiting to be paid",
+        "months": 24,
+        "start": 25000,
+        "kind": "netcash",
+        "t": 120000,
+        "story": "Clients now pay 30 to 60 days after you invoice them. You can be profitable and still run out of cash. Seasons, contracts and staff changes add pressure.",
+        "text": "Reach $120,000 in net cash (cash minus any loan) before the last month ends.",
+        "subjects": ["fsa", "corpfin", "law", "nego"]
+      },
+      "5": {
+        "title": "Building a studio business",
+        "months": 36,
+        "start": 20000,
+        "kind": "stake",
+        "t": 900000,
+        "needExpand": true,
+        "story": "Grow into a second studio, borrow, or bring in a partner investor. Service businesses sell for roughly 2.5× a year’s earnings.",
+        "text": "Open a second studio and make your share of the business worth $900,000.",
+        "subjects": ["valuation", "fund", "strategy", "innov"]
+      },
+      "6": {
+        "title": "Your studio, for real",
+        "months": 36,
+        "start": 15000,
+        "kind": "stake",
+        "t": 1000000,
+        "story": "Everything is switched on, with bigger swings and more surprises.",
+        "text": "Make your share of the business worth $1,000,000.",
+        "subjects": ["unitecon", "fsa", "valuation", "lead"]
+      }
+    }
+  },
+  "idea": {
+    "name": "My idea",
+    "color": "var(--accent)",
+    "blurb": "",
+    "equip": 0,
+    "loanSizes": [10000, 25000, 50000],
+    "loanRate": 0.1,
+    "minPre": 50000,
+    "valMult": 2.5,
+    "valBM": "agencyVal",
+    "levels": {
+      "4": {
+        "title": "My idea",
+        "months": 24,
+        "start": 20000,
+        "kind": "streak",
+        "t": 0,
+        "n": 3,
+        "story": "",
+        "text": "Make a profit three months in a row within 24 months, without running out of cash.",
+        "subjects": ["unitecon", "budget", "fsa", "pricing"]
+      }
+    }
+  }
+}

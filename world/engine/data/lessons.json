@@ -1,0 +1,170 @@
+{
+  "micro": {
+    "idea": "Microeconomics studies how people and single businesses decide. The core of it is demand: when a price goes up, fewer people buy, and how many fewer depends on how much they want the thing and what else they could buy.",
+    "formula": "price elasticity = % change in quantity ÷ % change in price",
+    "example": "You raise a coffee from $4.00 to $4.40 (+10%) and sales fall from 200 to 170 cups a day (−15%). Elasticity is −1.5, so demand is sensitive: revenue drops from $800 to $748.",
+    "tip": "Change your price in small steps and watch customers and revenue in the report. If revenue rises when you raise the price, customers aren't very price-sensitive yet."
+  },
+  "macro": {
+    "idea": "Macroeconomics is the economy as a whole: growth, recessions, inflation and interest rates. You can't control it, but it changes how much customers spend, what your costs are and what loans cost.",
+    "formula": "real growth ≈ nominal growth − inflation",
+    "example": "Your sales grow 6% in a year when prices across the economy rise 4%. In real terms you sold only about 2% more.",
+    "tip": "When a news card says spending is down or costs are up, don't assume it's your fault. Protect your cash until it passes rather than slashing prices in a panic."
+  },
+  "game": {
+    "idea": "Game theory studies decisions where the result depends on what others do too. A rival who reacts to your prices turns pricing into a game: if you both keep cutting, you both lose.",
+    "formula": "best move = the one that does best given what the rival is likely to do back",
+    "example": "You cut your price 20% to steal customers. The rival matches the next month. Now you both sell about the same as before, at lower prices, and both make less.",
+    "tip": "Compete on something the rival can't copy overnight, such as quality, service or a loyal following, instead of starting a price war."
+  },
+  "finacct": {
+    "idea": "Financial accounting records what happened in a business in three standard reports: the income statement (profit), the balance sheet (what you own and owe) and the cash flow statement (where cash came from and went).",
+    "formula": "assets = liabilities + equity",
+    "example": "You have $12,000 cash and $8,000 of equipment ($20,000 of assets). You owe the bank $5,000. The owners' equity is $15,000.",
+    "tip": "From Level IV the report has all three statements. The balance sheet always balances; if profit looks good but cash is falling, the cash flow tab shows why."
+  },
+  "mgmtacct": {
+    "idea": "Management accounting is numbers for making decisions inside the business: what each product really costs, which costs change with sales and which don't, and where money is wasted.",
+    "formula": "cost share = cost ÷ sales",
+    "example": "A café sells $20,000 a month and spends $8,000 on ingredients. Ingredients are 40% of sales, above the usual 25–35%, so something is being wasted or underpriced.",
+    "tip": "Compare each cost with your sales every month. A cost growing faster than sales is the first thing to look at."
+  },
+  "markets": {
+    "idea": "Financial markets are where money is lent, borrowed and invested: banks, bond markets and stock markets. Their prices, such as interest rates and company values, set what money costs for a business.",
+    "formula": "interest per year = amount borrowed × annual rate",
+    "example": "A $25,000 loan at 10% a year costs about $2,500 in interest in the first year, around $208 a month.",
+    "tip": "A loan is cheap when the money earns more than its interest rate. Borrowing to cover losses only buys time."
+  },
+  "corpfin": {
+    "idea": "Corporate finance decides how a business pays for itself and its growth: with its own profits, with loans (debt) or by selling part of the company (equity). Each has a cost and a risk.",
+    "formula": "monthly loan payment = P × r ÷ (1 − (1 + r)^−n)",
+    "example": "Borrow $50,000 at 10% a year over 36 months: r = 0.10 ÷ 12, n = 36, so each payment is about $1,613. Part is interest (a cost), the rest repays the loan (not a cost).",
+    "tip": "Before borrowing, check the monthly repayment fits comfortably inside your monthly profit. The game flags repayments above a quarter of sales."
+  },
+  "valuation": {
+    "idea": "Valuation is estimating what a business is worth. Small businesses are often valued at a multiple of their yearly profit; fast-growing software companies at a multiple of their yearly recurring revenue.",
+    "formula": "company value ≈ multiple × yearly profit + cash − debt",
+    "example": "A café making $40,000 a year, valued at 2.2×, is worth about $88,000. With $10,000 cash and a $15,000 loan, the equity is worth $83,000.",
+    "tip": "Steady profit raises your value more than one big month. In Level V the value counts your average profit, not one-off gains."
+  },
+  "fund": {
+    "idea": "Fundraising is selling part of your company for cash. The term sheet sets the price (the valuation) and the conditions, such as investors getting their money back first if the company is sold.",
+    "formula": "investor's share = investment ÷ (value before + investment)",
+    "example": "An investor puts in $50,000 at a $150,000 value before the money. The company is then worth $200,000 and they own 25%.",
+    "tip": "A higher valuation can hide worse terms. A 2× preference means the investor gets twice their money back before you see anything."
+  },
+  "excel": {
+    "idea": "Spreadsheets let you model a business: put your prices, volumes and costs in cells, link them with formulas, and change one number to see what happens to profit and cash.",
+    "formula": "profit = price × units − variable cost × units − fixed costs",
+    "example": "Price $5, cost $2, fixed costs $3,000, 1,200 sales: profit is 1,200 × $3 − $3,000 = $600. With 1,000 sales it's $0, exactly break-even. At $5.50 with 1,200 sales it's 1,200 × $3.50 − $3,000 = $1,200.",
+    "tip": "Before running a month, do the sum roughly: what you expect to sell, times your margin, minus fixed costs. Then compare it with the report."
+  },
+  "unitecon": {
+    "idea": "Unit economics is the profit on one sale. Break-even is how many sales it takes for those profits to cover your fixed costs. Below it you lose money; above it every sale adds profit.",
+    "formula": "break-even sales = fixed costs ÷ (price − variable cost per sale)",
+    "example": "Rent and wages are $9,000 a month. Each coffee sells for $4.50 and costs $1.50 to make, leaving $3.00. Break-even is 3,000 coffees a month, about 100 a day.",
+    "tip": "The hint on your decisions shows your break-even. If you can't serve that many, change the price, the costs or the capacity first."
+  },
+  "budget": {
+    "idea": "Budgeting plans money ahead: what you expect to earn and spend each month. Runway is how many months your cash lasts if you keep losing money at the current rate.",
+    "formula": "runway (months) = cash ÷ monthly loss",
+    "example": "You have $18,000 and lose $4,500 a month. Your runway is 4 months, so you must reach a profit, raise money or cut costs before then.",
+    "tip": "Keep at least three months of runway. The game flags any month where your cash would last less than that."
+  },
+  "fsa": {
+    "idea": "Financial statement analysis reads the three statements to judge health: is the business profitable, does it turn profit into cash, and can it pay its bills?",
+    "formula": "cash change = profit + depreciation − more owed to you − more stock + more you owe",
+    "example": "Profit was $6,000, but clients owe you $9,000 more than last month. Cash fell by about $3,000 even though you made a profit.",
+    "tip": "Read profit and cash together. Unpaid invoices and stock can make a profitable business run out of money."
+  },
+  "marketing": {
+    "idea": "Marketing is getting the right customers to know about you, want what you offer and come back. It covers who you target, what you offer them, your price, where you sell and how you tell them.",
+    "formula": "return on ad spend = sales from ads ÷ ad cost",
+    "example": "You spend $1,000 on ads and they bring $3,500 of sales. If your margin is 40%, that's $1,400 of profit: the ads paid back.",
+    "tip": "Raise marketing only while each extra dollar brings back more profit than it costs. Reviews and reputation are marketing too."
+  },
+  "pricing": {
+    "idea": "Pricing strategy sets prices on purpose: on what customers value, not only on your costs. Different customers will pay different amounts, and the price itself tells them something about quality.",
+    "formula": "margin % = (price − cost) ÷ price",
+    "example": "A design job takes 40 hours. At $50 an hour it's $2,000. If clients value the result at $5,000, a fixed price of $3,500 can earn more, as long as you don't run over.",
+    "tip": "If almost everyone buys and you're always full, your price is probably too low. Try a step up."
+  },
+  "sales": {
+    "idea": "Founder-led sales is selling it yourself in the early days: finding the first customers, listening to what they need and closing deals. It teaches you what really makes people buy.",
+    "formula": "sales = leads × conversion rate × average deal",
+    "example": "You speak to 40 possible clients, 1 in 5 says yes, and the average job is $3,000: 8 deals, $24,000 of sales.",
+    "tip": "Talk to customers in the town. What they say tells you which part of your offer to fix first."
+  },
+  "strategy": {
+    "idea": "Strategic management decides where to compete and how to win there. A strategy chooses what you will and won't do, so you can be better than rivals at something customers care about.",
+    "formula": "",
+    "example": "Two cafés on one street: one competes on the cheapest coffee, the other on the best coffee and seats to work in. Both can win, with different customers.",
+    "tip": "Scout the rival's business. Then pick the customers they serve badly instead of copying everything they do."
+  },
+  "ops": {
+    "idea": "Operations management runs the day-to-day work: how much you can make or serve, how fast, with what quality and at what cost. Capacity that's too small turns customers away; too big wastes money.",
+    "formula": "utilisation = time used ÷ time available",
+    "example": "Two baristas can serve 160 customers a day. If 200 want coffee, 40 leave. If only 80 come, half the wages pay for waiting.",
+    "tip": "Match staff and stock to demand. The report shows customers turned away and idle time."
+  },
+  "innov": {
+    "idea": "Innovation management is how a business finds, tests and launches new ideas: new products, new ways of working or new customers, while the existing business keeps running.",
+    "formula": "",
+    "example": "A software company spends a share of its developers on a new feature. It slows other work for a while, then wins customers a rival can't reach.",
+    "tip": "Try new things in small steps you can afford to lose, and keep what customers actually use."
+  },
+  "lead": {
+    "idea": "Leadership is getting the best from people: hiring well, setting clear goals and keeping the workload fair. Teams that are overloaded make mistakes; teams with too little to do cost money.",
+    "formula": "wages share = wages ÷ sales",
+    "example": "A studio pays $12,000 a month in wages and bills $20,000. Wages are 60% of sales; if work drops by a quarter, the team can't pay for itself.",
+    "tip": "Hire when you're turning work away for several months in a row, not after one busy month."
+  },
+  "nego": {
+    "idea": "Negotiation is reaching an agreement where both sides want something. Know your best alternative if there's no deal, find out theirs, and trade things that are cheap for you but valuable to them.",
+    "formula": "",
+    "example": "A big client asks for 20% off. Instead you offer 10% off for a longer contract paid upfront: steady work for you, a saving for them.",
+    "tip": "On event cards, look for the choice that gives up something cheap for you rather than cash."
+  },
+  "law": {
+    "idea": "Contract law makes agreements enforceable: who must do what, by when, and what happens if they don't. Good contracts prevent arguments; missing ones can cost a lot later.",
+    "formula": "",
+    "example": "A client refuses to pay for extra changes. Your contract says changes beyond two rounds are charged by the hour, so the invoice stands.",
+    "tip": "Some event choices save money now but bring a bill later. The report tells you when one arrives."
+  },
+  "discovery": {
+    "idea": "Customer discovery is finding out what customers really need before building or selling much. You learn by asking about their problems and what they do today, not by asking if they like your idea.",
+    "formula": "",
+    "example": "You ask office workers how they get lunch. Most say they have no time to queue. Fast ordering matters more to them than a cheaper sandwich.",
+    "tip": "Walk up to customers in the town and ask them. What they say is real information about last month."
+  },
+  "bizmodel": {
+    "idea": "A business model is how a business makes money: who pays, for what, how often, and what it costs to deliver. A café, a subscription, a store and a studio earn money in very different ways.",
+    "formula": "profit = revenue − costs (one-off sales, subscriptions, stock or hours)",
+    "example": "A café earns a little from many daily customers. A software company earns a monthly fee from fewer customers for years. Their costs, risks and value differ too.",
+    "tip": "Play each business at least once. Seeing four models side by side is the quickest way to learn them."
+  },
+  "launch": {
+    "idea": "Launching a startup means getting from an idea to paying customers with limited money and time. Start small, test whether people will pay, and grow only what works.",
+    "formula": "months to survive = starting cash ÷ monthly loss",
+    "example": "You start with $20,000 and lose $3,000 a month at first. You have about six months to reach break-even.",
+    "tip": "In your own idea, check the break-even point and runway before the first month. If it can't work on paper, it won't work in the game."
+  },
+  "product": {
+    "idea": "Product development builds and improves what you sell based on what customers use and value. A product people love keeps them; one that disappoints loses them however good the marketing is.",
+    "formula": "",
+    "example": "Customers cancel because the app is missing one feature. Building it lowers cancellations, which is worth more than winning new sign-ups who would also leave.",
+    "tip": "If many customers leave each month, fix the product before you spend more on marketing."
+  },
+  "saas": {
+    "idea": "SaaS metrics measure subscription businesses: monthly recurring revenue (MRR), churn (the share who cancel each month), and how much a customer is worth over their life (LTV) compared with the cost to win them (CAC).",
+    "formula": "LTV = monthly profit per customer ÷ monthly churn; aim for LTV ≥ 3 × CAC",
+    "example": "Each customer pays $30 a month with $25 profit, and 5% cancel each month. LTV is $25 ÷ 0.05 = $500. Winning a customer costs $150, so LTV is 3.3× CAC: healthy.",
+    "tip": "Lower churn raises LTV the most. Watch the churn number in the software company's report."
+  },
+  "growth": {
+    "idea": "Growth and customer acquisition is winning new customers efficiently: finding the channels that work, measuring what each customer costs to win, and spending more only where it pays back.",
+    "formula": "CAC = marketing spend ÷ new customers",
+    "example": "$4,000 of ads brings 50 new customers, so each one costs $80 to win. If a customer brings $60 profit in their first month and stays, it pays back in under two months.",
+    "tip": "Raise marketing step by step and check that the cost of each new customer doesn't rise faster than what they bring."
+  }
+}

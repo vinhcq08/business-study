@@ -1,0 +1,25 @@
+
+<div id="app"><canvas id="c" tabindex="0" aria-label="Start a Business. Use the Places menu to visit buildings without walking."></canvas></div>
+<header class="hud" aria-hidden="true"><div class="hud-stats" id="hudStats"></div></header>
+<div class="d-top" id="dTop" aria-live="polite"></div>
+<div class="d-money" id="dMoney"></div>
+<nav class="d-dock" aria-label="Places and menu">
+  <button id="bPlaces"><span class="ic blu shine"><svg viewBox="0 0 24 24" fill="#FFFFFF" stroke="#1F2430" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M9 4l-6 2v14l6-2 6 2 6-2V4l-6 2z"/></svg></span><span class="lb ol-sm">Places</span></button>
+  <button id="bReport"><span class="ic red shine"><svg viewBox="0 0 24 24" fill="#FFFFFF" stroke="#1F2430" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h13v14H6a2 2 0 0 1-2-2z"/><path d="M17 9h3v8a2 2 0 0 1-2 2" fill="none"/></svg></span><span class="lb ol-sm">Report</span><span class="badge" id="badgeReport" hidden>1</span></button>
+  <button id="bBank"><span class="ic grn shine"><svg viewBox="0 0 24 24" fill="#FFFFFF" stroke="#1F2430" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M3 10l9-6 9 6z"/><path d="M5 10h14v9H5z"/></svg></span><span class="lb ol-sm">Bank</span></button>
+  <button id="bLibrary"><span class="ic sun shine"><svg viewBox="0 0 24 24" fill="#FFFFFF" stroke="#1F2430" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h6a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2H4z"/><path d="M20 4h-6a2 2 0 0 0-2 2v14a2 2 0 0 1 2-2h6z"/></svg></span><span class="lb ol-sm">School</span><span class="badge" id="badgeSchool" hidden>1</span></button>
+  <button id="bMenu"><span class="ic pur shine"><svg viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M5 7h14M5 12h14M5 17h14"/></svg></span><span class="lb ol-sm">Menu</span></button>
+</nav>
+<div class="prompt" id="prompt" hidden><button class="btn" id="bAct">Enter</button><span>or press E</span></div>
+<div class="joy" id="joy" aria-hidden="true"><div class="knob" id="knob"></div></div>
+<div class="keys" id="keys">WASD or arrows to walk · drag or Z/C to turn · E to enter · Esc to close</div>
+<aside class="sheet" id="sheet" hidden aria-labelledby="sheetTitle" role="dialog">
+  <div class="sheet-head"><div><span class="kicker" id="sheetKicker"></span><h2 id="sheetTitle"></h2></div><button class="sheet-close" id="sheetClose" aria-label="Close">×</button></div>
+  <div class="sheet-body" id="sheetBody"></div>
+</aside>
+<div class="modal" id="modal" hidden><div class="modal-box" id="modalBox" role="dialog" aria-modal="true"></div></div>
+<div class="fade" id="fade" aria-hidden="true"></div>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>

@@ -1,0 +1,28 @@
+[
+  {"n": 1, "name": "Basics", "d": "One product. Price, sales, and revenue − costs = profit."},
+  {
+    "n": 2,
+    "name": "Costs & break-even",
+    "d": "Fixed and variable costs, break-even, budget, runway and marketing."
+  },
+  {
+    "n": 3,
+    "name": "Customers & competition",
+    "d": "Customer groups who want different things, reputation, a rival who reacts, and first surprises."
+  },
+  {
+    "n": 4,
+    "name": "Real-world finances",
+    "d": "Full statements, stock and unpaid invoices, supplier credit, bank loans, seasons and random events."
+  },
+  {
+    "n": 5,
+    "name": "Growth & funding",
+    "d": "Expansion, investors, valuation and term sheets. Your goal is what your share is worth."
+  },
+  {
+    "n": 6,
+    "name": "Real life",
+    "d": "Everything switched on, 36 months, more frequent events and bigger swings."
+  }
+]

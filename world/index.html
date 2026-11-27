@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <style>[hidden]{display:none!important}</style>
-<title>Runway Town</title>
+<title>Start a Business</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800;900&display=swap">
 <style>
 /* Layout: editorial masthead, then one screen at a time (setup, settings, briefing, play, result).
-   Play screen: decisions column beside a ledger-style monthly report. Palette shared with Business Skill Tree. */
+   Base styles from the first, flat version of the game; world/src/town.css restyles them. */
 :root{
   --paper:#F2EDE3; --sheet:#FBF8F2; --wash:#EAE3D6; --ink:#23201A; --muted:#6B6355; --rule:#D6CCBA; --edge:#B3A893; --focus:#23201A;
   --accent:#2F5D3A; --accent-wash:#E2E8DA; --good:#3E6B34; --bad:#9B3A2A; --bad-wash:#F3E1DA; --on-accent:#FBF8F2;
@@ -198,7 +198,7 @@ table.ledger{width:100%;border-collapse:collapse;font-size:14.5px}
 .form label{display:flex;flex-direction:column;gap:6px;font:500 16px/1.3 var(--f-display)}
 .form label span{font:400 12.5px/1.4 var(--f-body);color:var(--muted)}
 .biz.idea{border-top-style:dashed}
-/* ===== Runway Town: full-screen 3D world with an editorial HUD and side sheets ===== */
+/* ===== Start a Business: full-screen 3D world with an editorial HUD and side sheets ===== */
 :root{ --sky:#8FD3FF; --hud:rgba(251,248,242,.94); }
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --sky:#4F94CF; --hud:rgba(34,30,24,.94); } }
 :root[data-theme="dark"]{ --sky:#4F94CF; --hud:rgba(34,30,24,.94); }
@@ -464,11 +464,28 @@ input[type=range]::-moz-range-thumb{width:24px;height:24px;border-radius:50%;bac
 .sheet{top:calc(env(safe-area-inset-top, 0px) + 128px)}
 @media (max-width:640px){ .d-top{left:max(12px, env(safe-area-inset-left, 0px));transform:none;align-items:flex-start;max-width:calc(100% - 170px)} .d-bar{width:34vw} .d-dock{top:calc(env(safe-area-inset-top, 0px) + 104px)} }
 @media (prefers-reduced-motion: reduce){ *, *::before, *::after{animation:none!important;transition:none!important} }
+/* Business School: lesson tiles and lesson cards */
+.lessons{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
+.lessons .ls{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;padding:10px 12px;background:#FFFFFF;border:3px solid var(--ink);border-radius:16px;box-shadow:0 4px 0 var(--ink);color:var(--ink);font:inherit;cursor:pointer;min-height:64px}
+.lessons .ls b{font:700 16px/1.2 var(--f-display)}
+.lessons .ls span{font:800 11px var(--f-body);text-transform:uppercase;letter-spacing:.06em;color:var(--blu2)}
+.lessons .ls.new span{color:#D81E1E}
+.lessons .ls:hover{transform:translateY(-1px)}
+.lessons .ls:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+.lessons .ls.locked{background:var(--wash);border-style:dashed;box-shadow:none;cursor:default;opacity:.7}
+.lessons .ls.locked span{color:var(--muted)}
+.lesson{background:#FFFFFF;border:3px solid var(--ink);border-radius:18px;box-shadow:0 4px 0 var(--ink);padding:16px 18px;display:flex;flex-direction:column;gap:8px}
+.lesson .kick{font:800 11px var(--f-body);text-transform:uppercase;letter-spacing:.08em;color:var(--blu2)}
+.lesson h2{font:700 26px/1.15 var(--f-display);margin:0}
+.lesson h3{margin:6px 0 0}
+.lesson .f{font:800 14px/1.4 var(--f-body);background:var(--wash);border-radius:12px;padding:8px 10px}
+.why .card .study, .review .study{align-self:flex-start;background:none;border:0;padding:0;font:700 13px var(--f-display);color:var(--blu2);cursor:pointer;text-decoration:underline}
+#modalBox .lesson{margin-bottom:12px}
 </style>
 </head>
 <body>
 
-<div id="app"><canvas id="c" tabindex="0" aria-label="Runway Town. Use the Places menu to visit buildings without walking."></canvas></div>
+<div id="app"><canvas id="c" tabindex="0" aria-label="Start a Business. Use the Places menu to visit buildings without walking."></canvas></div>
 <header class="hud" aria-hidden="true"><div class="hud-stats" id="hudStats"></div></header>
 <div class="d-top" id="dTop" aria-live="polite"></div>
 <div class="d-money" id="dMoney"></div>
@@ -476,7 +493,7 @@ input[type=range]::-moz-range-thumb{width:24px;height:24px;border-radius:50%;bac
   <button id="bPlaces"><span class="ic blu shine"><svg viewBox="0 0 24 24" fill="#FFFFFF" stroke="#1F2430" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M9 4l-6 2v14l6-2 6 2 6-2V4l-6 2z"/></svg></span><span class="lb ol-sm">Places</span></button>
   <button id="bReport"><span class="ic red shine"><svg viewBox="0 0 24 24" fill="#FFFFFF" stroke="#1F2430" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h13v14H6a2 2 0 0 1-2-2z"/><path d="M17 9h3v8a2 2 0 0 1-2 2" fill="none"/></svg></span><span class="lb ol-sm">Report</span><span class="badge" id="badgeReport" hidden>1</span></button>
   <button id="bBank"><span class="ic grn shine"><svg viewBox="0 0 24 24" fill="#FFFFFF" stroke="#1F2430" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M3 10l9-6 9 6z"/><path d="M5 10h14v9H5z"/></svg></span><span class="lb ol-sm">Bank</span></button>
-  <button id="bLibrary"><span class="ic sun shine"><svg viewBox="0 0 24 24" fill="#FFFFFF" stroke="#1F2430" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h6a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2H4z"/><path d="M20 4h-6a2 2 0 0 0-2 2v14a2 2 0 0 1 2-2h6z"/></svg></span><span class="lb ol-sm">Library</span></button>
+  <button id="bLibrary"><span class="ic sun shine"><svg viewBox="0 0 24 24" fill="#FFFFFF" stroke="#1F2430" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h6a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2H4z"/><path d="M20 4h-6a2 2 0 0 0-2 2v14a2 2 0 0 1 2-2h6z"/></svg></span><span class="lb ol-sm">School</span><span class="badge" id="badgeSchool" hidden>1</span></button>
   <button id="bMenu"><span class="ic pur shine"><svg viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M5 7h14M5 12h14M5 17h14"/></svg></span><span class="lb ol-sm">Menu</span></button>
 </nav>
 <div class="prompt" id="prompt" hidden><button class="btn" id="bAct">Enter</button><span>or press E</span></div>
@@ -489,30 +506,39 @@ input[type=range]::-moz-range-thumb{width:24px;height:24px;border-radius:50%;bac
 <div class="modal" id="modal" hidden><div class="modal-box" id="modalBox" role="dialog" aria-modal="true"></div></div>
 <div class="fade" id="fade" aria-hidden="true"></div>
 <div class="toast" id="toast" role="status"></div>
-<a id="treeLink" href="#" hidden>Skill Tree</a>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <script>
 (function(){
-/* ===== Shared Runway engine (generated from the Runway game; do not edit here) ===== */
+/* ===== Game data (built from world/engine/data/*.json) ===== */
+const GAME_DATA = {
+  benchmarks: {"food":"Benchmark: many cafés keep ingredient costs at about 25–35% of sales, and wages at about 25–35%.","margin":"Benchmark: independent coffee shops typically keep about 10–20% of sales as profit.","ltv":"Benchmark: LTV of at least 3× CAC is a common target; the median company reports about 2×.","churn":"Benchmark: small-business software often loses 3–7% of customers a month; enterprise software under 1%.","conv":"Benchmark: online stores typically turn about 1.5–3% of visitors into buyers.","roas":"Benchmark: online ads typically bring in about 3–4.5× what they cost.","util":"Benchmark: service firms averaged about 66% billable time in 2025; 75% is a common target.","loan":"Benchmark: small-business bank loans cost roughly 6–11% a year.","fail":"Benchmark: about 17–26% of restaurants close in their first year (not the often-quoted 90%).","cafeVal":"Benchmark: small cafés typically sell for about 2× a year’s owner earnings.","shopVal":"Benchmark: online stores typically sell for about 3.4× a year’s earnings.","agencyVal":"Benchmark: small service businesses typically sell for about 2.3–2.5× a year’s earnings.","saasVal":"Benchmark: private software companies typically sell for about 3–7× annual recurring revenue."},
+  businesses: {"cafe":{"name":"Café","color":"var(--cafe)","blurb":"Food and drink. Daily customers, ingredients, rent, staff and a rival down the road.","equip":30000,"loanSizes":[10000,25000,50000],"loanRate":0.1,"loanMin":20000,"minPre":80000,"valMult":2.2,"valBM":"cafeVal","expand":{"label":"Open a second café ($60,000)","cost":60000,"help":"Fit-out and equipment for a second location. It takes a few months to find regulars."},"levels":{"1":{"title":"The coffee cart","months":6,"start":500,"kind":"cash","t":35000,"story":"You run a coffee cart outside a busy train station. Each morning you decide your price and how many cups to prepare. Coffee you don’t sell is poured away.","text":"Have $35,000 in cash by the end of the last month.","subjects":["micro","finacct","excel"]},"2":{"title":"Your first café","months":12,"start":25000,"kind":"streak","t":0,"n":3,"story":"You’ve opened a small café with rent, staff and a menu. New cafés take a few months to be discovered, so expect early losses.","text":"Make a profit three months in a row before the last month ends, without running out of cash.","subjects":["mgmtacct","unitecon","budget","marketing"]},"3":{"title":"The café across the road","months":18,"start":30000,"kind":"streak","t":3000,"n":3,"rival":true,"story":"Commuters, office workers and students all want different things. A few months in, a rival café opens across the road and will react to your prices.","text":"After the rival opens, make at least $3,000 profit three months in a row.","subjects":["pricing","game","ops","lead","sales"]},"4":{"title":"Running the books","months":24,"start":30000,"kind":"netcash","t":60000,"story":"Now you see the full picture: equipment that wears out, suppliers you pay a month later, seasons, a bank that will lend, and things that go wrong.","text":"Reach $60,000 in net cash (cash minus any loan) before the last month ends.","subjects":["fsa","corpfin","macro","law"]},"5":{"title":"A second café","months":36,"start":40000,"kind":"stake","t":300000,"needExpand":true,"story":"Your café works. Can you grow it into two? You can borrow, bring in an investor, or grow from your own profits.","text":"Open a second café and make your share of the business worth $300,000.","subjects":["valuation","fund","strategy","innov","nego"]},"6":{"title":"Your café, for real","months":36,"start":30000,"kind":"stake","t":230000,"story":"Everything is switched on: rivals, seasons, events, loans and investors, with bigger month-to-month swings.","text":"Make your share of the business worth $230,000.","subjects":["unitecon","fsa","valuation","strategy"]}}},"saas":{"name":"Software subscription","color":"var(--saas)","blurb":"Monthly subscriptions. Sign-ups, cancellations, developers, marketing and investors.","equip":8000,"loanSizes":[25000,50000,100000],"loanRate":0.12,"loanMin":50000,"minPre":400000,"valBM":"saasVal","expand":{"label":"Build an enterprise sales team ($15,000)","cost":15000,"help":"Unlocks sales reps who win large companies on bigger contracts."},"levels":{"1":{"title":"Your first app","months":12,"start":2000,"kind":"mrr","t":12000,"story":"You’ve built a small app that people pay for monthly. About 2,000 people visit your site each month. Choose a price: cheaper wins more sign-ups, but each pays less.","text":"Reach $12,000 in monthly recurring revenue (MRR) by the last month.","subjects":["micro","finacct","pricing"]},"2":{"title":"Growing the startup","months":18,"start":80000,"kind":"mrr","t":25000,"profit":true,"story":"Now you can buy ads and hire developers to improve the product. Better products win more sign-ups and lose fewer customers, but developers are expensive and slow to pay off.","text":"Have a profitable month with at least $25,000 MRR before the last month ends, without running out of cash.","subjects":["unitecon","budget","marketing","saas"]},"3":{"title":"Two plans, one rival","months":18,"start":120000,"kind":"mrr","t":30000,"churnMax":0.045,"story":"Individuals want cheap; small businesses pay more but expect a better product and support. A few months in, a competitor launches and reacts to your Pro price.","text":"Reach $30,000 MRR while losing fewer than 4.5% of customers a month.","subjects":["pricing","game","product","lead"]},"4":{"title":"Cash is not revenue","months":24,"start":120000,"kind":"mrr","t":50000,"profit":true,"story":"Yearly plans bring cash early but you still owe the service. Seasons, outages, contracts and resignations test you. A bank will lend.","text":"Reach $50,000 MRR in a profitable month before the last month ends.","subjects":["fsa","corpfin","law","macro"]},"5":{"title":"Raise or bootstrap","months":36,"start":120000,"kind":"stake","t":3000000,"story":"Investors value software on recurring revenue and growth. Raise money to grow faster, or keep more of the company and grow on profits.","text":"Make your share of the company worth $3,000,000.","subjects":["valuation","fund","sales","innov"]},"6":{"title":"Your software company, for real","months":36,"start":100000,"kind":"stake","t":4000000,"story":"Everything is switched on, with bigger swings and more surprises.","text":"Make your share of the company worth $4,000,000.","subjects":["saas","fsa","valuation","strategy"]}}},"shop":{"name":"Online store","color":"var(--shop)","blurb":"Selling backpacks online. Stock bought ahead, shipping, returns, ads and ratings.","equip":10000,"startInv":200,"loanSizes":[10000,25000,50000],"loanRate":0.1,"loanMin":20000,"minPre":100000,"valMult":3.4,"valBM":"shopVal","expand":{"label":"Launch a second product line ($25,000)","cost":25000,"help":"Design and samples for a new range. Brings more visitors once it’s known."},"levels":{"1":{"title":"Your first stock order","months":6,"start":5000,"kind":"cash","t":15000,"story":"You sell backpacks online. Each month you choose a price and how many bags to buy at $24 each. Bags you don’t sell stay in stock, still holding your cash.","text":"Have $15,000 in cash by the end of the last month.","subjects":["micro","finacct","excel"]},"2":{"title":"Ads, shipping and returns","months":12,"start":15000,"kind":"streak","t":0,"n":3,"story":"Now you pay for shipping, card fees, storage and returns, and you can buy ads and hire packers. New stores take a few months to be found.","text":"Make a profit three months in a row before the last month ends, without running out of cash.","subjects":["mgmtacct","unitecon","budget","marketing"]},"3":{"title":"Ratings and rivals","months":18,"start":20000,"kind":"streak","t":2500,"n":3,"rival":true,"rating":4,"story":"Bargain hunters and quality seekers want different things. Your star rating decides how many visitors buy. A rival seller appears and fights on price.","text":"After the rival appears, make at least $2,500 profit three months in a row with a rating of 4.0 or more.","subjects":["pricing","game","ops","marketing"]},"4":{"title":"The holiday rush","months":24,"start":20000,"kind":"netcash","t":55000,"story":"Stock now takes a month to arrive, and you pay your supplier a month later. The holiday season brings huge demand if you have the stock.","text":"Reach $55,000 in net cash (cash minus any loan) before the last month ends.","subjects":["fsa","budget","corpfin","macro"]},"5":{"title":"Scaling the store","months":36,"start":30000,"kind":"stake","t":250000,"story":"Grow with a new product line, a loan or an investor. Online stores sell for roughly 3.4× a year’s earnings.","text":"Make your share of the business worth $250,000.","subjects":["valuation","fund","strategy","growth"]},"6":{"title":"Your store, for real","months":36,"start":20000,"kind":"stake","t":220000,"story":"Everything is switched on, with bigger swings and more surprises.","text":"Make your share of the business worth $220,000.","subjects":["unitecon","fsa","valuation","growth"]}}},"agency":{"name":"Service agency","color":"var(--agency)","blurb":"A design studio. Billable hours, hourly or fixed prices, and clients who pay late.","equip":6000,"startAR":15000,"loanSizes":[10000,25000,50000],"loanRate":0.1,"loanMin":20000,"minPre":80000,"valMult":2.5,"valBM":"agencyVal","expand":{"label":"Open a second studio ($30,000)","cost":30000,"help":"A second studio in another city. Brings new clients once it’s known."},"levels":{"1":{"title":"Going freelance","months":6,"start":1000,"kind":"cash","t":50000,"story":"You’re a freelance designer with about 120 billable hours a month. Set your hourly rate: too low and you’re fully booked but poorly paid; too high and the work dries up.","text":"Have $50,000 in cash by the end of the last month.","subjects":["micro","finacct","pricing"]},"2":{"title":"Hiring your first designers","months":12,"start":10000,"kind":"streak","t":0,"n":3,"story":"You rent a studio and can hire designers. Each costs a salary whether or not they have work, so keeping them busy is everything.","text":"Make a profit three months in a row before the last month ends, without running out of cash.","subjects":["mgmtacct","unitecon","budget","lead"]},"3":{"title":"Clients and competitors","months":18,"start":15000,"kind":"streak","t":12000,"n":3,"rival":true,"story":"Small businesses, startups and corporates want different things. You can charge by the hour or by the project. Cheap freelancers compete for small clients.","text":"After the rival freelancers appear, make at least $12,000 profit three months in a row.","subjects":["pricing","game","law","sales"]},"4":{"title":"Waiting to be paid","months":24,"start":25000,"kind":"netcash","t":120000,"story":"Clients now pay 30 to 60 days after you invoice them. You can be profitable and still run out of cash. Seasons, contracts and staff changes add pressure.","text":"Reach $120,000 in net cash (cash minus any loan) before the last month ends.","subjects":["fsa","corpfin","law","nego"]},"5":{"title":"Building a studio business","months":36,"start":20000,"kind":"stake","t":900000,"needExpand":true,"story":"Grow into a second studio, borrow, or bring in a partner investor. Service businesses sell for roughly 2.5× a year’s earnings.","text":"Open a second studio and make your share of the business worth $900,000.","subjects":["valuation","fund","strategy","innov"]},"6":{"title":"Your studio, for real","months":36,"start":15000,"kind":"stake","t":1000000,"story":"Everything is switched on, with bigger swings and more surprises.","text":"Make your share of the business worth $1,000,000.","subjects":["unitecon","fsa","valuation","lead"]}}},"idea":{"name":"My idea","color":"var(--accent)","blurb":"","equip":0,"loanSizes":[10000,25000,50000],"loanRate":0.1,"minPre":50000,"valMult":2.5,"valBM":"agencyVal","levels":{"4":{"title":"My idea","months":24,"start":20000,"kind":"streak","t":0,"n":3,"story":"","text":"Make a profit three months in a row within 24 months, without running out of cash.","subjects":["unitecon","budget","fsa","pricing"]}}}},
+  difficulty: {"easy":{"label":"Easy","cash":1.3,"demand":1.15,"cost":0.9,"vol":0.05},"normal":{"label":"Normal","cash":1,"demand":1,"cost":1,"vol":0.1},"hard":{"label":"Hard","cash":0.8,"demand":0.85,"cost":1.1,"vol":0.18}},
+  flags: {"waste":{"s":"excel","t":"You often made more than you sold."},"stockout":{"s":"budget","t":"You often ran out of stock and missed sales."},"overstock":{"s":"mgmtacct","t":"Unsold stock tied up your cash."},"capacity":{"s":"ops","t":"Customers were turned away because you lacked capacity."},"lowRunway":{"s":"budget","t":"Your cash ran low, with less than three months of runway."},"lowMargin":{"s":"unitecon","t":"Your price barely covered the cost of each sale."},"foodcost":{"s":"mgmtacct","t":"Ingredient costs were above the usual 25–35% of sales."},"labour":{"s":"lead","t":"Wages were a high share of sales."},"ltv":{"s":"saas","t":"Customers were worth less than they cost to win."},"churn":{"s":"product","t":"Too many customers cancelled each month."},"util":{"s":"ops","t":"Your team was often idle."},"overload":{"s":"lead","t":"Your team was overloaded, which hurt quality."},"rating":{"s":"marketing","t":"Your store rating slipped below 3.9."},"ar":{"s":"fsa","t":"Unpaid invoices left you short of cash."},"dilution":{"s":"fund","t":"You gave away more than half the company."},"debt":{"s":"corpfin","t":"Loan repayments took a large share of your sales."},"rival":{"s":"game","t":"Your rival won customers on price."},"pricing":{"s":"pricing","t":"Fixed-price projects ran over."}},
+  lessons: {"micro":{"idea":"Microeconomics studies how people and single businesses decide. The core of it is demand: when a price goes up, fewer people buy, and how many fewer depends on how much they want the thing and what else they could buy.","formula":"price elasticity = % change in quantity ÷ % change in price","example":"You raise a coffee from $4.00 to $4.40 (+10%) and sales fall from 200 to 170 cups a day (−15%). Elasticity is −1.5, so demand is sensitive: revenue drops from $800 to $748.","tip":"Change your price in small steps and watch customers and revenue in the report. If revenue rises when you raise the price, customers aren't very price-sensitive yet."},"macro":{"idea":"Macroeconomics is the economy as a whole: growth, recessions, inflation and interest rates. You can't control it, but it changes how much customers spend, what your costs are and what loans cost.","formula":"real growth ≈ nominal growth − inflation","example":"Your sales grow 6% in a year when prices across the economy rise 4%. In real terms you sold only about 2% more.","tip":"When a news card says spending is down or costs are up, don't assume it's your fault. Protect your cash until it passes rather than slashing prices in a panic."},"game":{"idea":"Game theory studies decisions where the result depends on what others do too. A rival who reacts to your prices turns pricing into a game: if you both keep cutting, you both lose.","formula":"best move = the one that does best given what the rival is likely to do back","example":"You cut your price 20% to steal customers. The rival matches the next month. Now you both sell about the same as before, at lower prices, and both make less.","tip":"Compete on something the rival can't copy overnight, such as quality, service or a loyal following, instead of starting a price war."},"finacct":{"idea":"Financial accounting records what happened in a business in three standard reports: the income statement (profit), the balance sheet (what you own and owe) and the cash flow statement (where cash came from and went).","formula":"assets = liabilities + equity","example":"You have $12,000 cash and $8,000 of equipment ($20,000 of assets). You owe the bank $5,000. The owners' equity is $15,000.","tip":"From Level IV the report has all three statements. The balance sheet always balances; if profit looks good but cash is falling, the cash flow tab shows why."},"mgmtacct":{"idea":"Management accounting is numbers for making decisions inside the business: what each product really costs, which costs change with sales and which don't, and where money is wasted.","formula":"cost share = cost ÷ sales","example":"A café sells $20,000 a month and spends $8,000 on ingredients. Ingredients are 40% of sales, above the usual 25–35%, so something is being wasted or underpriced.","tip":"Compare each cost with your sales every month. A cost growing faster than sales is the first thing to look at."},"markets":{"idea":"Financial markets are where money is lent, borrowed and invested: banks, bond markets and stock markets. Their prices, such as interest rates and company values, set what money costs for a business.","formula":"interest per year = amount borrowed × annual rate","example":"A $25,000 loan at 10% a year costs about $2,500 in interest in the first year, around $208 a month.","tip":"A loan is cheap when the money earns more than its interest rate. Borrowing to cover losses only buys time."},"corpfin":{"idea":"Corporate finance decides how a business pays for itself and its growth: with its own profits, with loans (debt) or by selling part of the company (equity). Each has a cost and a risk.","formula":"monthly loan payment = P × r ÷ (1 − (1 + r)^−n)","example":"Borrow $50,000 at 10% a year over 36 months: r = 0.10 ÷ 12, n = 36, so each payment is about $1,613. Part is interest (a cost), the rest repays the loan (not a cost).","tip":"Before borrowing, check the monthly repayment fits comfortably inside your monthly profit. The game flags repayments above a quarter of sales."},"valuation":{"idea":"Valuation is estimating what a business is worth. Small businesses are often valued at a multiple of their yearly profit; fast-growing software companies at a multiple of their yearly recurring revenue.","formula":"company value ≈ multiple × yearly profit + cash − debt","example":"A café making $40,000 a year, valued at 2.2×, is worth about $88,000. With $10,000 cash and a $15,000 loan, the equity is worth $83,000.","tip":"Steady profit raises your value more than one big month. In Level V the value counts your average profit, not one-off gains."},"fund":{"idea":"Fundraising is selling part of your company for cash. The term sheet sets the price (the valuation) and the conditions, such as investors getting their money back first if the company is sold.","formula":"investor's share = investment ÷ (value before + investment)","example":"An investor puts in $50,000 at a $150,000 value before the money. The company is then worth $200,000 and they own 25%.","tip":"A higher valuation can hide worse terms. A 2× preference means the investor gets twice their money back before you see anything."},"excel":{"idea":"Spreadsheets let you model a business: put your prices, volumes and costs in cells, link them with formulas, and change one number to see what happens to profit and cash.","formula":"profit = price × units − variable cost × units − fixed costs","example":"Price $5, cost $2, fixed costs $3,000, 1,200 sales: profit is 1,200 × $3 − $3,000 = $600. With 1,000 sales it's $0, exactly break-even. At $5.50 with 1,200 sales it's 1,200 × $3.50 − $3,000 = $1,200.","tip":"Before running a month, do the sum roughly: what you expect to sell, times your margin, minus fixed costs. Then compare it with the report."},"unitecon":{"idea":"Unit economics is the profit on one sale. Break-even is how many sales it takes for those profits to cover your fixed costs. Below it you lose money; above it every sale adds profit.","formula":"break-even sales = fixed costs ÷ (price − variable cost per sale)","example":"Rent and wages are $9,000 a month. Each coffee sells for $4.50 and costs $1.50 to make, leaving $3.00. Break-even is 3,000 coffees a month, about 100 a day.","tip":"The hint on your decisions shows your break-even. If you can't serve that many, change the price, the costs or the capacity first."},"budget":{"idea":"Budgeting plans money ahead: what you expect to earn and spend each month. Runway is how many months your cash lasts if you keep losing money at the current rate.","formula":"runway (months) = cash ÷ monthly loss","example":"You have $18,000 and lose $4,500 a month. Your runway is 4 months, so you must reach a profit, raise money or cut costs before then.","tip":"Keep at least three months of runway. The game flags any month where your cash would last less than that."},"fsa":{"idea":"Financial statement analysis reads the three statements to judge health: is the business profitable, does it turn profit into cash, and can it pay its bills?","formula":"cash change = profit + depreciation − more owed to you − more stock + more you owe","example":"Profit was $6,000, but clients owe you $9,000 more than last month. Cash fell by about $3,000 even though you made a profit.","tip":"Read profit and cash together. Unpaid invoices and stock can make a profitable business run out of money."},"marketing":{"idea":"Marketing is getting the right customers to know about you, want what you offer and come back. It covers who you target, what you offer them, your price, where you sell and how you tell them.","formula":"return on ad spend = sales from ads ÷ ad cost","example":"You spend $1,000 on ads and they bring $3,500 of sales. If your margin is 40%, that's $1,400 of profit: the ads paid back.","tip":"Raise marketing only while each extra dollar brings back more profit than it costs. Reviews and reputation are marketing too."},"pricing":{"idea":"Pricing strategy sets prices on purpose: on what customers value, not only on your costs. Different customers will pay different amounts, and the price itself tells them something about quality.","formula":"margin % = (price − cost) ÷ price","example":"A design job takes 40 hours. At $50 an hour it's $2,000. If clients value the result at $5,000, a fixed price of $3,500 can earn more, as long as you don't run over.","tip":"If almost everyone buys and you're always full, your price is probably too low. Try a step up."},"sales":{"idea":"Founder-led sales is selling it yourself in the early days: finding the first customers, listening to what they need and closing deals. It teaches you what really makes people buy.","formula":"sales = leads × conversion rate × average deal","example":"You speak to 40 possible clients, 1 in 5 says yes, and the average job is $3,000: 8 deals, $24,000 of sales.","tip":"Talk to customers in the town. What they say tells you which part of your offer to fix first."},"strategy":{"idea":"Strategic management decides where to compete and how to win there. A strategy chooses what you will and won't do, so you can be better than rivals at something customers care about.","formula":"","example":"Two cafés on one street: one competes on the cheapest coffee, the other on the best coffee and seats to work in. Both can win, with different customers.","tip":"Scout the rival's business. Then pick the customers they serve badly instead of copying everything they do."},"ops":{"idea":"Operations management runs the day-to-day work: how much you can make or serve, how fast, with what quality and at what cost. Capacity that's too small turns customers away; too big wastes money.","formula":"utilisation = time used ÷ time available","example":"Two baristas can serve 160 customers a day. If 200 want coffee, 40 leave. If only 80 come, half the wages pay for waiting.","tip":"Match staff and stock to demand. The report shows customers turned away and idle time."},"innov":{"idea":"Innovation management is how a business finds, tests and launches new ideas: new products, new ways of working or new customers, while the existing business keeps running.","formula":"","example":"A software company spends a share of its developers on a new feature. It slows other work for a while, then wins customers a rival can't reach.","tip":"Try new things in small steps you can afford to lose, and keep what customers actually use."},"lead":{"idea":"Leadership is getting the best from people: hiring well, setting clear goals and keeping the workload fair. Teams that are overloaded make mistakes; teams with too little to do cost money.","formula":"wages share = wages ÷ sales","example":"A studio pays $12,000 a month in wages and bills $20,000. Wages are 60% of sales; if work drops by a quarter, the team can't pay for itself.","tip":"Hire when you're turning work away for several months in a row, not after one busy month."},"nego":{"idea":"Negotiation is reaching an agreement where both sides want something. Know your best alternative if there's no deal, find out theirs, and trade things that are cheap for you but valuable to them.","formula":"","example":"A big client asks for 20% off. Instead you offer 10% off for a longer contract paid upfront: steady work for you, a saving for them.","tip":"On event cards, look for the choice that gives up something cheap for you rather than cash."},"law":{"idea":"Contract law makes agreements enforceable: who must do what, by when, and what happens if they don't. Good contracts prevent arguments; missing ones can cost a lot later.","formula":"","example":"A client refuses to pay for extra changes. Your contract says changes beyond two rounds are charged by the hour, so the invoice stands.","tip":"Some event choices save money now but bring a bill later. The report tells you when one arrives."},"discovery":{"idea":"Customer discovery is finding out what customers really need before building or selling much. You learn by asking about their problems and what they do today, not by asking if they like your idea.","formula":"","example":"You ask office workers how they get lunch. Most say they have no time to queue. Fast ordering matters more to them than a cheaper sandwich.","tip":"Walk up to customers in the town and ask them. What they say is real information about last month."},"bizmodel":{"idea":"A business model is how a business makes money: who pays, for what, how often, and what it costs to deliver. A café, a subscription, a store and a studio earn money in very different ways.","formula":"profit = revenue − costs (one-off sales, subscriptions, stock or hours)","example":"A café earns a little from many daily customers. A software company earns a monthly fee from fewer customers for years. Their costs, risks and value differ too.","tip":"Play each business at least once. Seeing four models side by side is the quickest way to learn them."},"launch":{"idea":"Launching a startup means getting from an idea to paying customers with limited money and time. Start small, test whether people will pay, and grow only what works.","formula":"months to survive = starting cash ÷ monthly loss","example":"You start with $20,000 and lose $3,000 a month at first. You have about six months to reach break-even.","tip":"In your own idea, check the break-even point and runway before the first month. If it can't work on paper, it won't work in the game."},"product":{"idea":"Product development builds and improves what you sell based on what customers use and value. A product people love keeps them; one that disappoints loses them however good the marketing is.","formula":"","example":"Customers cancel because the app is missing one feature. Building it lowers cancellations, which is worth more than winning new sign-ups who would also leave.","tip":"If many customers leave each month, fix the product before you spend more on marketing."},"saas":{"idea":"SaaS metrics measure subscription businesses: monthly recurring revenue (MRR), churn (the share who cancel each month), and how much a customer is worth over their life (LTV) compared with the cost to win them (CAC).","formula":"LTV = monthly profit per customer ÷ monthly churn; aim for LTV ≥ 3 × CAC","example":"Each customer pays $30 a month with $25 profit, and 5% cancel each month. LTV is $25 ÷ 0.05 = $500. Winning a customer costs $150, so LTV is 3.3× CAC: healthy.","tip":"Lower churn raises LTV the most. Watch the churn number in the software company's report."},"growth":{"idea":"Growth and customer acquisition is winning new customers efficiently: finding the channels that work, measuring what each customer costs to win, and spending more only where it pays back.","formula":"CAC = marketing spend ÷ new customers","example":"$4,000 of ads brings 50 new customers, so each one costs $80 to win. If a customer brings $60 profit in their first month and stays, it pays back in under two months.","tip":"Raise marketing step by step and check that the cost of each new customer doesn't rise faster than what they bring."}},
+  level_lessons: {"3":"Different customers value different things, and rivals react to your moves. A reputation built on good service is harder to copy than a low price.","4":"Profit and cash are not the same thing. Stock, unpaid invoices, supplier credit and loans all move cash without changing profit, so the cash flow statement matters as much as the income statement.","5":"Growth costs money before it pays back. A loan keeps your ownership but must be repaid; investor money doesn’t, but you give up part of the company and investors may be paid back first.","6":"Real businesses face everything at once. The steady habits win: know your break-even, protect your cash, listen to customers, and grow only as fast as your cash allows.","cafe-1":"Price sets how many people buy, and preparing too much or too little both cost money. Profit is simply what’s left of revenue after costs.","cafe-2":"Fixed costs must be covered before you make any profit. Break-even tells you how many customers that takes, and runway tells you how long you can wait for them.","saas-1":"Subscriptions stack up month after month, so even a small, steady flow of sign-ups builds large recurring revenue. The best price balances sign-ups against revenue per customer.","saas-2":"Software companies usually lose money while they grow. They succeed when each customer is worth well over what it cost to win them (LTV vs CAC), and cash lasts until that pays off.","shop-1":"Stock turns cash into goods before it turns back into cash. Profit only counts bags you sold, but your bank balance pays for every bag you bought.","shop-2":"Every order carries hidden costs: shipping, fees and returns. Ads only pay when the profit on the sales they bring is more than they cost.","agency-1":"In a service business you sell your time. The right rate fills most of your hours without leaving work on the table.","agency-2":"Salaries are paid whether or not there’s work. Keeping billable time high is how a studio covers its fixed costs.","idea":"Your own numbers decide whether the idea can work. Check the break-even point and how long your cash lasts before you commit real money."},
+  levels: [{"n":1,"name":"Basics","d":"One product. Price, sales, and revenue − costs = profit."},{"n":2,"name":"Costs & break-even","d":"Fixed and variable costs, break-even, budget, runway and marketing."},{"n":3,"name":"Customers & competition","d":"Customer groups who want different things, reputation, a rival who reacts, and first surprises."},{"n":4,"name":"Real-world finances","d":"Full statements, stock and unpaid invoices, supplier credit, bank loans, seasons and random events."},{"n":5,"name":"Growth & funding","d":"Expansion, investors, valuation and term sheets. Your goal is what your share is worth."},{"n":6,"name":"Real life","d":"Everything switched on, 36 months, more frequent events and bigger swings."}],
+  seasons: {"cafe":[1,0.97,1,0.98,0.95,0.9,0.86,0.88,1.02,1.05,1.08,1.12],"saas":[1.1,1,1.05,1,1,0.95,0.9,0.9,1.05,1.05,1,0.85],"shop":[0.8,0.85,0.95,0.95,1,0.95,0.9,0.95,1,1.05,1.5,1.7],"agency":[0.95,1,1.05,1,1,0.95,0.85,0.8,1.05,1.05,1,0.78],"idea":[1,1,1,1,1,1,1,1,1,1,1,1]},
+  subjects: {"micro":"Microeconomics","macro":"Macroeconomics","game":"Game Theory","finacct":"Financial Accounting","mgmtacct":"Managerial Accounting","markets":"Financial Markets","corpfin":"Corporate Finance","valuation":"Valuation","fund":"Fundraising & Term Sheets","excel":"Spreadsheets for Business","unitecon":"Unit Economics & Break-even","budget":"Budgeting & Forecasting","fsa":"Financial Statement Analysis","marketing":"Marketing Management","pricing":"Pricing Strategy","sales":"Founder-led Sales","strategy":"Strategic Management","ops":"Operations Management","innov":"Innovation Management","lead":"Leadership & Teams","nego":"Negotiation","law":"Contract Law","discovery":"Customer Discovery","bizmodel":"Business Models","launch":"Launching a Startup","product":"Product Development","saas":"SaaS Metrics","growth":"Growth & Customer Acquisition"}
+};
 /* =========================================================
-   Links, subjects
+   Start a Business: the simulation engine
+   ---------------------------------------------------------
+   Pure game rules: no screen, no saving, no browser. The page (world/src/app.js)
+   draws it and saves it; tools/golden_test.js runs it in Node. A port (for
+   example Luau for Roblox, see docs/roblox-port.md) should give the same numbers.
+   Reads GAME_DATA, built from world/engine/data/*.json.
    ========================================================= */
-const TREE_URL = /github\.io$/.test(location.hostname) ? '../' : 'https://claude.ai/artifact/XzU2C8BiYcv79R8AEKQcW2';
-document.getElementById('treeLink').href = TREE_URL;
-const SUBJ = {micro:'Microeconomics', macro:'Macroeconomics', game:'Game Theory', finacct:'Financial Accounting', mgmtacct:'Managerial Accounting',
-  markets:'Financial Markets', corpfin:'Corporate Finance', valuation:'Valuation', fund:'Fundraising & Term Sheets', excel:'Spreadsheets for Business',
-  unitecon:'Unit Economics & Break-even', budget:'Budgeting & Forecasting', fsa:'Financial Statement Analysis', marketing:'Marketing Management',
-  pricing:'Pricing Strategy', sales:'Founder-led Sales', strategy:'Strategic Management', ops:'Operations Management', innov:'Innovation Management',
-  lead:'Leadership & Teams', nego:'Negotiation', law:'Contract Law', discovery:'Customer Discovery', bizmodel:'Business Models',
-  launch:'Launching a Startup', product:'Product Development', saas:'SaaS Metrics', growth:'Growth & Customer Acquisition'};
-function treeDone(){ try { const v = JSON.parse(localStorage.getItem('biz-skill-tree-v1') || 'null'); return (v && v.prog) || null; } catch(e){ return null; } }
+const DATA = GAME_DATA;
+const SUBJ = DATA.subjects;            // 28 subjects: data/subjects.json
+const LESSONS = DATA.lessons;          // a lesson card per subject: data/lessons.json
+const BIZ_ORDER = ['cafe','saas','shop','agency'];
 
 /* =========================================================
    Helpers
    ========================================================= */
-const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money = v => (v < 0 ? '−' : '') + '$' + Math.round(Math.abs(v)).toLocaleString('en-US');
 const money2 = v => '$' + Number(v).toFixed(2);
@@ -523,41 +549,17 @@ const FMT = {money, money2, int};
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 function rng(seed){ let a = seed >>> 0; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 const noise = (R, vol) => 1 + (R() - R()) * vol * 1.5;
-const toast = msg => { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('show'), 2600); };
-const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /* =========================================================
-   Settings and storage
+   Difficulty
    ========================================================= */
-const DIFF = {
-  easy:   {label:'Easy',   cash:1.3, demand:1.15, cost:0.9, vol:0.05},
-  normal: {label:'Normal', cash:1,   demand:1,    cost:1,   vol:0.10},
-  hard:   {label:'Hard',   cash:0.8, demand:0.85, cost:1.1, vol:0.18},
-};
-const KEY = 'runway-world-v1';
-let DB = {settings:{free:false, diff:'normal', custom:{cash:1, demand:1, cost:1, vol:0.1}, length:'default', formulas:true, seed:Math.floor(Math.random()*1e6)},
-  progress:{}, game:null, pick:{biz:'cafe', level:1},
-  idea:{name:'My business', unit:'customer', price:20, varCost:8, fixed:6000, start:20000, customers:400, capacity:1500, sens:'med', ramp:3}};
-try {
-  const v = JSON.parse(localStorage.getItem(KEY) || 'null');
-  if (v && typeof v === 'object') DB = Object.assign(DB, v, {settings:Object.assign(DB.settings, v.settings || {}), idea:Object.assign(DB.idea, v.idea || {})});
-  else { const old = JSON.parse(localStorage.getItem('runway-v2') || 'null'); if (old && old.progress) DB.progress = old.progress; if (old && old.settings) Object.assign(DB.settings, old.settings); }
-} catch(e) {}
-const save = () => { try { localStorage.setItem(KEY, JSON.stringify(DB)); } catch(e) {} };
-const S = () => DB.settings;
+const DIFF = DATA.difficulty;    // data/difficulty.json
 function envFrom(st, real){ const e = st.diff === 'custom' ? Object.assign({label:'Custom'}, st.custom) : Object.assign({}, DIFF[st.diff]); if (real) e.vol = e.vol*1.3; return e; }
 
 /* =========================================================
    Levels and features
    ========================================================= */
-const LEVELS = [
-  {n:1, name:'Basics', d:'One product. Price, sales, and revenue − costs = profit.'},
-  {n:2, name:'Costs & break-even', d:'Fixed and variable costs, break-even, budget, runway and marketing.'},
-  {n:3, name:'Customers & competition', d:'Customer groups who want different things, reputation, a rival who reacts, and first surprises.'},
-  {n:4, name:'Real-world finances', d:'Full statements, stock and unpaid invoices, supplier credit, bank loans, seasons and random events.'},
-  {n:5, name:'Growth & funding', d:'Expansion, investors, valuation and term sheets. Your goal is what your share is worth.'},
-  {n:6, name:'Real life', d:'Everything switched on, 36 months, more frequent events and bigger swings.'},
-];
+const LEVELS = DATA.levels;      // data/levels.json
 const ROMAN = ['I','II','III','IV','V','R'];
 const lvName = n => n === 6 ? 'Real life' : 'Level ' + ROMAN[n-1];
 const FEAT = lvl => { const L = lvl === 6 ? 5 : lvl; return {lvl, L, fixed:L>=2, seg:L>=3, rival:L>=3, voices:L>=3, events:L>=3, stmts:L>=4, credit:L>=4, loan:L>=4, season:L>=4, equity:L>=5, expand:L>=5, real:lvl===6}; };
@@ -574,28 +576,8 @@ function scalePrice(g, f){ const B = BIZ[g.biz]; ['price','pb','pp','rate','pe']
 /* =========================================================
    Businesses
    ========================================================= */
-const SEASON = {
-  cafe:  [1.0,0.97,1.0,0.98,0.95,0.9,0.86,0.88,1.02,1.05,1.08,1.12],
-  saas:  [1.1,1.0,1.05,1.0,1.0,0.95,0.9,0.9,1.05,1.05,1.0,0.85],
-  shop:  [0.8,0.85,0.95,0.95,1.0,0.95,0.9,0.95,1.0,1.05,1.5,1.7],
-  agency:[0.95,1.0,1.05,1.0,1.0,0.95,0.85,0.8,1.05,1.05,1.0,0.78],
-  idea:  [1,1,1,1,1,1,1,1,1,1,1,1],
-};
-const BM = {
-  food:'Benchmark: many cafés keep ingredient costs at about 25–35% of sales, and wages at about 25–35%.',
-  margin:'Benchmark: independent coffee shops typically keep about 10–20% of sales as profit.',
-  ltv:'Benchmark: LTV of at least 3× CAC is a common target; the median company reports about 2×.',
-  churn:'Benchmark: small-business software often loses 3–7% of customers a month; enterprise software under 1%.',
-  conv:'Benchmark: online stores typically turn about 1.5–3% of visitors into buyers.',
-  roas:'Benchmark: online ads typically bring in about 3–4.5× what they cost.',
-  util:'Benchmark: service firms averaged about 66% billable time in 2025; 75% is a common target.',
-  loan:'Benchmark: small-business bank loans cost roughly 6–11% a year.',
-  fail:'Benchmark: about 17–26% of restaurants close in their first year (not the often-quoted 90%).',
-  cafeVal:'Benchmark: small cafés typically sell for about 2× a year’s owner earnings.',
-  shopVal:'Benchmark: online stores typically sell for about 3.4× a year’s earnings.',
-  agencyVal:'Benchmark: small service businesses typically sell for about 2.3–2.5× a year’s earnings.',
-  saasVal:'Benchmark: private software companies typically sell for about 3–7× annual recurring revenue.',
-};
+const SEASON = DATA.seasons;     // monthly demand by business: data/seasons.json
+const BM = DATA.benchmarks;      // real-world benchmark notes: data/benchmarks.json
 
 const loanDec = (sizes) => ({id:'loan', kind:'select', group:'Finance', label:'Bank loan this month', def:'none',
   opts:[['none','No change'], ['b0','Borrow ' + money(sizes[0])], ['b1','Borrow ' + money(sizes[1])], ['b2','Borrow ' + money(sizes[2])], ['repay','Repay the whole loan']],
@@ -605,17 +587,7 @@ const BIZ = {};
 
 /* ---------- Café ---------- */
 BIZ.cafe = {
-  name:'Café', color:'var(--cafe)', blurb:'Food and drink. Daily customers, ingredients, rent, staff and a rival down the road.',
-  equip:30000, loanSizes:[10000,25000,50000], loanRate:0.10, loanMin:20000, minPre:80000, valMult:2.2, valBM:'cafeVal',
-  expand:{label:'Open a second café ($60,000)', cost:60000, help:'Fit-out and equipment for a second location. It takes a few months to find regulars.'},
-  levels:{
-    1:{title:'The coffee cart', months:6, start:500, kind:'cash', t:35000, story:'You run a coffee cart outside a busy train station. Each morning you decide your price and how many cups to prepare. Coffee you don’t sell is poured away.', text:'Have $35,000 in cash by the end of the last month.', subjects:['micro','finacct','excel']},
-    2:{title:'Your first café', months:12, start:25000, kind:'streak', t:0, n:3, story:'You’ve opened a small café with rent, staff and a menu. New cafés take a few months to be discovered, so expect early losses.', text:'Make a profit three months in a row before the last month ends, without running out of cash.', subjects:['mgmtacct','unitecon','budget','marketing']},
-    3:{title:'The café across the road', months:18, start:30000, kind:'streak', t:3000, n:3, rival:true, story:'Commuters, office workers and students all want different things. A few months in, a rival café opens across the road and will react to your prices.', text:'After the rival opens, make at least $3,000 profit three months in a row.', subjects:['pricing','game','ops','lead','sales']},
-    4:{title:'Running the books', months:24, start:30000, kind:'netcash', t:60000, story:'Now you see the full picture: equipment that wears out, suppliers you pay a month later, seasons, a bank that will lend, and things that go wrong.', text:'Reach $60,000 in net cash (cash minus any loan) before the last month ends.', subjects:['fsa','corpfin','macro','law']},
-    5:{title:'A second café', months:36, start:40000, kind:'stake', t:300000, needExpand:true, story:'Your café works. Can you grow it into two? You can borrow, bring in an investor, or grow from your own profits.', text:'Open a second café and make your share of the business worth $300,000.', subjects:['valuation','fund','strategy','innov','nego']},
-    6:{title:'Your café, for real', months:36, start:30000, kind:'stake', t:230000, story:'Everything is switched on: rivals, seasons, events, loans and investors, with bigger month-to-month swings.', text:'Make your share of the business worth $230,000.', subjects:['unitecon','fsa','valuation','strategy']},
-  },
+  ...DATA.businesses.cafe,  // name, colour, money settings and levels: data/businesses.json
   dec1:[
     {id:'price', label:'Price per cup', min:1, max:8, step:0.25, def:3, fmt:'money2', help:'A higher price earns more per cup, but fewer people buy.'},
     {id:'prep', label:'Cups prepared per day', min:20, max:250, step:5, def:100, fmt:'int', help:'Cups you make but don’t sell are wasted.'}],
@@ -706,17 +678,7 @@ BIZ.cafe = {
 
 /* ---------- Software ---------- */
 BIZ.saas = {
-  name:'Software subscription', color:'var(--saas)', blurb:'Monthly subscriptions. Sign-ups, cancellations, developers, marketing and investors.',
-  equip:8000, loanSizes:[25000,50000,100000], loanRate:0.12, loanMin:50000, minPre:400000, valBM:'saasVal',
-  expand:{label:'Build an enterprise sales team ($15,000)', cost:15000, help:'Unlocks sales reps who win large companies on bigger contracts.'},
-  levels:{
-    1:{title:'Your first app', months:12, start:2000, kind:'mrr', t:12000, story:'You’ve built a small app that people pay for monthly. About 2,000 people visit your site each month. Choose a price: cheaper wins more sign-ups, but each pays less.', text:'Reach $12,000 in monthly recurring revenue (MRR) by the last month.', subjects:['micro','finacct','pricing']},
-    2:{title:'Growing the startup', months:18, start:80000, kind:'mrr', t:25000, profit:true, story:'Now you can buy ads and hire developers to improve the product. Better products win more sign-ups and lose fewer customers, but developers are expensive and slow to pay off.', text:'Have a profitable month with at least $25,000 MRR before the last month ends, without running out of cash.', subjects:['unitecon','budget','marketing','saas']},
-    3:{title:'Two plans, one rival', months:18, start:120000, kind:'mrr', t:30000, churnMax:0.045, story:'Individuals want cheap; small businesses pay more but expect a better product and support. A few months in, a competitor launches and reacts to your Pro price.', text:'Reach $30,000 MRR while losing fewer than 4.5% of customers a month.', subjects:['pricing','game','product','lead']},
-    4:{title:'Cash is not revenue', months:24, start:120000, kind:'mrr', t:50000, profit:true, story:'Yearly plans bring cash early but you still owe the service. Seasons, outages, contracts and resignations test you. A bank will lend.', text:'Reach $50,000 MRR in a profitable month before the last month ends.', subjects:['fsa','corpfin','law','macro']},
-    5:{title:'Raise or bootstrap', months:36, start:120000, kind:'stake', t:3000000, story:'Investors value software on recurring revenue and growth. Raise money to grow faster, or keep more of the company and grow on profits.', text:'Make your share of the company worth $3,000,000.', subjects:['valuation','fund','sales','innov']},
-    6:{title:'Your software company, for real', months:36, start:100000, kind:'stake', t:4000000, story:'Everything is switched on, with bigger swings and more surprises.', text:'Make your share of the company worth $4,000,000.', subjects:['saas','fsa','valuation','strategy']},
-  },
+  ...DATA.businesses.saas,  // name, colour, money settings and levels: data/businesses.json
   dec1:[{id:'price', label:'Price per month', min:1, max:120, step:1, def:15, fmt:'money', help:'Each paying customer is charged this every month.'}],
   dec:[
     {id:'price', lv:[2,2], label:'Price per month', min:5, max:200, step:1, def:29, fmt:'money', help:'Business customers will pay more than individuals, up to a point.'},
@@ -826,17 +788,7 @@ BIZ.saas = {
 
 /* ---------- Online store ---------- */
 BIZ.shop = {
-  name:'Online store', color:'var(--shop)', blurb:'Selling backpacks online. Stock bought ahead, shipping, returns, ads and ratings.',
-  equip:10000, startInv:200, loanSizes:[10000,25000,50000], loanRate:0.10, loanMin:20000, minPre:100000, valMult:3.4, valBM:'shopVal',
-  expand:{label:'Launch a second product line ($25,000)', cost:25000, help:'Design and samples for a new range. Brings more visitors once it’s known.'},
-  levels:{
-    1:{title:'Your first stock order', months:6, start:5000, kind:'cash', t:15000, story:'You sell backpacks online. Each month you choose a price and how many bags to buy at $24 each. Bags you don’t sell stay in stock, still holding your cash.', text:'Have $15,000 in cash by the end of the last month.', subjects:['micro','finacct','excel']},
-    2:{title:'Ads, shipping and returns', months:12, start:15000, kind:'streak', t:0, n:3, story:'Now you pay for shipping, card fees, storage and returns, and you can buy ads and hire packers. New stores take a few months to be found.', text:'Make a profit three months in a row before the last month ends, without running out of cash.', subjects:['mgmtacct','unitecon','budget','marketing']},
-    3:{title:'Ratings and rivals', months:18, start:20000, kind:'streak', t:2500, n:3, rival:true, rating:4.0, story:'Bargain hunters and quality seekers want different things. Your star rating decides how many visitors buy. A rival seller appears and fights on price.', text:'After the rival appears, make at least $2,500 profit three months in a row with a rating of 4.0 or more.', subjects:['pricing','game','ops','marketing']},
-    4:{title:'The holiday rush', months:24, start:20000, kind:'netcash', t:55000, story:'Stock now takes a month to arrive, and you pay your supplier a month later. The holiday season brings huge demand if you have the stock.', text:'Reach $55,000 in net cash (cash minus any loan) before the last month ends.', subjects:['fsa','budget','corpfin','macro']},
-    5:{title:'Scaling the store', months:36, start:30000, kind:'stake', t:250000, story:'Grow with a new product line, a loan or an investor. Online stores sell for roughly 3.4× a year’s earnings.', text:'Make your share of the business worth $250,000.', subjects:['valuation','fund','strategy','growth']},
-    6:{title:'Your store, for real', months:36, start:20000, kind:'stake', t:220000, story:'Everything is switched on, with bigger swings and more surprises.', text:'Make your share of the business worth $220,000.', subjects:['unitecon','fsa','valuation','growth']},
-  },
+  ...DATA.businesses.shop,  // name, colour, money settings and levels: data/businesses.json
   dec1:[
     {id:'price', label:'Price per bag', min:20, max:200, step:1, def:60, fmt:'money', help:'Each bag costs you $24. Higher prices mean fewer buyers.'},
     {id:'order', label:'Bags to buy this month', min:0, max:1000, step:10, def:80, fmt:'int', help:'Paid for now. Unsold bags stay in stock for next month.'}],
@@ -937,17 +889,7 @@ BIZ.shop = {
 
 /* ---------- Service agency ---------- */
 BIZ.agency = {
-  name:'Service agency', color:'var(--agency)', blurb:'A design studio. Billable hours, hourly or fixed prices, and clients who pay late.',
-  equip:6000, startAR:15000, loanSizes:[10000,25000,50000], loanRate:0.10, loanMin:20000, minPre:80000, valMult:2.5, valBM:'agencyVal',
-  expand:{label:'Open a second studio ($30,000)', cost:30000, help:'A second studio in another city. Brings new clients once it’s known.'},
-  levels:{
-    1:{title:'Going freelance', months:6, start:1000, kind:'cash', t:50000, story:'You’re a freelance designer with about 120 billable hours a month. Set your hourly rate: too low and you’re fully booked but poorly paid; too high and the work dries up.', text:'Have $50,000 in cash by the end of the last month.', subjects:['micro','finacct','pricing']},
-    2:{title:'Hiring your first designers', months:12, start:10000, kind:'streak', t:0, n:3, story:'You rent a studio and can hire designers. Each costs a salary whether or not they have work, so keeping them busy is everything.', text:'Make a profit three months in a row before the last month ends, without running out of cash.', subjects:['mgmtacct','unitecon','budget','lead']},
-    3:{title:'Clients and competitors', months:18, start:15000, kind:'streak', t:12000, n:3, rival:true, story:'Small businesses, startups and corporates want different things. You can charge by the hour or by the project. Cheap freelancers compete for small clients.', text:'After the rival freelancers appear, make at least $12,000 profit three months in a row.', subjects:['pricing','game','law','sales']},
-    4:{title:'Waiting to be paid', months:24, start:25000, kind:'netcash', t:120000, story:'Clients now pay 30 to 60 days after you invoice them. You can be profitable and still run out of cash. Seasons, contracts and staff changes add pressure.', text:'Reach $120,000 in net cash (cash minus any loan) before the last month ends.', subjects:['fsa','corpfin','law','nego']},
-    5:{title:'Building a studio business', months:36, start:20000, kind:'stake', t:900000, needExpand:true, story:'Grow into a second studio, borrow, or bring in a partner investor. Service businesses sell for roughly 2.5× a year’s earnings.', text:'Open a second studio and make your share of the business worth $900,000.', subjects:['valuation','fund','strategy','innov']},
-    6:{title:'Your studio, for real', months:36, start:15000, kind:'stake', t:1000000, story:'Everything is switched on, with bigger swings and more surprises.', text:'Make your share of the business worth $1,000,000.', subjects:['unitecon','fsa','valuation','lead']},
-  },
+  ...DATA.businesses.agency,  // name, colour, money settings and levels: data/businesses.json
   dec1:[{id:'rate', label:'Hourly rate', min:30, max:250, step:5, def:50, fmt:'money', help:'You can bill about 120 hours a month.'}],
   dec:[
     {id:'rate', label:'Hourly rate', min:40, max:400, step:5, def:90, fmt:'money', help:'Higher rates bring fewer clients.'},
@@ -1031,8 +973,7 @@ BIZ.agency = {
 
 /* ---------- Use my idea ---------- */
 BIZ.idea = {
-  name:'My idea', color:'var(--accent)', blurb:'', equip:0, loanSizes:[10000,25000,50000], loanRate:0.10, minPre:50000, valMult:2.5, valBM:'agencyVal',
-  levels:{4:{title:'My idea', months:24, start:20000, kind:'streak', t:0, n:3, story:'', text:'Make a profit three months in a row within 24 months, without running out of cash.', subjects:['unitecon','budget','fsa','pricing']}},
+  ...DATA.businesses.idea,  // name, colour, money settings and levels: data/businesses.json
   dec:[
     {id:'price', label:'Price', min:1, max:1000, step:1, def:20, fmt:'money2', help:'Your price per sale.'},
     {id:'mkt', label:'Marketing per month', min:0, max:20000, step:100, def:500, fmt:'money', help:'Each extra dollar brings fewer new customers than the last.'}],
@@ -1140,30 +1081,8 @@ function valuation(g){ const B = BIZ[g.biz]; let op, label;
   return {op, label, equity:Math.max(0, op + g.bs.cash - g.bs.loan)}; }
 function ownership(g){ const inv = g.inv.reduce((s, x) => s + x.pct, 0); return 1 - inv; }
 function stake(g){ const V = valuation(g).equity; let pay = 0; for (const x of g.inv) pay += Math.min(V, Math.max(x.pref, x.pct*V)); return Math.max(0, V - Math.min(V, pay)); }
-const FLAGS = {
-  waste:{s:'excel', t:'You often made more than you sold.'}, stockout:{s:'budget', t:'You often ran out of stock and missed sales.'}, overstock:{s:'mgmtacct', t:'Unsold stock tied up your cash.'},
-  capacity:{s:'ops', t:'Customers were turned away because you lacked capacity.'}, lowRunway:{s:'budget', t:'Your cash ran low, with less than three months of runway.'},
-  lowMargin:{s:'unitecon', t:'Your price barely covered the cost of each sale.'}, foodcost:{s:'mgmtacct', t:'Ingredient costs were above the usual 25–35% of sales.'},
-  labour:{s:'lead', t:'Wages were a high share of sales.'}, ltv:{s:'saas', t:'Customers were worth less than they cost to win.'}, churn:{s:'product', t:'Too many customers cancelled each month.'},
-  util:{s:'ops', t:'Your team was often idle.'}, overload:{s:'lead', t:'Your team was overloaded, which hurt quality.'}, rating:{s:'marketing', t:'Your store rating slipped below 3.9.'},
-  ar:{s:'fsa', t:'Unpaid invoices left you short of cash.'}, dilution:{s:'fund', t:'You gave away more than half the company.'}, debt:{s:'corpfin', t:'Loan repayments took a large share of your sales.'},
-  rival:{s:'game', t:'Your rival won customers on price.'}, pricing:{s:'pricing', t:'Fixed-price projects ran over.'},
-};
-const LESSON = {
-  'cafe-1':'Price sets how many people buy, and preparing too much or too little both cost money. Profit is simply what’s left of revenue after costs.',
-  'cafe-2':'Fixed costs must be covered before you make any profit. Break-even tells you how many customers that takes, and runway tells you how long you can wait for them.',
-  'saas-1':'Subscriptions stack up month after month, so even a small, steady flow of sign-ups builds large recurring revenue. The best price balances sign-ups against revenue per customer.',
-  'saas-2':'Software companies usually lose money while they grow. They succeed when each customer is worth well over what it cost to win them (LTV vs CAC), and cash lasts until that pays off.',
-  'shop-1':'Stock turns cash into goods before it turns back into cash. Profit only counts bags you sold, but your bank balance pays for every bag you bought.',
-  'shop-2':'Every order carries hidden costs: shipping, fees and returns. Ads only pay when the profit on the sales they bring is more than they cost.',
-  'agency-1':'In a service business you sell your time. The right rate fills most of your hours without leaving work on the table.',
-  'agency-2':'Salaries are paid whether or not there’s work. Keeping billable time high is how a studio covers its fixed costs.',
-  3:'Different customers value different things, and rivals react to your moves. A reputation built on good service is harder to copy than a low price.',
-  4:'Profit and cash are not the same thing. Stock, unpaid invoices, supplier credit and loans all move cash without changing profit, so the cash flow statement matters as much as the income statement.',
-  5:'Growth costs money before it pays back. A loan keeps your ownership but must be repaid; investor money doesn’t, but you give up part of the company and investors may be paid back first.',
-  6:'Real businesses face everything at once. The steady habits win: know your break-even, protect your cash, listen to customers, and grow only as fast as your cash allows.',
-  idea:'Your own numbers decide whether the idea can work. Check the break-even point and how long your cash lasts before you commit real money.',
-};
+const FLAGS = DATA.flags;        // review notes: data/flags.json
+const LESSON = DATA.level_lessons; // end-of-level lessons: data/level-lessons.json
 
 
 /* =========================================================
@@ -1177,19 +1096,22 @@ function decList(g){
   if (F.expand && B.expand && !g.st.expanded) list.push({id:'expand', kind:'check', group:'Growth', label:B.expand.label, help:B.expand.help, def:false});
   return list;
 }
-function startGame(){
-  const {biz, level} = DB.pick, B = BIZ[biz], L = B.levels[level], F = FEAT(level), E = envFrom(S(), level === 6);
-  const start = (biz === 'idea' ? DB.idea.start : L.start)*E.cash, equip = F.stmts ? B.equip : 0;
-  const g = {biz, level, env:E, months: S().length === 'default' ? L.months : +S().length, seed:S().seed, month:0, start, status:'playing', hist:[], last:null,
-    dec:{}, formulas:S().formulas, st:{}, mods:[], charges:[], later:[], news:[], flags:{}, inv:[], loanPay:0, event:null, offer:null, lastPitch:-99, equityIn:0, capexNext:0,
-    streak:0, evLog:[], idea: biz === 'idea' ? Object.assign({}, DB.idea) : null,
+/* Start a game. settings: {diff, custom, length, formulas, seed}; idea: the player's own
+   business numbers (only for biz 'idea'). Returns the game state g, a plain object
+   that the page saves as JSON. */
+function newGame({biz, level, settings, idea}){
+  const st = settings, B = BIZ[biz], L = B.levels[level], F = FEAT(level), E = envFrom(st, level === 6);
+  const start = (biz === 'idea' ? idea.start : L.start)*E.cash, equip = F.stmts ? B.equip : 0;
+  const g = {biz, level, env:E, months: st.length === 'default' ? L.months : +st.length, seed:st.seed, month:0, start, status:'playing', hist:[], last:null,
+    dec:{}, formulas:st.formulas, st:{}, mods:[], charges:[], later:[], news:[], flags:{}, inv:[], loanPay:0, event:null, offer:null, lastPitch:-99, equityIn:0, capexNext:0,
+    streak:0, evLog:[], idea: biz === 'idea' ? Object.assign({}, idea) : null,
     bs:{cash:start, ar:0, inv:0, equip, ap:0, loan:0, def:0, capital:start + equip, retained:0}};
   B.init ? B.init(g, F) : null;
   if (B.startAR && F.credit){ g.st.ar1 = B.startAR; g.bs.ar = B.startAR; g.bs.capital += B.startAR; }
   if (B.startInv && F.credit){ const v = B.startInv*24*E.cost; g.st.inv = B.startInv; g.bs.inv = v; g.bs.capital += v; }
   decList(g).forEach(x => { if (g.dec[x.id] === undefined) g.dec[x.id] = x.def; });
-  if (biz === 'idea') g.dec.price = DB.idea.price;
-  DB.game = g; save(); go('play');
+  if (biz === 'idea') g.dec.price = idea.price;
+  return g;
 }
 function drawEvent(g, F){
   if (!F.events) return;
@@ -1200,16 +1122,17 @@ function drawEvent(g, F){
   const e = pool[Math.floor(R()*pool.length)];
   g.event = e.id; g.evLog.push(e.id);
 }
+/* Answer the event card g.event with choice i. */
 function chooseEvent(g, i){
   const e = EV.find(x => x.id === g.event); if (!e) { g.event = null; return; }
   const R = rng(g.seed*307 + g.month*131 + i);
   const msg = e.choices[i].do(g, R);
-  g.news.push({t:e.title, p:msg, s:e.choices[i].s}); g.event = null; save(); render();
+  g.news.push({t:e.title, p:msg, s:e.choices[i].s}); g.event = null;
 }
 function makeOffer(g){
   const B = BIZ[g.biz], v = valuation(g), pre = Math.max(B.minPre*g.env.cash, v.op + g.bs.cash - g.bs.loan);
   const amt = Math.max(10000, Math.round(pre*0.25/5000)*5000);
-  g.offer = {amt, pre, fair:{pre, mult:1}, rich:{pre:pre*1.4, mult:2}}; g.lastPitch = g.month; save(); render();
+  g.offer = {amt, pre, fair:{pre, mult:1}, rich:{pre:pre*1.4, mult:2}}; g.lastPitch = g.month;
 }
 function acceptOffer(g, which){
   const o = g.offer; if (!o) return;
@@ -1217,20 +1140,23 @@ function acceptOffer(g, which){
     g.inv.forEach(x => x.pct *= t.pre/post); g.inv.push({amt:o.amt, pct:share, pref:o.amt*t.mult, mult:t.mult}); g.equityIn += o.amt;
     g.news.push({t:'Investment agreed', p:`An investor will put in ${money(o.amt)} for ${pct(share)} of the company (valuing it at ${money(t.pre)} before the money). ${t.mult > 1 ? 'They get their money back twice over before you see anything in a sale.' : 'They get their money back first in a sale, then share as owners.'}`, s:'fund'});
   } else g.news.push({t:'Offer declined', p:'You kept full control and ownership for now.', s:'fund'});
-  g.offer = null; save(); render();
+  g.offer = null;
 }
-function runMonth(){
-  const g = DB.game, B = BIZ[g.biz], F = FEAT(g.level), E = g.env, d = g.dec, bs = g.bs;
-  if (g.event || g.offer) return toast('Choose an option on the card first');
+/* Run one month with the decisions in g.dec. Returns {ok:true} (with msg for a warning)
+   or {ok:false, msg} when the month can't run yet (nothing changes then). */
+function stepMonth(g){
+  const B = BIZ[g.biz], F = FEAT(g.level), E = g.env, d = g.dec, bs = g.bs;
+  let warn = '';
+  if (g.event || g.offer) return {ok:false, msg:'Choose an option on the card first'};
   // Loan decisions
   let loanIn = 0, repayAll = false;
   if (F.loan && d.loan && d.loan !== 'none'){
-    if (d.loan === 'repay'){ if (bs.loan <= 0) toast('You have no loan to repay'); else if (bs.cash < bs.loan) return toast('Not enough cash to repay the whole loan'); else repayAll = true; }
+    if (d.loan === 'repay'){ if (bs.loan <= 0) warn = 'You have no loan to repay'; else if (bs.cash < bs.loan) return {ok:false, msg:'Not enough cash to repay the whole loan'}; else repayAll = true; }
     else { const amt = B.loanSizes[+d.loan.slice(1)], limit = loanLimit(g);
-      if (bs.loan + amt > limit) return toast(`The bank will only lend up to ${money(limit)} in total right now`);
+      if (bs.loan + amt > limit) return {ok:false, msg:`The bank will only lend up to ${money(limit)} in total right now`};
       loanIn = amt; }
   }
-  if (F.expand && d.expand && B.expand && !g.st.expanded && bs.cash + loanIn + g.equityIn < B.expand.cost) return toast(`You need ${money(B.expand.cost)} in cash to expand`);
+  if (F.expand && d.expand && B.expand && !g.st.expanded && bs.cash + loanIn + g.equityIn < B.expand.cost) return {ok:false, msg:`You need ${money(B.expand.cost)} in cash to expand`};
   const R = rng(g.seed*7919 + (g.month + 1)*104729 + g.level*31 + BIZ_ORDER.indexOf(g.biz)*7);
   // due later items
   g.later.filter(x => x.at <= g.month + 1).forEach(x => { charge(g, x.amt, x.label); g.news.push({t:x.label, p:x.text, s:'law'}); });
@@ -1280,13 +1206,12 @@ function runMonth(){
   const k = goalKey(g);
   g.news = [];
   if (bs.cash < 0){ g.status = 'lost'; g.reason = 'You ran out of cash.'; }
-  else if (k.won){ g.status = 'won'; if (g.biz !== 'idea') DB.progress[g.biz] = Math.max(prog(g.biz), g.level); }
+  else if (k.won) g.status = 'won';
   else if (g.month >= g.months){ g.status = 'lost'; g.reason = 'Time ran out before you reached the goal.'; }
   // Mods tick
   g.mods.forEach(m => m.left -= 1); g.mods = g.mods.filter(m => m.left > 0);
   if (g.status === 'playing') drawEvent(g, F);
-  save(); render();
-  if (g.status === 'playing' && $('.board')) $('.board').scrollIntoView({block:'start', behavior: reduceMotion() ? 'auto' : 'smooth'});
+  return {ok:true, msg:warn};
 }
 function loanLimit(g){ const B = BIZ[g.biz], h = g.hist.slice(-3); const avg = h.length ? h.reduce((s, x) => s + x.rev, 0)/h.length : 0; return Math.max(B.loanMin || 10000, 4*avg); }
 function goalKey(g){
@@ -1302,6 +1227,52 @@ function goalKey(g){
 }
 
 
+function equityMetrics(g){ const v = valuation(g); return [['Company value', money(v.equity) + ' (' + v.label + ' + cash − loans)'], ['Your ownership', pct(ownership(g), 0)], ['Your share is worth', money(stake(g))]]; }
+/* ===== End of the engine ===== */
+/* =========================================================
+   Start a Business: the page. Saving, panels, lessons and the 3D town.
+   The rules of the game are in world/engine/engine.js.
+   ========================================================= */
+const $ = s => document.querySelector(s);
+const toast = msg => { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('show'), 2600); };
+const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ---------- Saving (this browser only) ---------- */
+const KEY = 'start-a-business-v1', OLD_KEYS = ['runway-world-v1'];
+let DB = {settings:{free:false, diff:'normal', custom:{cash:1, demand:1, cost:1, vol:0.1}, length:'default', formulas:true, seed:Math.floor(Math.random()*1e6)},
+  progress:{}, game:null, pick:{biz:'cafe', level:1}, met:{}, read:{},
+  idea:{name:'My business', unit:'customer', price:20, varCost:8, fixed:6000, start:20000, customers:400, capacity:1500, sens:'med', ramp:3}};
+try {
+  // Load this game's save; the first time, carry over a save from the game's old name (Runway Town).
+  let v = JSON.parse(localStorage.getItem(KEY) || 'null');
+  for (const k of OLD_KEYS) if (!v) v = JSON.parse(localStorage.getItem(k) || 'null');
+  if (v && typeof v === 'object') DB = Object.assign(DB, v, {settings:Object.assign(DB.settings, v.settings || {}), idea:Object.assign(DB.idea, v.idea || {}), met:v.met || {}, read:v.read || {}});
+} catch(e) {}
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(DB)); } catch(e) {} };
+const S = () => DB.settings;
+
+let tab = 'income', panel = null, modalKind = null;
+const prog = b => DB.progress[b] || 0;
+function unlocked(b, n){ return S().free || n === 1 || prog(b) >= n - 1; }
+
+/* ---------- The engine's moves, plus saving and redrawing ---------- */
+function startGame(){
+  DB.game = newGame({biz:DB.pick.biz, level:DB.pick.level, settings:S(), idea:DB.idea});
+  meetLevel(DB.game); save(); go('play');
+}
+function runMonth(){
+  const g = DB.game, r = stepMonth(g);
+  if (r.msg) toast(r.msg);
+  if (!r.ok) return;
+  if (g.status === 'won' && g.biz !== 'idea') DB.progress[g.biz] = Math.max(prog(g.biz), g.level);
+  if (g.last) meetSubjects(g.last.why.map(w => w.s));
+  save(); render();
+}
+function answerEvent(g, i){ chooseEvent(g, i); save(); render(); }
+function pitch(g){ makeOffer(g); save(); render(); }
+function answerOffer(g, which){ acceptOffer(g, which); save(); render(); }
+
+/* ---------- Statements and chart (HTML for the report) ---------- */
 function ledger(rows){ return `<table class="ledger">${rows.map(([l, v, k]) => k === 'head' ? `<tr class="head"><td colspan="2">${esc(l)}</td></tr>` : `<tr class="${k}"><td>${esc(l)}</td><td class="v ${v < 0 && k !== 'cost' ? 'neg' : ''}">${money(v)}</td></tr>`).join('')}</table>`; }
 function statementTabs(g){
   const o = g.last, cf = o.cf, bs = g.bs;
@@ -1318,7 +1289,6 @@ function statementTabs(g){
   return `<div class="tabs" role="tablist">${Object.entries(T).map(([k, [n]]) => `<button role="tab" data-tab="${k}" aria-selected="${tab===k}">${n}</button>`).join('')}</div>
     <h3 style="margin:6px 0 4px">Month ${g.month} · ${T[tab][0]}</h3>${ledger(T[tab][1])}${tab === 'balance' ? `<p class="small muted" style="margin-top:6px">Assets always equal liabilities plus equity: ${money(A)} = ${money(Li + Eq)}.</p>` : ''}`;
 }
-function equityMetrics(g){ const v = valuation(g); return [['Company value', money(v.equity) + ' (' + v.label + ' + cash − loans)'], ['Your ownership', pct(ownership(g), 0)], ['Your share is worth', money(stake(g))]]; }
 function chart(g){
   const W = 640, H = 170, P = {l:58, r:10, t:12, b:22};
   const pts = [{m:0, cash:g.start}].concat(g.hist), n = Math.max(g.months, 2);
@@ -1338,15 +1308,7 @@ function chart(g){
 }
 
 
-/* ===== End of shared engine ===== */
 
-/* =========================================================
-   Runway Town: glue, panels, 3D world
-   ========================================================= */
-let tab = 'income', panel = null, modalKind = null;
-const BIZ_ORDER = ['cafe','saas','shop','agency'];
-const prog = b => DB.progress[b] || 0;
-function unlocked(b, n){ return S().free || n === 1 || prog(b) >= n - 1; }
 const CHECK_URL = /github\.io$/.test(location.hostname) ? 'model-check.html' : 'https://claude.ai/artifact/7SbgsLtiTZPxiqPTBjU82j';
 const bizName = () => { const g = DB.game; return !g ? 'Your business' : g.biz === 'idea' ? g.idea.name : BIZ[g.biz].name; };
 const RIVAL_NAME = {cafe:'Bean Counter Café', saas:'Rival Software Ltd', shop:'Discount Bags', agency:'Freelancers Hub', idea:'The competition'};
@@ -1370,7 +1332,7 @@ let prevCash = null;
 const kfmt = v => { const a = Math.abs(v), sgn = v < 0 ? '−' : ''; return a >= 1e6 ? sgn + '$' + (a/1e6).toFixed(a >= 1e7 ? 0 : 1) + 'M' : a >= 1000 ? sgn + '$' + (a/1000).toFixed(a >= 1e5 ? 0 : 1) + 'k' : money(v); };
 function updateHud(){
   const g = DB.game, top = $('#dTop'), mon = $('#dMoney'), badge = $('#badgeReport');
-  if (!g || g.status !== 'playing'){ top.innerHTML = `<span class="line ol">Runway Town</span>`; mon.innerHTML = ''; badge.hidden = true; prevCash = null; return; }
+  if (!g || g.status !== 'playing'){ top.innerHTML = `<span class="line ol">Start a Business</span>`; mon.innerHTML = ''; badge.hidden = true; prevCash = null; return; }
   const F = FEAT(g.level), k = goalKey(g), p = Math.max(0, Math.min(1, k.value/k.target)), yr = Math.floor(g.month/12) + 1, small = innerWidth < 640;
   const when = F.season || g.biz === 'idea' ? (small ? `${MONTHS[g.month % 12].slice(0, 3)} · Y${yr}` : `${MONTHS[g.month % 12]}, Year ${yr}`) : `Month ${g.month + 1} of ${g.months}`;
   const goalTxt = k.count ? `${k.value}/${k.target}` : `${kfmt(k.value)} / ${kfmt(k.target)}`;
@@ -1389,14 +1351,15 @@ function updateHud(){
 /* ---------- Sheets (side panels) ---------- */
 const SHEETS = {
   desk:    {title:() => bizName(), kicker:'Your business · decisions', needGame:true},
-  news:    {title:() => 'The Runway Ledger', kicker:'Newspaper stand · monthly report', needGame:true},
+  news:    {title:() => 'The Town Ledger', kicker:'Newspaper stand · monthly report', needGame:true},
   bank:    {title:() => 'Bank', kicker:'Loans', needGame:true, need:F => F.loan, lock:'The bank lends from Level IV.'},
   investor:{title:() => 'Investors’ tower', kicker:'Funding', needGame:true, need:F => F.equity, lock:'Investors meet you from Level V.'},
-  library: {title:() => 'Library', kicker:'Study the subjects'},
+  library: {title:() => 'Business School', kicker:'Lessons'},
   places:  {title:() => 'Places', kicker:'Visit without walking'},
-  menu:    {title:() => 'Menu', kicker:'Runway Town'},
+  menu:    {title:() => 'Menu', kicker:'Start a Business'},
 };
-function openPanel(id){
+function openPanel(id, keepLesson){
+  if (id === 'library' && !keepLesson) lessonView = null;
   const S0 = SHEETS[id], g = DB.game;
   if (S0.needGame && (!g || g.status !== 'playing')){ toast('Start a business first'); showSetup(); return; }
   if (S0.need && !S0.need(FEAT(g.level))){ toast(S0.lock); return; }
@@ -1407,7 +1370,7 @@ function renderPanel(){
   const g = DB.game, S0 = SHEETS[panel];
   $('#sheetTitle').textContent = S0.title(); $('#sheetKicker').textContent = S0.kicker;
   $('#sheet').style.setProperty('--c', g ? (g.biz === 'idea' ? 'var(--accent)' : BIZ[g.biz].color) : 'var(--ink)');
-  const body = $('#sheetBody'), top = body.dataset.panel === panel ? body.scrollTop : 0; body.dataset.panel = panel; $('#sheet').dataset.panel = panel;
+  const body = $('#sheetBody'), view = panel + (panel === 'library' ? ':' + (lessonView || '') : ''), top = body.dataset.panel === view ? body.scrollTop : 0; body.dataset.panel = view; $('#sheet').dataset.panel = panel;
   if (panel === 'news' && g && g.last && g.seenRep !== g.month){ g.seenRep = g.month; save(); updateHud(); }
   body.innerHTML = ({desk:deskHtml, station:stationHtml, rival:rivalHtml, news:newsHtml, bank:bankHtml, investor:investorHtml, library:libraryHtml, places:placesHtml, menu:menuHtml})[panel](g);
   body.scrollTop = top;
@@ -1449,7 +1412,7 @@ function newsHtml(g){
     ${o.voices && o.voices.length && g.heard !== g.month ? `<div style="display:flex;flex-direction:column;gap:10px"><h3>Overheard in town</h3><p class="small muted">Customers at your business have opinions about last month. Walk over and ask one.</p></div>` : ''}
     ${o.voices && o.voices.length && g.heard === g.month ? `<div style="display:flex;flex-direction:column;gap:10px"><h3>Overheard in town</h3><div class="voices">${o.voices.slice(0, 3).map(([w, q]) => `<div class="voice"><q>${esc(q)}</q><span>${esc(w)}</span></div>`).join('')}</div></div>` : ''}
     <div style="display:flex;flex-direction:column;gap:10px"><h3>What happened and why</h3>
-      <div class="why">${visibleWhy(g, o.why).map(w => `<div class="card"><b>${esc(w.t)}</b><p>${esc(w.p)}</p>${g.formulas ? `<div class="f">${esc(w.f)}</div>` : ''}${w.b ? `<p class="bm">${esc(w.b)}</p>` : ''}<a href="${esc(TREE_URL)}" target="_blank" rel="noopener">Study: ${esc(SUBJ[w.s])} ↗</a></div>`).join('')}</div></div>
+      <div class="why">${visibleWhy(g, o.why).map(w => `<div class="card"><b>${esc(w.t)}</b><p>${esc(w.p)}</p>${g.formulas ? `<div class="f">${esc(w.f)}</div>` : ''}${w.b ? `<p class="bm">${esc(w.b)}</p>` : ''}${SUBJ[w.s] ? `<button class="study" data-act="lesson" data-subj="${w.s}">Lesson: ${esc(SUBJ[w.s])}</button>` : ''}</div>`).join('')}</div></div>
     <div class="row"><button class="btn primary" data-act="go-desk">Back to my business</button></div>`;
 }
 function bankHtml(g){
@@ -1476,20 +1439,35 @@ function investorHtml(g){
     : `<div class="row"><button class="btn primary" data-act="pitch" ${g.month - g.lastPitch < 4 ? 'disabled' : ''}>Pitch for investment</button></div><p class="small muted">${g.month - g.lastPitch < 4 ? 'You can pitch again in ' + (4 - (g.month - g.lastPitch)) + ' months.' : 'You’ll get an offer based on your current value and can choose whether to accept.'} ${esc(BM[BIZ[g.biz].valBM] || '')}</p>`}
     <div class="row"><button class="btn" data-act="go-desk">Back to my business</button></div>`;
 }
+/* ---------- Business School: a lesson card for each subject ---------- */
+let lessonView = null;
+function meetSubjects(list){ let n = 0; for (const s of list) if (s && SUBJ[s] && !DB.met[s]){ DB.met[s] = 1; n++; } if (n) updateSchoolBadge(); return n; }
+function meetLevel(g){ meetSubjects(BIZ[g.biz].levels[g.level].subjects || []); }
+const lessonOpen = s => S().free || !!DB.met[s];
+function updateSchoolBadge(){ const b = $('#badgeSchool'); if (!b) return; const n = Object.keys(SUBJ).filter(s => DB.met[s] && !DB.read[s]).length; b.hidden = !n; b.textContent = n; }
+function markRead(s){ if (!DB.read[s]){ DB.read[s] = 1; save(); updateSchoolBadge(); } }
+function lessonHtml(s){
+  const L = LESSONS[s];
+  return `<article class="lesson"><span class="kick">Lesson</span><h2>${esc(SUBJ[s])}</h2><p class="lede">${esc(L.idea)}</p>
+    ${L.formula ? `<div class="f">${esc(L.formula)}</div>` : ''}
+    <h3>Example</h3><p>${esc(L.example)}</p>
+    <h3>In the game</h3><p>${esc(L.tip)}</p></article>`;
+}
+function openLesson(s){ meetSubjects([s]); lessonView = s; openPanel('library', true); }
 function libraryHtml(g){
-  const done = treeDone() || {}, first = g ? (BIZ[g.biz].levels[g.level].subjects || []) : [];
-  const rest = Object.keys(SUBJ).filter(s => !first.includes(s));
-  const row = s => { const st = done[s] || 'none'; return `<div><span>${esc(SUBJ[s])}</span><div class="seg" role="group" aria-label="${esc(SUBJ[s])} status">${[['none','Not started'],['doing','Studying'],['done','Done']].map(([v, l]) => `<button data-act="subj" data-subj="${s}" data-st="${v}" aria-pressed="${st===v}">${l}</button>`).join('')}</div></div>`; };
+  if (lessonView){ markRead(lessonView); return lessonHtml(lessonView) + `<div class="row"><button class="btn primary" data-act="lessons">All lessons</button>${g && g.status === 'playing' ? `<button class="btn" data-act="go-news">Back to the report</button>` : ''}</div>`; }
+  const first = g ? (BIZ[g.biz].levels[g.level].subjects || []) : [], all = Object.keys(SUBJ), n = all.filter(lessonOpen).length;
+  const tile = s => lessonOpen(s) ? `<button class="ls${DB.read[s] ? '' : ' new'}" data-act="lesson" data-subj="${s}"><b>${esc(SUBJ[s])}</b><span>${DB.read[s] ? 'Read' : 'New'}</span></button>`
+    : `<div class="ls locked"><b>${esc(SUBJ[s])}</b><span>Not met yet</span></div>`;
   return `
-    <p class="lede">Every subject links to a free course in the Business Skill Tree. Mark your progress here or there.</p>
-    <div class="row"><a class="btn primary" href="${esc(TREE_URL)}" target="_blank" rel="noopener">Open the Skill Tree ↗</a></div>
-    <p class="small muted">${/github\.io$/.test(location.hostname) ? 'Progress here and in the Skill Tree is shared.' : 'On the GitHub version, progress here and in the Skill Tree is shared. Separate Claude pages keep separate progress.'}</p>
-    ${first.length ? `<h3>For your current level</h3><div class="subjlist">${first.map(row).join('')}</div>` : ''}
-    <h3>All subjects</h3><div class="subjlist">${rest.map(row).join('')}</div>`;
+    <p class="lede">Short lessons on the ideas behind the game. A lesson opens when its subject comes up in your business: in a report, on a level, or in your end-of-game review. You have opened ${n} of ${all.length}.</p>
+    ${first.length ? `<h3>For this level</h3><div class="lessons">${first.map(tile).join('')}</div>` : ''}
+    <h3>${first.length ? 'All other lessons' : 'All lessons'}</h3><div class="lessons">${all.filter(s => !first.includes(s)).map(tile).join('')}</div>
+    ${S().free ? '' : '<p class="small muted">Free play (in Menu) opens every lesson.</p>'}`;
 }
 function placesHtml(g){
   const F = g ? FEAT(g.level) : null;
-  const P = [['desk', bizName(), 'Decisions and running the month'], ['news', 'Newspaper stand', 'The monthly report: statements, numbers and why'], ['bank', 'Bank', F && F.loan ? 'Borrow or repay' : 'Opens at Level IV'], ['investor', 'Investors’ tower', F && F.equity ? 'Pitch for investment' : 'Opens at Level V'], ['library', 'Library', 'Study subjects and track progress'], ['menu', 'Menu', 'New game, settings and help']];
+  const P = [['desk', bizName(), 'Decisions and running the month'], ['news', 'Newspaper stand', 'The monthly report: statements, numbers and why'], ['bank', 'Bank', F && F.loan ? 'Borrow or repay' : 'Opens at Level IV'], ['investor', 'Investors’ tower', F && F.equity ? 'Pitch for investment' : 'Opens at Level V'], ['library', 'Business School', 'Lessons on the ideas behind the game'], ['menu', 'Menu', 'New game, settings and help']];
   return `<div class="places">${P.map(([id, n, d]) => `<button data-act="go-${id}"><b>${esc(n)}</b><span>${esc(d)}</span><em>Open</em></button>`).join('')}</div>
     <p class="small muted">You can also walk to each building and press E (or tap the Enter button).</p>`;
 }
@@ -1503,9 +1481,8 @@ function menuHtml(g){
       <label class="switch" for="m-day"><input type="checkbox" id="m-day" data-set="nightOff" ${st.nightOff?'checked':''}><span>Always daytime (no night or dusk)</span></label></div>
     <div class="field"><span class="lab">Controls</span><p class="help">Walk with WASD or the arrow keys, or the joystick on a touch screen. Press E or tap Enter beside a building. Drag the view (or press Z and C) to turn the camera, and X to put it back behind you. Scroll or pinch to zoom. Esc closes a panel. The Places button opens any building without walking.</p></div>
     <div class="field"><span class="lab">3D models</span><p class="help">${esc(modelSummary())} Drop a .glb exported from Blender onto the town to try it until you reload.</p><div class="row" style="margin-top:8px"><a class="btn" href="${esc(CHECK_URL)}" target="_blank" rel="noopener">Model check ↗</a></div></div>
-    <div class="row"><a class="btn" href="${esc(TREE_URL)}" target="_blank" rel="noopener">Skill Tree ↗</a>${g && g.status === 'playing' ? `<button class="btn danger" data-act="abandon">Abandon game</button>` : ''}</div>`;
+    ${g && g.status === 'playing' ? `<div class="row"><button class="btn danger" data-act="abandon">Abandon game</button></div>` : ''}`;
 }
-function treeSet(id, st){ try { const v = JSON.parse(localStorage.getItem('biz-skill-tree-v1') || 'null') || {prog:{}, apply:{}}; v.prog = v.prog || {}; if (st === 'none') delete v.prog[id]; else v.prog[id] = st; localStorage.setItem('biz-skill-tree-v1', JSON.stringify(v)); } catch(e){} }
 
 /* Sheet events */
 const sheetBody = $('#sheetBody');
@@ -1515,15 +1492,16 @@ sheetBody.addEventListener('change', e => { const t = e.target, g = DB.game;
   if (t.dataset.n) syncDec(t.dataset.n, t.value);
   if (t.dataset.s && g){ g.dec[t.dataset.s] = t.value; save(); }
   if (t.dataset.k && g){ g.dec[t.dataset.k] = t.checked; save(); }
-  if (t.dataset.set){ S()[t.dataset.set] = t.checked; save(); toast('Saved'); } });
+  if (t.dataset.set){ S()[t.dataset.set] = t.checked; save(); toast('Saved'); if (t.dataset.set === 'free') updateSchoolBadge(); } });
 sheetBody.addEventListener('click', e => {
   const t = e.target.closest('[data-act],[data-tab]'); if (!t) return; const g = DB.game, a = t.dataset.act;
   if (t.dataset.tab){ tab = t.dataset.tab; renderPanel(); return; }
   if (a === 'run') return doRun();
   if (a && a.startsWith('go-')) return openPanel(a.slice(3));
-  if (a === 'pitch') return makeOffer(g);
-  if (a && a.startsWith('of-')) return acceptOffer(g, a.slice(3));
-  if (a === 'subj'){ treeSet(t.dataset.subj, t.dataset.st); renderPanel(); return; }
+  if (a === 'pitch') return pitch(g);
+  if (a && a.startsWith('of-')) return answerOffer(g, a.slice(3));
+  if (a === 'lesson') return openLesson(t.dataset.subj);
+  if (a === 'lessons'){ lessonView = null; renderPanel(); return; }
   if (a === 'close') return closePanel();
   if (a === 'new'){ closePanel(); return showSetup(); }
   if (a === 'diff'){ S().diff = t.dataset.diff; save(); renderPanel(); return; }
@@ -1534,6 +1512,7 @@ $('#bPlaces').onclick = () => openPanel('places');
 $('#bReport').onclick = () => openPanel('news');
 $('#bBank').onclick = () => openPanel('bank');
 $('#bLibrary').onclick = () => openPanel('library');
+updateSchoolBadge();
 $('#bMenu').onclick = () => openPanel('menu');
 
 function doRun(){
@@ -1554,8 +1533,8 @@ function showSetup(){
   const pk = DB.pick; if (!BIZ_ORDER.includes(pk.biz)) pk.biz = 'cafe'; if (!unlocked(pk.biz, pk.level)) pk.level = 1;
   const g = DB.game;
   showModal('setup', `
-    <h1>Runway <em>Town</em></h1>
-    <p class="lede">Walk around a small town and run your business from the inside. Customers queue at your door, rivals open across the street, and the bank, investors and library are a short walk away.</p>
+    <h1>Start a <em>Business</em></h1>
+    <p class="lede">Walk around a small town and run your business from the inside. Customers queue at your door, rivals open across the street, and the bank, investors and Business School are a short walk away.</p>
     <h3>Choose a business</h3>
     <div class="pick">${BIZ_ORDER.map(k => `<button data-biz="${k}" style="--c:${BIZ[k].color}" aria-pressed="${pk.biz===k}"><b>${esc(BIZ[k].name)}</b><span>${prog(k) ? 'Completed up to ' + lvName(prog(k)) : esc(BIZ[k].blurb.split('.')[0])}</span></button>`).join('')}</div>
     <h3>Choose a level</h3>
@@ -1575,13 +1554,14 @@ function showResult(){
   const best = Math.max(...g.hist.map(h => h.profit)), review = Object.entries(g.flags).filter(([k]) => FLAGS[k]).sort((a, b) => b[1] - a[1]).slice(0, 4);
   const lesson = LESSON[g.biz === 'idea' ? 'idea' : (LESSON[g.biz + '-' + g.level] ? g.biz + '-' + g.level : g.level)];
   if (modalKind === 'result') return;
+  meetSubjects(review.map(([k]) => FLAGS[k].s)); save();
   showModal('result', `
     <span class="kicker">${esc(bizName())} · ${g.biz === 'idea' ? 'Your idea' : lvName(g.level)}</span>
     <h1 style="color:${won ? 'var(--good)' : 'var(--bad)'}">${won ? 'Goal reached.' : 'Not this time.'}</h1>
     <p class="lede">${won ? `You reached the goal in month ${g.month} of ${g.months}.` : esc(g.reason || '')} You finished with ${money(g.bs.cash)} in cash. Your best month made ${money(best)}.${F.equity ? ` You own ${pct(ownership(g), 0)}, worth ${money(stake(g))}.` : ''}</p>
     <div class="goal"><h3>What this level teaches</h3><b style="font-size:19px">${esc(lesson)}</b></div>
     <h3>Subjects to revisit</h3>
-    ${review.length ? `<div class="review">${review.map(([k, n]) => `<div><span>${esc(FLAGS[k].t)} <span class="muted small">(${n} month${n > 1 ? 's' : ''})</span></span><a href="${esc(TREE_URL)}" target="_blank" rel="noopener">${esc(SUBJ[FLAGS[k].s])} ↗</a></div>`).join('')}</div>` : `<p class="muted">No clear weak spots this time.</p>`}
+    ${review.length ? `<div class="review">${review.map(([k, n]) => `<div><span>${esc(FLAGS[k].t)} <span class="muted small">(${n} month${n > 1 ? 's' : ''})</span></span><button class="study" data-m="lesson" data-subj="${FLAGS[k].s}">Lesson: ${esc(SUBJ[FLAGS[k].s])}</button></div>`).join('')}</div>` : `<p class="muted">No clear weak spots this time.</p>`}
     <div class="row">${won && g.biz !== 'idea' && next <= 6 ? `<button class="btn primary" data-m="next">Play ${lvName(next)}</button>` : ''}<button class="btn" data-m="again">Play again with the same luck</button><button class="btn" data-m="new">Choose another game</button></div>`);
 }
 $('#modalBox').addEventListener('click', e => {
@@ -1591,10 +1571,12 @@ $('#modalBox').addEventListener('click', e => {
   const m = t.dataset.m;
   if (m === 'start'){ hideModal(); startGame(); }
   if (m === 'cont'){ hideModal(); render(); }
-  if (m === 'ev'){ hideModal(); chooseEvent(g, +t.dataset.i); }
+  if (m === 'ev'){ hideModal(); answerEvent(g, +t.dataset.i); }
   if (m === 'next'){ DB.pick = {biz:g.biz, level:g.level + 1}; save(); modalKind = null; showSetup(); }
   if (m === 'again'){ DB.pick = {biz:g.biz, level:g.level}; S().seed = g.seed; save(); hideModal(); startGame(); }
   if (m === 'new'){ modalKind = null; showSetup(); }
+  if (m === 'lesson'){ const s = t.dataset.subj; markRead(s); showModal('lesson', lessonHtml(s) + `<div class="row"><button class="btn primary" data-m="back-result">Back to results</button></div>`); }
+  if (m === 'back-result'){ modalKind = null; showResult(); }
 });
 
 /* =========================================================
@@ -1710,13 +1692,13 @@ function initWorld(){
   // Kiosk (newspaper stand)
   const kiosk = makeBuilding({x:0, z:-2, w:3, d:2.4, h:2.8, color:0x2F5D3A, roofColor:0x23201A, face:'s', sign:'The Ledger', window:0xF2EDE3, role:'kiosk'});
   targets.push({id:'news', name:'the newspaper stand', door:kiosk.door, r:2.8});
-  // Bank, library, investors
+  // Bank, Business School (the 'library' model role), investors
   const bank = makeBuilding({x:-25, z:0, w:9, d:8, h:6, color:0xCFC6B5, roofColor:0x8A8172, face:'e', sign:'Bank', role:'bank'});
   for (const dz of [-2.6, -1, 1, 2.6]){ const col = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 5, 10), mat(0xEDE6D8)); col.position.set(-20.1, 2.5, dz); col.castShadow = true; scene.add(col); bank.extras.push(col); }
   if (bank.dressed) bank.extras.forEach(c => c.visible = false);
   targets.push({id:'bank', name:'the bank', door:bank.door, r:3});
-  const lib = makeBuilding({x:-30, z:25, w:9, d:8, h:5.5, color:0xB8A27A, roofColor:0x6A4B32, roof:'gable', face:'n', sign:'Library', role:'library'});
-  targets.push({id:'library', name:'the library', door:lib.door, r:3});
+  const lib = makeBuilding({x:-30, z:25, w:9, d:8, h:5.5, color:0xB8A27A, roofColor:0x6A4B32, roof:'gable', face:'n', sign:'School', role:'library'});
+  targets.push({id:'library', name:'the Business School', door:lib.door, r:3});
   const inv = makeBuilding({x:0, z:24.5, w:7, d:7, h:16, color:0x6F7C83, roofColor:0x4A555C, face:'n', sign:'Investors', signBg:'#23201A', signFg:'#EDE6D8', role:'investors'});
   targets.push({id:'investor', name:'the investors’ tower', door:inv.door, r:3});
   // Houses and trees
@@ -1988,8 +1970,8 @@ function loadModels(){
     if (!man || !Array.isArray(man.models)) return;
     return Promise.all(man.models.map(e => new Promise(done => loader.load('models/' + e.file, gl => {
       try { const role = e.role || gl.scene.userData.rt_role || roleFromName(e.file.split('/').pop()); if (role) addModel(role, gl, e.file, false); }
-      catch(err){ console.warn('Runway Town: could not use model', e.file, err); }
-      done(); }, undefined, () => { console.warn('Runway Town: could not load model', e.file); done(); }))));
+      catch(err){ console.warn('Start a Business: could not use model', e.file, err); }
+      done(); }, undefined, () => { console.warn('Start a Business: could not load model', e.file); done(); }))));
   }).then(() => { if (modelCount()) applyModels(); }).catch(() => {});
 }
 // Drop a .glb from Blender onto the town to try it (kept until reload).
@@ -2418,14 +2400,14 @@ let webgl = typeof THREE !== 'undefined';
 if (webgl){ try { initWorld(); } catch(e){ webgl = false; } }
 if (!webgl){
   const d = document.createElement('div'); d.className = 'nogl';
-  d.innerHTML = `<div><p>Runway Town needs 3D graphics (WebGL), which this browser or device didn’t provide.</p><p style="margin-top:12px">Try a recent version of Chrome, Edge, Firefox or Safari, or another device.</p></div>`;
+  d.innerHTML = `<div><p>Start a Business needs 3D graphics (WebGL), which this browser or device didn’t provide.</p><p style="margin-top:12px">Try a recent version of Chrome, Edge, Firefox or Safari, or another device.</p></div>`;
   document.body.appendChild(d);
 } else {
   rebuildBusiness(); render(); loadModels();
   if (!DB.game || DB.game.status !== 'playing') showSetup();
   requestAnimationFrame(t => { last = t; frame(t); });
 }
-window.__town = {city:() => ({npcs, sitters, DOORS, weatherKind, lampGlows, skyline, setDay:v => { dayT = v; }, setWeather}), cam:() => ({yaw:camYaw, pitch:camPitch, pos:camera.position.clone()}), DB:() => DB, runMonth, chooseEvent, startGame, openPanel, closePanel, player:() => player, targets, MODELS, tryModelFile, slots:() => ({bldgs, bizSlot, people, trees, props}),
+window.__town = {city:() => ({npcs, sitters, DOORS, weatherKind, lampGlows, skyline, setDay:v => { dayT = v; }, setWeather}), cam:() => ({yaw:camYaw, pitch:camPitch, pos:camera.position.clone()}), DB:() => DB, runMonth, chooseEvent:answerEvent, startGame, openPanel, closePanel, openLesson, player:() => player, targets, MODELS, tryModelFile, slots:() => ({bldgs, bizSlot, people, trees, props}),
   interior:() => ({inside, iRoom, iPeople, iDyn, inTargets, iBounds, iObstacles}), enterInterior, exitInterior, streetPlaced, interact, near:() => nearTarget};
 })();
 </script>

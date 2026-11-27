@@ -1,0 +1,20 @@
+{
+  "waste": {"s": "excel", "t": "You often made more than you sold."},
+  "stockout": {"s": "budget", "t": "You often ran out of stock and missed sales."},
+  "overstock": {"s": "mgmtacct", "t": "Unsold stock tied up your cash."},
+  "capacity": {"s": "ops", "t": "Customers were turned away because you lacked capacity."},
+  "lowRunway": {"s": "budget", "t": "Your cash ran low, with less than three months of runway."},
+  "lowMargin": {"s": "unitecon", "t": "Your price barely covered the cost of each sale."},
+  "foodcost": {"s": "mgmtacct", "t": "Ingredient costs were above the usual 25–35% of sales."},
+  "labour": {"s": "lead", "t": "Wages were a high share of sales."},
+  "ltv": {"s": "saas", "t": "Customers were worth less than they cost to win."},
+  "churn": {"s": "product", "t": "Too many customers cancelled each month."},
+  "util": {"s": "ops", "t": "Your team was often idle."},
+  "overload": {"s": "lead", "t": "Your team was overloaded, which hurt quality."},
+  "rating": {"s": "marketing", "t": "Your store rating slipped below 3.9."},
+  "ar": {"s": "fsa", "t": "Unpaid invoices left you short of cash."},
+  "dilution": {"s": "fund", "t": "You gave away more than half the company."},
+  "debt": {"s": "corpfin", "t": "Loan repayments took a large share of your sales."},
+  "rival": {"s": "game", "t": "Your rival won customers on price."},
+  "pricing": {"s": "pricing", "t": "Fixed-price projects ran over."}
+}

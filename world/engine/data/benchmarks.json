@@ -1,0 +1,15 @@
+{
+  "food": "Benchmark: many cafés keep ingredient costs at about 25–35% of sales, and wages at about 25–35%.",
+  "margin": "Benchmark: independent coffee shops typically keep about 10–20% of sales as profit.",
+  "ltv": "Benchmark: LTV of at least 3× CAC is a common target; the median company reports about 2×.",
+  "churn": "Benchmark: small-business software often loses 3–7% of customers a month; enterprise software under 1%.",
+  "conv": "Benchmark: online stores typically turn about 1.5–3% of visitors into buyers.",
+  "roas": "Benchmark: online ads typically bring in about 3–4.5× what they cost.",
+  "util": "Benchmark: service firms averaged about 66% billable time in 2025; 75% is a common target.",
+  "loan": "Benchmark: small-business bank loans cost roughly 6–11% a year.",
+  "fail": "Benchmark: about 17–26% of restaurants close in their first year (not the often-quoted 90%).",
+  "cafeVal": "Benchmark: small cafés typically sell for about 2× a year’s owner earnings.",
+  "shopVal": "Benchmark: online stores typically sell for about 3.4× a year’s earnings.",
+  "agencyVal": "Benchmark: small service businesses typically sell for about 2.3–2.5× a year’s earnings.",
+  "saasVal": "Benchmark: private software companies typically sell for about 3–7× annual recurring revenue."
+}

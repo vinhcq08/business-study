@@ -1,8 +1,8 @@
 # business-study
 
-Two static pages, no build step: `index.html` (Business Skill Tree) and `world/index.html` (Runway Town, a business simulation played in a 3D town, Three.js r128). Classic Runway (`game/`) was removed. The user is learning business and building these for themselves. Write plainly; they are not a professional 3D artist or programmer.
+Two static pages: `index.html` (Business Skill Tree, no build step) and `world/index.html` (**Start a Business**, formerly Runway Town: a standalone business simulation played in a 3D town, Three.js r128, built from source by `tools/build_world.py`). The game is standalone (built-in lessons, no links to the Skill Tree) and is being kept ready for a later Roblox port (`docs/roblox-port.md`). Classic Runway (`game/`) was removed. The user is learning business and building these for themselves. Write plainly; they are not a professional 3D artist or programmer.
 
-## Current job: rebuild the Runway Town models in Blender
+## Current job: rebuild the game's town models in Blender
 
 The models are being rebuilt from scratch in a **bright, blocky, colourful** style. The user gives a reference (images, notes) for each model; build it in their open Blender through the Blender MCP tools, show them a viewport screenshot, change it from their feedback, then export it to the game.
 
@@ -53,4 +53,10 @@ Commit each approved model (.blend, .glb and manifest.json) with a short message
 
 ### Page code
 
-`world/index.html` and `index.html` are built single files. If you change them, keep the existing look unless asked, test in a browser, and do not break the shared save key `biz-skill-tree-v1`.
+- **Game page:** never edit `world/index.html` directly. Edit the sources and run `python3 tools/build_world.py`:
+  - `world/engine/engine.js`: the rules. Keep it pure: no DOM, `localStorage` or browser APIs, so it runs in Node and stays portable to Luau.
+  - `world/engine/data/*.json`: the game's data, inlined as `GAME_DATA`.
+  - `world/src/app.js`, `town.css`, `base.css`, `body.html`, `head.html`: screens, saving, lessons and the 3D town.
+- **Test the rules:** run `node tools/golden_test.js` after any engine or data change. If you changed the rules on purpose, re-record with `--update`, say so in the commit, and update `docs/roblox-port.md` if the engine's moves changed.
+- **Saves:** the game saves under `start-a-business-v1` (and migrates `runway-world-v1`). The Skill Tree's save key is `biz-skill-tree-v1`; don't break it. The game must not read or link to the Skill Tree.
+- **Look:** keep the existing look unless asked, and test in a browser (desktop and phone width).
