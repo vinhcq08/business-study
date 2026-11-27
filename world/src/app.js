@@ -1133,7 +1133,7 @@ const STREET_SPOTS = [
   ['street-lamp', -9.3, -9.3, 0], ['street-lamp', 9.3, -9.3, 0], ['street-lamp', -9.3, 9.3, Math.PI], ['street-lamp', 9.3, 9.3, Math.PI],
   ['street-lamp', -19, -30, Math.PI/2], ['street-lamp', 19, -30, -Math.PI/2], ['street-lamp', -19, 30, Math.PI/2], ['street-lamp', 19, 30, -Math.PI/2],
   ['traffic-light', 11.2, -11.2, 0], ['traffic-light', -11.2, 11.2, Math.PI], ['street-sign', -11.2, -11.2, 0], ['street-sign', 11.2, 11.2, Math.PI],
-  ['bus-stop', 8, 19.1, Math.PI], ['bin', -6.6, -6, 0], ['bin', 6.6, 6, Math.PI], ['planter', -8.5, -3, Math.PI/2], ['planter', 8.5, 3, -Math.PI/2],
+  ['bus-stop', 4.5, 19.1, Math.PI], ['bin', -6.6, -6, 0], ['bin', 6.6, 6, Math.PI], ['planter', -8.5, -3, Math.PI/2], ['planter', 8.5, 3, -Math.PI/2],
   ['bollard', -2.5, -9.4, 0], ['bollard', 2.5, -9.4, 0], ['hydrant', 7.5, -9.4, 0], ['mailbox', -7.5, 9.4, Math.PI], ['bike-rack', 4.5, 9.4, Math.PI]];
 const streetPlaced = [];
 function placeStreet(){
@@ -1235,14 +1235,16 @@ function makeLoiterers(){
   // people on benches and at the bus stop
   [[-4.6, -6], [5.4, 0], [-5.4, 6]].forEach(([x, z], i) => { const g = makePerson(SHIRTS[(i + 5) % SHIRTS.length], PANTS[(i + 1) % PANTS.length], C.skin[(i + 2) % 4], HAIRS[(i + 1) % HAIRS.length], 'townsperson', 40 + i);
     g.position.set(x, 0, z + 0.05); g.rotation.y = 0; sitters.push({g, seat:0.45}); });
-  [[6.4, 18.7], [8.9, 18.6], [10.3, 18.9]].forEach(([x, z], i) => { const g = makePerson(SHIRTS[(i + 2) % SHIRTS.length], PANTS[(i + 3) % PANTS.length], C.skin[(i + 3) % 4], HAIRS[(i + 4) % HAIRS.length], 'townsperson', 50 + i);
+  [[3.2, 18.7], [4.6, 18.6], [6.0, 18.9]].forEach(([x, z], i) => { const g = makePerson(SHIRTS[(i + 2) % SHIRTS.length], PANTS[(i + 3) % PANTS.length], C.skin[(i + 3) % 4], HAIRS[(i + 4) % HAIRS.length], 'townsperson', 50 + i);
     g.position.set(x, 0, z); g.rotation.y = Math.PI; sitters.push({g, seat:null}); });
 }
 function updateWalkers(dt){
   for (const w of npcs){
     if (w.hideUntil){ if (T < w.hideUntil) continue; w.hideUntil = 0; w.g.visible = true; }
     const tgt = w.door ? [w.door.x, w.door.z] : WALK.nodes[w.to], p = w.g.position, dx = tgt[0] - p.x, dz = tgt[1] - p.z, dist = Math.hypot(dx, dz), step = w.speed*dt;
-    if (dist > step){ p.x += dx/dist*step; p.z += dz/dist*step; w.g.rotation.y = Math.atan2(dx, dz); animatePerson(w.g, T*(w.speed/1.6) + w.t, true); continue; }
+    if (dist > step){ const nx = p.x + dx/dist*step, nz = p.z + dz/dist*step;
+      if (cars.some(c => (c.speed > 0.4 || c.blocker !== w.g) && nx > c.box.minX - 0.35 && nx < c.box.maxX + 0.35 && nz > c.box.minZ - 0.35 && nz < c.box.maxZ + 0.35) && (w.waited = (w.waited || 0) + dt) < 8){ animatePerson(w.g, 0, false); continue; }
+      w.waited = 0; p.x = nx; p.z = nz; w.g.rotation.y = Math.atan2(dx, dz); animatePerson(w.g, T*(w.speed/1.6) + w.t, true); continue; }
     p.x = tgt[0]; p.z = tgt[1];
     if (w.door){   // went inside: come out of another door a little later, then head for the nearest corner
       w.g.visible = false; w.hideUntil = T + 4 + Math.random()*10;
@@ -1263,7 +1265,7 @@ function updateWalkers(dt){
 }
 
 /* Day and night: a five-minute day. Lamps and windows light up after sunset. Menu can keep it daytime. */
-const SKY_DAY = new THREE.Color(0x8FD3FF), SKY_DUSK = new THREE.Color(0xFFB98A), SKY_NIGHT = new THREE.Color(0x1C2A4E), SKY_RAIN = new THREE.Color(0x9AAAB8);
+const SKY_DAY = new THREE.Color(0x8FD3FF), SKY_DUSK = new THREE.Color(0xFFB98A), SKY_NIGHT = new THREE.Color(0x2E4A7E), SKY_RAIN = new THREE.Color(0x9AAAB8);
 let glowTex = null;
 function glowTexture(){ if (glowTex) return glowTex; const cv = document.createElement('canvas'); cv.width = cv.height = 64; const x = cv.getContext('2d'), gr = x.createRadialGradient(32, 32, 2, 32, 32, 32);
   gr.addColorStop(0, 'rgba(255,240,190,1)'); gr.addColorStop(0.35, 'rgba(255,214,120,0.55)'); gr.addColorStop(1, 'rgba(255,200,100,0)'); x.fillStyle = gr; x.fillRect(0, 0, 64, 64); glowTex = new THREE.CanvasTexture(cv); return glowTex; }
@@ -1274,12 +1276,13 @@ function addLampGlow(o){
 function updateSky(dt){
   const g = DB.game, off = S().nightOff;
   dayT = (dayT + dt/300) % 1;
-  const f = 0.5 + 0.5*Math.cos((dayT - 0.5)*Math.PI*2), light = off ? 1 : Math.min(1, Math.max(0, (f - 0.18)/0.45));
+  const f = 0.5 + 0.5*Math.cos((dayT - 0.5)*Math.PI*2), light = off ? 1 : Math.min(1, Math.max(0, (f - 0.1)/0.42));
   const dusk = off ? 0 : Math.max(0, 1 - Math.abs(light - 0.45)/0.3)*0.55, wet = weatherKind === 'rain' ? 0.45 : weatherKind === 'snow' ? 0.25 : 0;
   const sky = SKY_NIGHT.clone().lerp(SKY_DAY, light).lerp(SKY_DUSK, dusk*(1 - wet)).lerp(SKY_RAIN, wet*light);
   scene.background.copy(sky); scene.fog.color.copy(sky);
-  townHemi.intensity = 0.28 + 0.32*light - wet*0.08; townHemi.color.setHex(light > 0.3 ? 0xFFFFFF : 0x9DB3FF);
-  townSun.intensity = 0.1 + 0.42*light*(1 - wet*0.5); townSun.color.copy(new THREE.Color(0xFFF6E5).lerp(new THREE.Color(0xFF9A5C), dusk));
+  // A city never gets truly dark: street and window light keep a soft bluish glow at night, with moonlight.
+  townHemi.intensity = 0.5 + 0.1*light - wet*0.05; townHemi.color.copy(new THREE.Color(0xC4D2FF).lerp(new THREE.Color(0xFFFFFF), light));
+  townSun.intensity = 0.24 + 0.28*light*(1 - wet*0.5); townSun.color.copy(new THREE.Color(0xCFDCFF).lerp(new THREE.Color(0xFFF6E5), light).lerp(new THREE.Color(0xFF9A5C), dusk));
   const n = 1 - light, glow = Math.max(0, (n - 0.35)/0.65);
   lampGlows.forEach(s => { s.material.opacity = glow; s.visible = glow > 0.01; });
   const em = new THREE.Color(0xFFCE6E).multiplyScalar(glow*0.85);
@@ -1421,7 +1424,7 @@ function placePark(){
 }
 
 /* ---------- Traffic: cars, taxis and vans drive the right-hand lanes ---------- */
-const NODE_C = [-45, -15, 15, 45], LANE = 1.6, HALF = 5;
+const NODE_C = [-45, -15, 15, 45], LANE = 1.75, HALF = 5, STOP_GAP = 1.5;
 const LIGHTS = new Set(['-15,-15', '15,-15', '-15,15', '15,15']);
 const BUS_ROUTE = [[-15, 15], [15, 15], [15, -15], [-15, -15]];
 const CAR_COLS = [0xE74C3C, 0x3A86FF, 0x2ECC71, 0x9B59B6, 0xFF6B5A, 0xF5F5F5, 0x1F2430, 0x7CC8FF];
@@ -1455,10 +1458,11 @@ function makeTraffic(){
   addCar({from:BUS_ROUTE[0], to:BUS_ROUTE[1], s:2, color:0x3A86FF, bus:true, route:1});
 }
 function addCar(o){
-  const c = Object.assign({phase:'road', speed:0, max:o.bus ? 5.5 : 7 + (o.variant % 3)*0.8, len:o.bus ? 10.2 : 4.3, wait:0, dressed:null}, o);
+  const c = Object.assign({phase:'road', speed:0, max:o.bus ? 5.5 : 7 + (o.variant % 3)*0.8, len:o.bus ? 10.2 : 4.3, dressed:null, holding:null}, o);
   c.path = roadPath(c.from, c.to); c.grp = new THREE.Group(); scene.add(c.grp);
   c.box = {minX:0, maxX:0, minZ:0, maxZ:0, on:true}; obstacles.push(c.box);
-  cars.push(c); dressCar(c); placeCar(c, 0);
+  cars.push(c); dressCar(c);
+  const f = bez(c.path, c.s/c.path.len), d = dirOf(c.from, c.to); c.trail = [[f[0] - d[0]*(c.len + 1), f[1] - d[1]*(c.len + 1)], f]; c.dir = d; placeCar(c);
 }
 function vehicleModels(){ return (MODELS.vehicle || []).filter(m => !/city-bus|food-truck/.test(fileId(m))); }
 function dressCar(c){
@@ -1471,11 +1475,24 @@ function dressCar(c){
   c.wheels = []; obj.traverse(o => { if (/^wheel_/.test(o.name)) c.wheels.push(o); });
 }
 function dressCars(){ cars.forEach(dressCar); }
-function carPos(c){ const P = c.path, t = Math.min(1, c.s/(P.len || 1)); return {p:bez(P, t), d:bezDir(P, t)}; }
+/* Each vehicle drives its front axle along the lane, and the back axle follows exactly where
+   the front went (like a train), so long vehicles take corners naturally and straighten up
+   as soon as they're through. */
+const front = c => bez(c.path, Math.min(1, Math.max(0, c.s)/(c.path.len || 1)));
 function placeCar(c){
-  const {p, d} = carPos(c); c.grp.position.set(p[0], 0, p[1]); c.grp.rotation.y = Math.atan2(d[0], d[1]); c.dir = d;
-  const hx = Math.abs(d[0])*c.len/2 + Math.abs(d[1])*(c.wid || 1.8)/2, hz = Math.abs(d[1])*c.len/2 + Math.abs(d[0])*(c.wid || 1.8)/2;
-  Object.assign(c.box, {minX:p[0] - hx, maxX:p[0] + hx, minZ:p[1] - hz, maxZ:p[1] + hz});
+  const f = front(c), W = c.len*0.6, tr = c.trail, last = tr[tr.length - 1];
+  if (Math.hypot(f[0] - last[0], f[1] - last[1]) > 0.12) tr.push(f); else tr[tr.length - 1] = f;
+  let need = W, prev = f, rear = null;
+  for (let i = tr.length - 2; i >= 0; i--){ const q = tr[i], d = Math.hypot(prev[0] - q[0], prev[1] - q[1]);
+    if (d >= need){ const t = need/d; rear = [prev[0] + (q[0] - prev[0])*t, prev[1] + (q[1] - prev[1])*t]; if (i > 1) tr.splice(0, i - 1); break; }
+    need -= d; prev = q; }
+  if (!rear){ const d0 = c.dir; rear = [prev[0] - d0[0]*need, prev[1] - d0[1]*need]; }
+  const dx = f[0] - rear[0], dz = f[1] - rear[1], l = Math.hypot(dx, dz) || 1, d = [dx/l, dz/l];
+  // body centre: the axles sit 20% in from each end of the vehicle
+  const mx = (f[0] + rear[0])/2, mz = (f[1] + rear[1])/2;
+  c.grp.position.set(mx, 0, mz); c.grp.rotation.y = Math.atan2(d[0], d[1]); c.dir = d; c.mid = [mx, mz];
+  const w = (c.wid || 1.8)/2 + 0.15, hx = Math.abs(d[0])*c.len/2 + Math.abs(d[1])*w, hz = Math.abs(d[1])*c.len/2 + Math.abs(d[0])*w;
+  Object.assign(c.box, {minX:mx - hx, maxX:mx + hx, minZ:mz - hz, maxZ:mz + hz});
 }
 function lightGreen(node, d){
   if (!LIGHTS.has(nk(node))) return true;
@@ -1487,37 +1504,45 @@ function nextNode(c){
   if (c.bus){ c.route = (c.route + 1) % BUS_ROUTE.length; return BUS_ROUTE[c.route]; }
   const opts = nbrs(c.to).filter(n => nk(n) !== nk(c.from)); return opts[Math.floor(Math.random()*opts.length)] || c.from;
 }
-function blockedAhead(c, pos, dir){   // a person (or the player) in front of the car
-  const ppl = [player].concat(npcs.filter(w => w.g.visible).map(w => w.g));
-  let best = 1e9;
-  for (const g of ppl){ const rx = g.position.x - pos[0], rz = g.position.z - pos[1], along = rx*dir[0] + rz*dir[1], lat = Math.abs(rx*dir[1] - rz*dir[0]);
-    if (along > c.len/2 - 0.5 && along < c.len/2 + 7 && lat < 1.9) best = Math.min(best, along - c.len/2 - 1.2); }
+function blockedAhead(c){   // a person (or the player) in front of the vehicle
+  const ppl = [player].concat(npcs.filter(w => w.g.visible).map(w => w.g)), d = c.dir, m = c.mid, half = (c.wid || 1.8)/2 + 0.7;
+  let best = 1e9; c.blocker = null;
+  for (const g of ppl){ const rx = g.position.x - m[0], rz = g.position.z - m[1], along = rx*d[0] + rz*d[1], lat = Math.abs(rx*d[1] - rz*d[0]);
+    // ahead of the bumper, or beside the front half of the vehicle (where a turning car would sweep)
+    const near = (along > c.len/2 - 0.4 && along < c.len/2 + 6 && lat < half) || (along > -0.2 && along <= c.len/2 - 0.4 && lat < (c.wid || 1.8)/2 + 0.55);
+    if (near){ const room = Math.max(0, along - c.len/2 - 1.2); if (room < best){ best = room; c.blocker = g; } } }
   return best;
 }
 let busStopUntil = 0, busDwell = 0;
+const BUS_STOP_S = 15.5;   // where the bus's front axle stops beside the shelter
+const rearS = c => c.s - c.len*0.8;   // how far the back bumper is along the current road
 function updateTraffic(dt){
   for (const c of cars){
-    const {p, d} = carPos(c);
-    let room = c.path.len - c.s;                         // distance to the stop line (road) or the end of the turn
+    let room;                                   // how far the front bumper may still go
     if (c.phase === 'road'){
-      for (const o of cars) if (o !== c && o.phase === 'road' && nk(o.from) === nk(c.from) && nk(o.to) === nk(c.to) && o.s > c.s) room = Math.min(room, o.s - c.s - (o.len + c.len)/2 - 1.5);
-      if (c.bus && nk(c.from) === nk(BUS_ROUTE[0]) && !busDwell && !c.leftStop && c.s < 15) room = Math.min(room, 15 - c.s);
-      const atLine = c.path.len - c.s < 0.6;
-      if (atLine){
+      const line = c.path.len - c.len*0.2 - STOP_GAP;   // front axle position that leaves the bumper behind the stop line
+      room = c.go ? 99 : line - c.s;
+      for (const o of cars){ if (o === c || nk(o.from) !== nk(c.from) || nk(o.to) !== nk(c.to)) continue;
+        const oRear = o.phase === 'road' ? (o.s > c.s ? rearS(o) : null) : c.path.len + o.s - o.len*0.8;   // a car ahead, even one already turning
+        if (oRear !== null) room = Math.min(room, oRear - (c.s + c.len*0.2) - 1.5); }
+      if (c.bus && nk(c.from) === nk(BUS_ROUTE[0]) && !busDwell && !c.leftStop && c.s < BUS_STOP_S) room = Math.min(room, BUS_STOP_S - c.s);
+      if (!c.go && line - c.s < 0.6){
         if (!c.next) c.next = nextNode(c);
-        const free = !occupied[nk(c.to)], green = lightGreen(c.to, d);
-        const exitRoom = cars.every(o => o === c || !(o.phase === 'road' && nk(o.from) === nk(c.to) && nk(o.to) === nk(c.next) && o.s < c.len + 2));
-        if (free && green && exitRoom){ occupied[nk(c.to)] = c; c.phase = 'turn'; c.path = turnPath(c.from, c.to, c.next); c.s = 0; room = c.path.len + 10; }
+        const free = !occupied[nk(c.to)], green = lightGreen(c.to, c.dir);
+        const exitRoom = cars.every(o => o === c || !(nk(o.from) === nk(c.to) && nk(o.to) === nk(c.next) && (o.phase !== 'road' || rearS(o) < c.len + 1.5)));
+        if (free && green && exitRoom){ occupied[nk(c.to)] = c; c.holding = nk(c.to); c.go = true; room = 99; }
       }
-    } else room = c.path.len - c.s + 10;
-    room = Math.min(room, blockedAhead(c, p, d));
+    } else room = 99;
+    room = Math.min(room, blockedAhead(c));
     if (c.bus && busDwell){ busDwell -= dt; room = 0; if (busDwell <= 0){ busDwell = 0; c.leftStop = true; } }
     const want = Math.max(0, Math.min(c.max, Math.sqrt(Math.max(0, 2*6*Math.max(0, room)))));
     c.speed += clamp(want - c.speed, -12*dt, 4*dt); if (room <= 0.05) c.speed = Math.min(c.speed, 0);
     c.s += c.speed*dt;
-    if (c.bus && c.phase === 'road' && nk(c.from) === nk(BUS_ROUTE[0]) && !busDwell && !c.leftStop && c.s >= 14.8){ busDwell = 5; c.speed = 0; boardBus(); }
-    if (c.phase === 'road' && c.s > c.path.len) c.s = c.path.len;
-    if (c.phase === 'turn' && c.s >= c.path.len){ occupied[nk(c.to)] = null; c.from = c.to; c.to = c.next; c.next = null; c.phase = 'road'; c.path = roadPath(c.from, c.to); c.s = 0; c.leftStop = false; }
+    if (c.bus && c.phase === 'road' && nk(c.from) === nk(BUS_ROUTE[0]) && !busDwell && !c.leftStop && c.s >= BUS_STOP_S - 0.2){ busDwell = 5; c.speed = 0; boardBus(); }
+    if (c.phase === 'road' && c.go && c.s >= c.path.len){ c.s -= c.path.len; c.phase = 'turn'; c.go = false; c.path = turnPath(c.from, c.to, c.next); }
+    if (c.phase === 'turn' && c.s >= c.path.len){ c.s -= c.path.len; c.from = c.to; c.to = c.next; c.next = null; c.phase = 'road'; c.path = roadPath(c.from, c.to); c.leftStop = false; }
+    // the crossing is free again only once the back of the vehicle has left it
+    if (c.holding && c.phase === 'road' && !c.go && rearS(c) > 0.5){ if (occupied[c.holding] === c) occupied[c.holding] = null; c.holding = null; }
     placeCar(c);
     if (c.wheels) c.wheels.forEach(w => w.rotation.x += c.speed*dt/0.36);
   }
