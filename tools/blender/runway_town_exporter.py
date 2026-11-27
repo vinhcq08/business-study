@@ -90,7 +90,8 @@ ROLES = {
               + [("rival:" + k, "Rival: " + n, "The rival that opens nearby") for k, n in BUSINESSES]
               + [("kiosk", "Newspaper stand", ""), ("bank", "Bank", ""), ("library", "Library", ""),
                  ("investors", "Investors' tower", ""), ("house", "House", "Six houses; recoloured with swap_wall and swap_roof"),
-                 ("filler", "Neighbour building (named by file)", "Fills the town's spare plots; exported as filler:<file name>")],
+                 ("filler", "Neighbour building (named by file)", "Fills the town's spare plots; exported as filler:<file name>"),
+                 ("skyline", "Skyline building (named by file)", "Distant background block beyond the outer roads; exported as skyline:<file name>")],
     "vehicle": [("vehicle", "Vehicle (named by file)", "Drives the roads; exported as vehicle:<file name>")],
     "prop": [("tree", "Tree", "Leaves use swap_leaves for seasons"), ("bench", "Bench", ""),
              ("crate", "Crate", "Stock crates for the online store"),
@@ -118,7 +119,7 @@ def hex_to_linear(hx):
 
 def full_role(role, name):
     """Furniture and street pieces are identified by file name, e.g. furniture:cafe-table, street:bin."""
-    return role + ":" + name if role in ("furniture", "street", "vehicle", "filler") else role
+    return role + ":" + name if role in ("furniture", "street", "vehicle", "filler", "skyline") else role
 
 
 def default_name(role):
@@ -130,6 +131,8 @@ def default_name(role):
         return "hatchback"
     if role == "filler":
         return "apartment-block"
+    if role == "skyline":
+        return "skyline-tower"
     base = role.replace(":", "-")
     if role.startswith("business:"):
         base = role.split(":")[1] + "-exterior"
@@ -447,6 +450,8 @@ def check_objects(context, objs, mtype, role, name):
             warn("Name the wheels wheel_FL, wheel_FR, wheel_RL, wheel_RR (origin at the axle) so the game can spin them.")
         if size.x > size.y:
             err("The vehicle is wider than it is long. Its front must face -Y, so it runs along the Y axis.")
+    if role == "skyline" and tris > 400:
+        warn("Skyline buildings are seen from far away and repeated many times: keep them under 400 triangles.")
     if role == "filler" and max(size.x, size.y) > 9.2:
         warn("Neighbour buildings must fit a 9 x 8 m plot (front 9 m wide).")
     if role == "tree" and "swap_leaves" not in mats:

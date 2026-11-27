@@ -1,4 +1,4 @@
-# Model tasks, round 3: a living city
+# Model tasks, round 3: a living city (superseded by `model-tasks-4.md`, which includes everything here)
 
 The town now has a grid of streets, a skyline, people walking between doors, day and night, and seasonal weather. What it still lacks is **traffic** and **neighbours**: the spare plots are filled with plain code-built stand-in blocks, and nothing drives on the roads. This round builds the models for both. Follow `CLAUDE.md` for every rule not repeated here.
 
