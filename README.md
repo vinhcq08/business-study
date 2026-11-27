@@ -53,6 +53,7 @@ On GitHub Pages, the game reads which subjects you have marked done in the Skill
 
 A 3D town built on the same Runway engine, numbers, levels and events. Walk around and run your business from inside the world:
 
+- **The town is a grid** of 10 m road tiles: a 3 × 3 set of blocks with the square in the middle, your business across the crossing to the north, the bank and the rival to the west and east, and the library and investors' tower to the south.
 - **Your business** is a building on the main street. Customers queue at the door, the online store's stock piles up outside, a rival opens across the street from Level III, and a second location appears when you expand. Step inside to make decisions and run the month.
 - **The newspaper stand** prints *The Runway Ledger*: your statements, key numbers, what people in town are saying, and why things happened.
 - **The bank** (Level IV+) arranges loans. **The investors' tower** (Level V+) makes offers. **The library** tracks your study progress, shared with the Skill Tree on GitHub Pages.
@@ -86,7 +87,7 @@ The rules (scale, facing, names, budgets) are section 13 of the game design docu
 | `tree`, `bench`, `crate` | Props | `swap_leaves` follows the seasons. |
 | `interior:cafe` … `interior:agency` | The room you walk into | `wall_front` and `ceiling` are hidden; numbered slot markers and `station_*` markers; `rt_level` unlocks by level. |
 | `staff:<business>`, `furniture:<name>` | Staff and furniture placed in the room | Furniture carries its own `seat_*` or `stock_*` markers. |
-| `street:<name>` | Lamps, bins, bus stop and other street pieces | Placed around the square. Road tiles are exported but not used yet. |
+| `street:<name>` | Lamps, bins, bus stop and other street pieces | Placed around the square. Road tiles (`road-straight`, `road-crosswalk`, `road-intersection`) build the street grid. |
 
 ## Privacy
 
