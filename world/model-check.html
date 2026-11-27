@@ -166,10 +166,10 @@ const ROLES = {
   building:BIZ.map(([k, n]) => ['business:' + k, 'Business: ' + n]).concat(BIZ.map(([k, n]) => ['rival:' + k, 'Rival: ' + n]),
     [['kiosk', 'Newspaper stand'], ['bank', 'Bank'], ['library', 'Library'], ['investors', 'Investors’ tower'], ['house', 'House'], ['filler', 'Neighbour building (named by file)'], ['skyline', 'Skyline building (named by file)']]),
   vehicle:[['vehicle', 'Vehicle (named by file)']],
-  prop:[['tree', 'Tree'], ['bench', 'Bench'], ['crate', 'Crate'], ['furniture', 'Furniture (named by file)'], ['street', 'Street piece (named by file)']],
+  prop:[['tree', 'Tree'], ['bench', 'Bench'], ['crate', 'Crate'], ['furniture', 'Furniture (named by file)'], ['street', 'Street piece (named by file)'], ['extra', 'People extra (named by file)']],
   interior:BIZ.map(([k, n]) => ['interior:' + k, 'Interior: ' + n]),
 };
-const typeOfRole = r => /^vehicle/.test(r || '') ? 'vehicle' : /^(filler|skyline)/.test(r || '') ? 'building' : /^(furniture|street)/.test(r || '') ? 'prop' : (Object.keys(ROLES).find(t => ROLES[t].some(x => x[0] === r)) || null);
+const typeOfRole = r => /^vehicle/.test(r || '') ? 'vehicle' : /^(filler|skyline)/.test(r || '') ? 'building' : /^(furniture|street|extra)/.test(r || '') ? 'prop' : (Object.keys(ROLES).find(t => ROLES[t].some(x => x[0] === r)) || null);
 function roleFromName(name){
   const n = name.toLowerCase().replace(/\.(glb|gltf)$/, '');
   let k = /^(?:business-)?(cafe|saas|shop|agency|idea)(?:-exterior)?$/.exec(n); if (k) return 'business:' + k[1];
@@ -211,7 +211,7 @@ function loadBuffer(buf, name){
     const extras = gl.scene.userData || {};
     const role = extras.rt_role || roleFromName(name) || null;
     const type = extras.rt_type && RULES[extras.rt_type] ? extras.rt_type : (role ? typeOfRole(role) : null) || guessType(gl.scene);
-    typeSel.value = type; fillRoles(type, /^(furniture|street|vehicle|filler|skyline):/.test(role || '') ? role.split(':')[0] : role);
+    typeSel.value = type; fillRoles(type, /^(furniture|street|vehicle|filler|skyline|extra):/.test(role || '') ? role.split(':')[0] : role);
     cur = {name, size:buf.byteLength, scene:gl.scene, extras, anims:gl.animations || [], roleKnown:!!role};
     runChecks(); show(gl.scene);
   }, err => {
@@ -271,16 +271,16 @@ function runChecks(){
   else add('warn', `File name ${cur.name} should be lowercase words joined by hyphens, for example cafe-exterior.glb.`);
   if (!cur.roleKnown) add('info', 'The file does not say what it replaces. Pick it above, or export with the Runway add-on so the town knows by itself.');
   if (type !== typeOfRole(role)) add('warn', 'The role does not match the type.');
-  const fullRole = ['furniture', 'street', 'vehicle', 'filler', 'skyline'].includes(role) ? role + ':' + cur.name.replace(/\.glb$/i, '') : role;
+  const fullRole = ['furniture', 'street', 'vehicle', 'filler', 'skyline', 'extra'].includes(role) ? role + ':' + cur.name.replace(/\.glb$/i, '') : role;
 
   if (meshes.length){
     const t = stats.tris;
     if (t <= R.tris) add('ok', `${fmt(t)} triangles, within the ${fmt(R.tris)} budget.`);
     else add(t <= R.tris*1.5 ? 'warn' : 'error', `${fmt(t)} triangles, over the ${fmt(R.tris)} budget. Remove hidden faces or extra bevels.`);
-    const [h0, h1] = R.h;
+    const [h0, h1] = role === 'skyline' ? [8, 120] : R.h;
     if (size.y >= h0 && size.y <= h1) add('ok', `Height ${size.y.toFixed(2)} m (a ${R.label.toLowerCase()} should be ${h0}–${h1} m).`);
     else add('error', `Height ${size.y.toFixed(2)} m, expected ${h0}–${h1} m. Check that 1 Blender unit is 1 metre and the scale is applied.`);
-    if (Math.max(size.x, size.z) > R.w) add('warn', `Footprint ${size.x.toFixed(1)} × ${size.z.toFixed(1)} m is wider than ${R.w} m.`);
+    if (Math.max(size.x, size.z) > (role === 'skyline' ? 30 : R.w)) add('warn', `Footprint ${size.x.toFixed(1)} × ${size.z.toFixed(1)} m is wider than ${R.w} m.`);
     if (Math.abs(box.min.y) <= 0.05) add('ok', 'Stands on the ground: its base is at 0 m.');
     else add('error', `The base is at ${box.min.y.toFixed(2)} m, so it will ${box.min.y > 0 ? 'float' : 'sink into the ground'}. Put the origin at the base and the base at Z = 0 in Blender.`);
     const c = box.getCenter(new THREE.Vector3()), tol = Math.max(0.15, 0.2*Math.max(size.x, size.z));
@@ -319,7 +319,7 @@ function runChecks(){
     if (!names.some(n => ['swap_shirt', 'swap_pants', 'swap_skin', 'swap_hair'].includes(n))) add('warn', 'No swap_shirt, swap_pants, swap_skin or swap_hair, so every townsperson will look the same.');
     else add('ok', 'Uses swap materials, so each townsperson gets their own colours.');
   }
-  if (type === 'building'){
+  if (type === 'building' && role !== 'skyline'){
     if (!door) add('error', 'No door marker. Add an empty named door where people walk in.');
     if (!markers.sign) add('warn', 'No sign marker. The town will hang the name sign on the front wall.');
     else { const front = cols.length ? Math.max(...cols.map(o => new THREE.Box3().setFromObject(o).max.z)) : box.max.z;

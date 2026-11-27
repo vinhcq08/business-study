@@ -71,6 +71,8 @@ RULES = {
     "vehicle": {"folder": "vehicles", "tris": 800, "mats": 6, "height": (1.0, 4.5), "width": 12.0},
     "interior": {"folder": "interiors", "tris": 5000, "mats": 12, "height": (2.0, 8.0), "width": 20.0},
 }
+# Skyline buildings are tall and seen from far away: their own size limits.
+SKYLINE_RULE = {"height": (8.0, 120.0), "width": 30.0}
 PERSON_PARTS = ["head", "body", "arm_L", "arm_R", "leg_L", "leg_R"]
 MARKERS = ["door", "sign", "counter", "queue_start", "stock_spot", "seat_1", "seat_2"]
 # Interior markers: numbered slots the game fills to match the numbers, and stations the player walks to.
@@ -96,7 +98,8 @@ ROLES = {
     "prop": [("tree", "Tree", "Leaves use swap_leaves for seasons"), ("bench", "Bench", ""),
              ("crate", "Crate", "Stock crates for the online store"),
              ("furniture", "Furniture (named by file)", "Interior furniture; exported as furniture:<file name>"),
-             ("street", "Street piece (named by file)", "Lamps, bins, bus stop, road tiles; exported as street:<file name>")],
+             ("street", "Street piece (named by file)", "Lamps, bins, bus stop, road tiles; exported as street:<file name>"),
+             ("extra", "People extra (named by file)", "Dog, umbrella, shopping bag, coffee cup; exported as extra:<file name>")],
     "interior": [("interior:" + k, "Interior: " + n, "The room you walk into") for k, n in BUSINESSES],
 }
 TYPES = [("person", "Person", "A character, 2 m tall"), ("prop", "Prop", "Tree, bench, crate"),
@@ -119,7 +122,7 @@ def hex_to_linear(hx):
 
 def full_role(role, name):
     """Furniture and street pieces are identified by file name, e.g. furniture:cafe-table, street:bin."""
-    return role + ":" + name if role in ("furniture", "street", "vehicle", "filler", "skyline") else role
+    return role + ":" + name if role in ("furniture", "street", "vehicle", "filler", "skyline", "extra") else role
 
 
 def default_name(role):
@@ -133,6 +136,8 @@ def default_name(role):
         return "apartment-block"
     if role == "skyline":
         return "skyline-tower"
+    if role == "extra":
+        return "dog"
     base = role.replace(":", "-")
     if role.startswith("business:"):
         base = role.split(":")[1] + "-exterior"
@@ -278,7 +283,9 @@ def base_name(name):
 
 def check_objects(context, objs, mtype, role, name):
     """Returns (lines, stats). lines: list of (level, text), level is ok/warn/error/info."""
-    R = RULES[mtype]
+    R = dict(RULES[mtype])
+    if role == "skyline":
+        R.update(SKYLINE_RULE)
     lines = []
     ok = lambda t: lines.append(("ok", t))
     warn = lambda t: lines.append(("warn", t))
@@ -428,7 +435,7 @@ def check_objects(context, objs, mtype, role, name):
                 warn("%s is rotated. Apply rotation (Ctrl+A) so walking swings it forwards." % p)
         if not (mats & {"swap_shirt", "swap_pants", "swap_skin", "swap_hair"}):
             warn("No swap_shirt/pants/skin/hair materials, so every townsperson will look the same.")
-    if mtype == "building":
+    if mtype == "building" and role != "skyline":
         if door is None:
             err("No 'door' marker. Add one where people walk in (Add marker > door).")
         if "sign" not in markers:
@@ -454,6 +461,11 @@ def check_objects(context, objs, mtype, role, name):
         warn("Skyline buildings are seen from far away and repeated many times: keep them under 400 triangles.")
     if role == "filler" and max(size.x, size.y) > 9.2:
         warn("Neighbour buildings must fit a 9 x 8 m plot (front 9 m wide).")
+    if role == "extra":
+        legs = [n for n in ("leg_FL", "leg_FR", "leg_RL", "leg_RR") if n in names]
+        if legs and len(legs) < 4:
+            warn("A dog needs all four legs: leg_FL, leg_FR, leg_RL, leg_RR (origins at the hips).")
+        info("Hand-held props: put the origin at the grip, where the hand holds it.")
     if role == "tree" and "swap_leaves" not in mats:
         warn("No swap_leaves material, so the leaves will not change with the seasons.")
     if mtype == "interior":
