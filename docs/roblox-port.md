@@ -105,6 +105,19 @@ Also keep the **order** in which the engine draws random numbers. Each `R()` cal
 
 After a month, `g.last` holds the report: `rows` (income statement), `cf` (cash flow), `cust` (customers, sign-ups, orders or hours that month), `news` (the moment and event outcomes), `metrics`, `why` (the "what happened and why" cards, each with a subject `s` that opens a lesson), `voices` (customer comments). The balance sheet is `g.bs`.
 
+### Tycoon mode
+
+A Tycoon company is an ordinary game state with `mode = 'tycoon'`, a `name`, and no end date. It starts at Level I and climbs as milestones are reached, so each level runs exactly the Story rules.
+
+| Function | What it does |
+| --- | --- |
+| `newCompany({biz, name, settings})` | A new company at Level I (a coffee cart, side project, market stall or freelance desk) |
+| `milestoneList(g)`, `nextMilestone(g)` | The milestone ladder as plain data (label, target, done, next, what it opens) |
+| `upgrade(g)` | Opens Level II when `g.canUp` is set (it costs money every month, so the player chooses when) |
+| `rescueOptions(g)`, `rescue(g, 'loan' \| 'partner')` | When `g.status` is `'rescue'` (cash below zero): an 18% rescue loan or a partner who buys a share |
+
+After each month `stepMonth` calls `tycoonMonth(g)`: at most one milestone a month (new ones are listed in `g.msNew`, and unlocks are at least three months apart), Levels III–V switch on by themselves, and every 12 months `g.yr` holds the yearly review (profit, sales growth, cash runway, best month, one thing to fix). `goalKey(g)` returns the next milestone for the goal bar.
+
 ## 4. Checking the port
 
 `tools/golden_test.js` plays 25 games with fixed seeds and fixed decisions and records every month in `world/engine/golden.json`:
@@ -117,6 +130,8 @@ After a month, `g.last` holds the report: `rows` (income statement), `cf` (cash 
   - On Level V and Real life, expand at month 8.
   - If the month is refused, drop the loan and the expansion and run it again.
 - **What's recorded each month:** cash, profit, revenue, MRR, every balance-sheet line, the profitable-months streak, the next event, the status and (from Level V) the value of your share.
+
+`tools/tycoon_test.js` does the same for Tycoon: one company of each kind (seeds 9000–9003) for 120 months. Each month it opens Level II as soon as it's offered (and hires a little), orders shop stock at 1.1 × last month's sales, answers moments with the cautious choice and news with choice 0, and takes a rescue loan when cash runs out. It records every month in `world/engine/golden-tycoon.json`.
 
 To check a Luau port, run the same plan in Luau and compare with `golden.json` (to the cent). [Lune](https://github.com/lune-org/lune), a Luau runtime for the command line, can run the engine module outside Studio, so this can be an automatic check like the JavaScript one. If a game differs, the first month and number that differ show where to look.
 
@@ -150,12 +165,13 @@ The six-part people (`head`, `body`, `arm_L`, `arm_R`, `leg_L`, `leg_R`, each pi
 Save the same shape the web game keeps in `DB`, one key per player in a `DataStore` (for example `"player_" .. userId`):
 
 ```
-{ settings, progress, pick, met, read, game }
+{ settings, progress, pick, met, read, game, cur, story, slots }
 ```
 
 - `progress`: the highest level won per business
 - `met` and `read`: which lessons have opened, and which have been read
-- `game`: the current game state
+- `game`: the game being played; `cur` says which it is (`'story'` or a slot number 0–2)
+- `story`: a Story game waiting while a Tycoon company plays; `slots`: three Tycoon companies (the one being played is saved only as `game`)
 
 Save when a month runs and when the player leaves. Wrap every DataStore call in `pcall` and retry, because DataStore calls can fail.
 

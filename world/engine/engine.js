@@ -757,6 +757,7 @@ function stepMonth(g){
   // Loan decisions
   let loanIn = 0, repayAll = false;
   if (F.loan && d.loan && d.loan !== 'none'){
+    if (g.rescue && d.loan !== 'repay') return {ok:false, msg:'No new loans until the rescue loan is repaid'};
     if (d.loan === 'repay'){ if (bs.loan <= 0) warn = 'You have no loan to repay'; else if (bs.cash < bs.loan) return {ok:false, msg:'Not enough cash to repay the whole loan'}; else repayAll = true; }
     else { const amt = B.loanSizes[+d.loan.slice(1)], limit = loanLimit(g);
       if (bs.loan + amt > limit) return {ok:false, msg:`The bank will only lend up to ${money(limit)} in total right now`};
@@ -767,12 +768,13 @@ function stepMonth(g){
   // due later items
   g.later.filter(x => x.at <= g.month + 1).forEach(x => { charge(g, x.amt, x.label); g.news.push({t:x.label, p:x.text, s:'law'}); });
   g.later = g.later.filter(x => x.at > g.month + 1);
-  if (loanIn){ const r = B.loanRate/12, P = bs.loan + loanIn; g.loanPay = P*r/(1 - Math.pow(1 + r, -36)); }
+  const rate = g.rate || B.loanRate;
+  if (loanIn){ const r = rate/12, P = bs.loan + loanIn; g.loanPay = P*r/(1 - Math.pow(1 + r, -36)); }
   const o = g.level === 1 && B.basic ? B.basic(g, d, E, R, F) : B.model(g, d, E, R, F);
   // Accounting
   const dep = F.stmts ? bs.equip/60 : 0;
   const capex = (o.capex || 0) + g.capexNext; g.capexNext = 0;
-  const loanBal = bs.loan + loanIn, interest = loanBal*B.loanRate/12;
+  const loanBal = bs.loan + loanIn, interest = loanBal*rate/12;
   let principal = 0; if (repayAll) principal = loanBal; else if (loanBal > 0) principal = Math.min(loanBal, Math.max(0, g.loanPay - interest));
   const chargesSum = g.charges.reduce((s, x) => s + x.amt, 0);
   const ni = o.op - dep - chargesSum - interest;
@@ -786,7 +788,7 @@ function stepMonth(g){
   const open = Object.assign({}, bs);
   bs.cash += cfo + cfi + cff; bs.ar += dAR; bs.inv += dInv; bs.ap += dAP; bs.def += dDef; bs.equip += capex - dep;
   bs.loan = loanBal - principal; bs.capital += g.equityIn; bs.retained += ni;
-  if (bs.loan < 0.5){ bs.loan = 0; g.loanPay = 0; }
+  if (bs.loan < 0.5){ bs.loan = 0; g.loanPay = 0; if (g.rate){ g.rate = 0; g.rescue = false; } }
   const cf = {ni, dep, dAR, dInv, dAP, dDef, cfo, capex, loanIn, principal, equityIn:g.equityIn, open:open.cash, close:bs.cash};
   g.equityIn = 0; g.charges = [];
   if (o.next) Object.assign(g.st, o.next);
@@ -794,7 +796,7 @@ function stepMonth(g){
   if (d.loan) d.loan = 'none';
   // Engine-level teaching cards
   if (F.stmts) o.why.push({t:'Profit vs cash', p:`Profit ${money(ni)}, cash ${money(bs.cash - open.cash)}. See the cash flow tab for why.`, f:`cash change = profit + depreciation − more owed to you − more stock + more owed by you ± equipment, loans and investment`, s:'fsa'});
-  if (interest > 0) o.why.push({t:'Your bank loan', p:`You owe ${money(bs.loan)}. Paid ${money(interest)} interest (a cost) and ${money(principal)} back (not a cost).`, f:`interest = loan × ${pct(B.loanRate, 0)} ÷ 12`, s:'corpfin', b:BM.loan});
+  if (interest > 0) o.why.push({t:'Your bank loan', p:`You owe ${money(bs.loan)}. Paid ${money(interest)} interest (a cost) and ${money(principal)} back (not a cost).`, f:`interest = loan × ${pct(rate, 0)} ÷ 12`, s:'corpfin', b:BM.loan});
   g.month += 1; g.last = Object.assign(o, {ni, rows, cf, interest, news:g.news.slice()});
   // Flags for review
   (o.flags || []).forEach(f => g.flags[f] = (g.flags[f] || 0) + 1);
@@ -811,7 +813,8 @@ function stepMonth(g){
   if (F.equity){ const v = valuation(g); h.stake = stake(g); h.value = v.equity; }
   const k = goalKey(g);
   g.news = [];
-  if (bs.cash < 0){ g.status = 'lost'; g.reason = 'You ran out of cash.'; }
+  if (bs.cash < 0){ g.status = g.mode === 'tycoon' ? 'rescue' : 'lost'; g.reason = 'You ran out of cash.'; }
+  else if (g.mode === 'tycoon') tycoonMonth(g);
   else if (k.won) g.status = 'won';
   else if (g.month >= g.months){ g.status = 'lost'; g.reason = 'Time ran out before you reached the goal.'; }
   // Mods tick
@@ -821,6 +824,7 @@ function stepMonth(g){
 }
 function loanLimit(g){ const B = BIZ[g.biz], h = g.hist.slice(-3); const avg = h.length ? h.reduce((s, x) => s + x.rev, 0)/h.length : 0; return Math.max(B.loanMin || 10000, 4*avg); }
 function goalKey(g){
+  if (g.mode === 'tycoon') return tycoonGoal(g);
   const L = BIZ[g.biz].levels[g.level], o = g.last, bs = g.bs;
   switch (L.kind){
     case 'cash': return {label:'Cash goal', value:bs.cash, target:L.t, won: bs.cash >= L.t, money:true};
@@ -832,6 +836,109 @@ function goalKey(g){
   return {label:'', value:0, target:1};
 }
 
+
+/* =========================================================
+   Tycoon mode: one company, no end date
+   A Tycoon game is an ordinary game state with mode 'tycoon'. It starts at
+   Level I and climbs as milestones are reached, so it uses exactly the Story
+   rules for each level. Level II costs money every month, so it is offered
+   (g.canUp) and the player opens it with upgrade(); Levels III to V switch on
+   by themselves. Running out of cash pauses the game (status 'rescue').
+   ========================================================= */
+const TYCOON = {
+  first:{cafe:'Coffee cart', saas:'Side project', shop:'Market stall', agency:'Freelance desk'},
+  names:{cafe:'Bean There Co.', saas:'Pixel Apps', shop:'Bag Basket', agency:'Bright Studio'},
+  up2:{cafe:'Rent a café', saas:'Hire a team', shop:'Grow the store', agency:'Hire designers'},
+  cash2:{cafe:25000, saas:30000, shop:15000, agency:20000},
+  cust3:{cafe:4200, saas:90, shop:200, agency:300},
+  opens:{2:{cafe:['Café rent', 'Baristas', 'Marketing'], saas:['Developers', 'Marketing'], shop:['Ads', 'Packers'], agency:['Designers', 'Marketing', 'Studio rent']},
+    3:['Customer groups', 'Reputation', 'A rival', 'Town news'], 4:['Full statements', 'Bank loans', 'Seasons'], 5:['Investors', 'A second site']},
+  rescueRate:0.18,
+};
+const shortM = v => v >= 1e6 ? '$' + +(v/1e6).toFixed(1) + 'M' : '$' + Math.round(v/1000) + 'k';
+const MILES = [
+  {id:'profit', l:() => 'First profit', kind:'profit', t:() => 100, s:'finacct'},
+  {id:'level2', l:g => TYCOON.up2[g.biz], kind:'cash', t:g => TYCOON.cash2[g.biz]*g.env.cash, unlock:2, s:'unitecon'},
+  {id:'level3', l:() => 'Customers & rivals', kind:'cust', t:g => TYCOON.cust3[g.biz], need:2, unlock:3, s:'marketing'},
+  {id:'level4', l:() => 'Bank & statements', kind:'months', t:() => 12, need:3, unlock:4, s:'fsa'},
+  {id:'level5', l:() => 'Investors & growth', kind:'value', t:() => 250000, need:4, unlock:5, s:'valuation'},
+  {id:'worth1m', l:() => 'A $1M company', kind:'value', t:() => 1e6, need:5, s:'corpfin'}];
+/* The next milestone (after the list: company value targets that keep going up). */
+function nextMilestone(g){
+  const m = MILES.find(x => !g.ms.includes(x.id)); if (m) return m;
+  let t = 2e6, i = 0; while (g.ms.includes('worth' + t)) t = i++ % 2 ? t*2 : t*2.5;
+  return {id:'worth' + t, l:() => `A ${shortM(t)} company`, kind:'value', t:() => t, need:5, s:'valuation'};
+}
+function msValue(g, m){
+  switch (m.kind){
+    case 'profit': return g.last ? g.last.ni : 0;
+    case 'cash': return g.bs.cash;
+    case 'cust': return g.last ? g.last.cust || 0 : 0;
+    case 'months': return g.month;
+    case 'value': return valuation(g).equity;
+  }
+  return 0;
+}
+/* The milestone ladder as plain data for a window: [{id, l, done, next, unlock, opens, s, t, kind}]. */
+function milestoneList(g){
+  const nx = nextMilestone(g), list = MILES.concat(MILES.some(x => x.id === nx.id) ? [] : [nx]);
+  return list.map(m => ({id:m.id, l:m.l(g), done:g.ms.includes(m.id), next:m.id === nx.id, unlock:m.unlock || 0, s:m.s, t:m.t(g), kind:m.kind,
+    opens:m.unlock ? (m.unlock === 2 ? TYCOON.opens[2][g.biz] : TYCOON.opens[m.unlock]) : []}));
+}
+/* Start a company. settings as for newGame. */
+function newCompany({biz, name, settings}){
+  const g = newGame({biz, level:1, settings});
+  return Object.assign(g, {mode:'tycoon', name:name || TYCOON.names[biz], months:0, ms:[], msNew:[], canUp:0, fy:{}, yr:null});
+}
+/* Switch on the features of level L (keeps the business as it is). */
+function unlock(g, L){
+  const from = g.level; if (L <= from) return;
+  g.level = L;
+  if (g.biz === 'saas' && FEAT(L).seg && !FEAT(from).seg && g.st.all){ g.st.ind += g.st.all*0.6; g.st.smb += g.st.all*0.4; g.st.all = 0; }
+  decList(g).forEach(x => { const v = g.dec[x.id];
+    if (from === 1 || v === undefined || (typeof v === 'number' && x.min !== undefined && (v < x.min || v > x.max))) g.dec[x.id] = x.def; });
+}
+/* Open the offered Level II (rent a café, hire a team...). */
+function upgrade(g){ if (!g.canUp) return; unlock(g, g.canUp); g.news.push({t:TYCOON.up2[g.biz], p:'A bigger business: watch your monthly costs.', s:'unitecon'}); g.canUp = 0; }
+/* After each Tycoon month: milestones (at most one a month) and the yearly review. */
+function tycoonMonth(g){
+  const m = nextMilestone(g);
+  const settled = !m || !m.unlock || g.month - (g.msLast || 0) >= 3;    // at least 3 months between unlocks
+  if (m && settled && g.level >= (m.need || 1) && !g.canUp && msValue(g, m) >= m.t(g)){
+    g.ms.push(m.id); g.msNew.push(m.id); g.msLast = g.month;
+    if (m.unlock === 2) g.canUp = 2; else if (m.unlock) unlock(g, m.unlock);
+  }
+  if (g.month % 12 === 0){
+    const h = g.hist.slice(-12), p = g.hist.slice(-24, -12), sum = (a, k) => a.reduce((s, x) => s + x[k], 0);
+    const profit = sum(h, 'profit'), rev = sum(h, 'rev'), prev = sum(p, 'rev'), burn = profit < 0 ? -profit/12 : 0;
+    const fl = Object.keys(g.flags).filter(k => FLAGS[k] && g.flags[k] > (g.fy[k] || 0)).sort((a, b) => (g.flags[b] - (g.fy[b] || 0)) - (g.flags[a] - (g.fy[a] || 0)));
+    g.yr = {year:g.month/12, profit, rev, growth:p.length && prev > 0 ? rev/prev - 1 : null, cash:g.bs.cash, runway:burn ? g.bs.cash/burn : null,
+      best:Math.max(...h.map(x => x.profit)), fix:fl.length ? {k:fl[0], n:g.flags[fl[0]] - (g.fy[fl[0]] || 0)} : null};
+    g.fy = Object.assign({}, g.flags);
+  }
+}
+/* The goal bar in Tycoon: the next milestone. */
+function tycoonGoal(g){
+  if (g.canUp) return {label:'Ready: ' + TYCOON.up2[g.biz], value:1, target:1, won:false, ready:true};
+  const m = nextMilestone(g), t = m.t(g);
+  return {label:m.l(g), value:Math.max(0, msValue(g, m)), target:t, won:false, money:m.kind !== 'cust' && m.kind !== 'months', count:m.kind === 'cust' || m.kind === 'months', kind:m.kind, need:m.need || 1};
+}
+/* Rescue: when cash runs out. Returns {gap, amt, loan:{rate}, partner:{pct, pre}|null}. */
+function rescueOptions(g){
+  const cost = g.last ? Math.max(0, g.last.rev - g.last.ni) : 0, amt = Math.max(1000, Math.ceil((-g.bs.cash + Math.max(1000, cost))/1000)*1000);
+  const pre = Math.max(5000, 0.5*valuation(g).equity), share = amt/(pre + amt), own = ownership(g);
+  return {gap:-g.bs.cash, amt, loan:{rate:TYCOON.rescueRate}, partner: own*(1 - share) >= 0.25 ? {pct:share, pre} : null};
+}
+function rescue(g, how){
+  const o = rescueOptions(g), bs = g.bs;
+  if (how === 'loan'){ bs.loan += o.amt; bs.cash += o.amt; g.rate = TYCOON.rescueRate; g.rescue = true; const r = g.rate/12; g.loanPay = bs.loan*r/(1 - Math.pow(1 + r, -36));
+    g.news.push({t:'Rescue loan', p:`${money(o.amt)} at ${pct(g.rate, 0)} a year. No new loans until it’s repaid.`, s:'corpfin'}); }
+  else if (how === 'partner' && o.partner){ const share = o.partner.pct; g.inv.forEach(x => x.pct *= 1 - share); g.inv.push({amt:o.amt, pct:share, pref:o.amt, mult:1});
+    bs.cash += o.amt; bs.capital += o.amt; g.news.push({t:'A partner joined', p:`${money(o.amt)} for ${pct(share)} of the company.`, s:'fund'}); }
+  else return false;
+  g.status = 'playing'; g.reason = ''; g.rescues = (g.rescues || 0) + 1;
+  return true;
+}
 
 function equityMetrics(g){ const v = valuation(g); return [['Company value', money(v.equity)], ['Your ownership', pct(ownership(g), 0)], ['Your share is worth', money(stake(g))]]; }
 /* ===== End of the engine ===== */

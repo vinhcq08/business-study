@@ -584,3 +584,80 @@ body.live-on .d-last{visibility:hidden}
 }
 @media (max-width:640px){ .weekpill{left:max(12px, env(safe-area-inset-left, 0px));transform:none} .weekpill .ol-sm{font-size:14px} }
 @media (prefers-reduced-motion: reduce){ .coinpop{display:none} }
+
+/* Tycoon: start screen, new company, milestones, rescue, yearly review */
+.modal-box.k-start{width:min(1180px, 100%)}
+.modal-box.k-start > h1{text-align:center;transform:rotate(-2deg);margin:4px 0 6px}
+.modal-box.k-newco, .modal-box.k-mile, .modal-box.k-rescue, .modal-box.k-year{padding:0;width:min(900px, 100%);gap:0}
+.start{display:grid;grid-template-columns:1.35fr 1fr;gap:24px;align-items:start}
+.mcard{background:#F7F9FC;border:4px solid var(--ink);border-radius:30px;box-shadow:0 10px 0 var(--ink);overflow:hidden;display:flex;flex-direction:column}
+.mcard-h{display:flex;align-items:center;gap:14px;padding:16px 22px;border-bottom:4px solid var(--ink);background:linear-gradient(color-mix(in srgb, var(--c) 55%, #FFFFFF), var(--c))}
+.mcard-h > span{display:flex;flex-direction:column}
+.mcard-h b.ol{font:700 36px/1 var(--f-display)} .mcard-h small{font:700 16px var(--f-display)}
+.mcard-b{padding:18px 20px 20px;display:flex;flex-direction:column;gap:12px}
+.slot{position:relative}
+.slot-b{width:100%;text-align:left;background:#FFFFFF;border:3px solid var(--ink);border-radius:20px;box-shadow:0 5px 0 var(--ink);padding:10px 12px;display:flex;align-items:center;gap:12px;cursor:pointer;font:inherit;color:var(--ink)}
+.slot.here .slot-b{background:#FFF8DC;box-shadow:0 5px 0 var(--ink),0 0 0 4px var(--sun2)}
+.slot-t{flex:1;display:flex;flex-direction:column;gap:5px;min-width:0}
+.slot-t b{font:700 22px/1.1 var(--f-display);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.slot-go{font:700 18px var(--f-display);color:var(--blu2);padding:8px 10px;flex:none}
+.slot-go.primary{background:linear-gradient(var(--grn1),var(--grn2));border:3px solid var(--ink);border-radius:14px;box-shadow:0 3px 0 var(--ink);padding:8px 16px}
+.slot-go.primary .ol{font:700 19px var(--f-display)}
+.slot-x{position:absolute;top:-10px;right:-10px;width:32px;height:32px;border-radius:50%;background:#FFFFFF;border:3px solid var(--ink);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+.slot-x svg{stroke:var(--ink)} .slot-x.sure{background:var(--red, #E5483A)} .slot-x.sure svg{stroke:#FFFFFF}
+.newslot{background:repeating-linear-gradient(-45deg,#EEF1F6 0 12px,#E3E7EE 12px 24px);border:3px dashed var(--ink);border-radius:20px;padding:16px;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;font:700 21px var(--f-display);color:var(--ink)}
+.newslot svg{stroke:var(--ink)}
+.muted-note{font:800 13.5px var(--f-body);color:#4A5163}
+.sdots{display:flex;justify-content:space-between;gap:6px}
+.sdot{width:54px;height:54px;border-radius:50%;background:#E3E7EE;border:3px solid var(--ink);display:flex;align-items:center;justify-content:center;font:700 20px var(--f-display)}
+.sdot.on{background:linear-gradient(var(--grn1),var(--grn2))}
+.sdot .ol{font:700 20px var(--f-display);color:var(--ink);text-shadow:none}
+.mcard .card{display:flex;flex-direction:column;gap:4px} .mcard .card b{font:700 19px var(--f-display)} .mcard .card small{font:800 14px var(--f-body);color:#3A4152}
+.story-go{background:linear-gradient(#C58BE0,#8645B0)}
+.nc-h{font:700 21px var(--f-display);margin:0}
+.bizgrid.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+.nc-name{display:flex;flex-direction:column;gap:6px}
+.nc-name input{font:700 22px var(--f-display);border:3px solid var(--ink);border-radius:14px;padding:10px 14px;background:#FFFFFF;color:var(--ink)}
+.unlocks{display:flex;flex-direction:column;gap:6px}
+.nextms{display:flex;align-items:center;gap:10px;background:#EAF4FF;border:3px solid var(--ink);border-radius:16px;padding:10px 14px;font:800 15px var(--f-body)}
+.nextms b{font-weight:900}
+.mslist{display:flex;flex-direction:column;gap:10px}
+.msrow{display:flex;gap:12px;align-items:flex-start;background:#FFFFFF;border:3px solid var(--ink);border-radius:18px;padding:10px 12px}
+.msrow.next{background:#FFF8DC;box-shadow:0 0 0 4px var(--sun2)}
+.msrow.later{opacity:.72}
+.msrow.done{background:#F0FBF4}
+.ms-t{flex:1;display:flex;flex-direction:column;gap:5px;min-width:0}
+.ms-t b{font:700 19px var(--f-display)} .ms-t small{font:800 14px var(--f-body);color:#3A4152}
+.ms-bar{height:14px;border:2px solid var(--ink);border-radius:999px;background:#E3E7EE;overflow:hidden}
+.ms-bar i{display:block;height:100%;background:repeating-linear-gradient(-45deg,#4BE08A 0 10px,#2CC56C 10px 20px)}
+.upcard{display:flex;align-items:center;gap:12px;flex-direction:row}
+.upcard > span{flex:1;display:flex;flex-direction:column} .upcard b{font:700 20px var(--f-display)} .upcard small{font:800 14px var(--f-body);color:#3A4152}
+.choices.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+.choice:disabled{opacity:.55;cursor:not-allowed}
+.help.center{text-align:center}
+.fixnext{display:flex;align-items:center;gap:12px;flex-direction:row}
+.fixnext > span{flex:1;display:flex;flex-direction:column;gap:2px} .fixnext b{font:700 19px var(--f-display)} .fixnext small{font:800 13.5px var(--f-body);color:#4A5163}
+.d-goal.click{pointer-events:auto;cursor:pointer}
+.d-goal.click:hover .d-bar{filter:brightness(1.08)}
+.d-goal.ready .d-bar{box-shadow:0 0 0 3px #FFE27A}
+.d-cash.warn b{color:#FFD84A} .d-cash.danger b{color:#FF8A7A}
+.d-cash.warn .d-coin{background:linear-gradient(#FFD84A,#E0A000)} .d-cash.danger .d-coin{background:linear-gradient(#FF9A8C,#E5483A)}
+@media (max-width:860px){
+  .start{grid-template-columns:1fr}
+  .bizgrid.four{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .choices.three{grid-template-columns:1fr}
+}
+@media (max-width:640px){
+  .modal-box.k-start > h1{font-size:40px}
+  .mcard-h b.ol{font-size:28px}
+  .slot-t b{font-size:18px} .slot-go{font-size:15px}
+  .sdot{width:44px;height:44px}
+}
+.upcard > .ico, .fixnext > .ico{flex:none}
+.mcard .btn.primary.story-go{background:linear-gradient(#C58BE0,#8645B0)}
+.slot-t .chip{white-space:nowrap}
+@media (max-width:640px){
+  .slot-b{flex-wrap:wrap}
+  .slot-t{flex:1 1 calc(100% - 80px)}
+  .slot-go{flex:1 1 100%;text-align:center}
+}

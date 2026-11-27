@@ -17,8 +17,12 @@ try {
   for (const k of OLD_KEYS) if (!v) v = JSON.parse(localStorage.getItem(k) || 'null');
   if (v && typeof v === 'object') DB = Object.assign(DB, v, {settings:Object.assign(DB.settings, v.settings || {}), idea:Object.assign(DB.idea, v.idea || {}), met:v.met || {}, read:v.read || {}});
 } catch(e) {}
+if (!Array.isArray(DB.slots)) DB.slots = [null, null, null];   // Tycoon companies (see "Tycoon mode")
+if (DB.cur === undefined) DB.cur = 'story';
+if (typeof DB.cur === 'number') DB.slots[DB.cur] = DB.game; else DB.story = DB.game;
 let live = null;          // the month playing as a time-lapse (see "The live month")
-const save = () => { if (live) live.dirty = true; try { localStorage.setItem(KEY, JSON.stringify(DB)); } catch(e) {} };
+const save = () => { if (live) live.dirty = true;
+  try { localStorage.setItem(KEY, JSON.stringify(Object.assign({}, DB, {slots:DB.slots.map((x, i) => i === DB.cur ? null : x), story:DB.cur === 'story' ? null : DB.story}))); } catch(e) {} };
 const S = () => DB.settings;
 
 let tab = 'income', panel = null, modalKind = null;
@@ -27,7 +31,7 @@ function unlocked(b, n){ return S().free || n === 1 || prog(b) >= n - 1; }
 
 /* ---------- The engine's moves, plus saving and redrawing ---------- */
 function startGame(){
-  stopLive();
+  useSlot('story');
   DB.game = newGame({biz:DB.pick.biz, level:DB.pick.level, settings:S(), idea:DB.idea});
   meetLevel(DB.game); save(); go('play');
 }
@@ -64,7 +68,7 @@ function statementTabs(g){
 
 
 const CHECK_URL = /github\.io$/.test(location.hostname) ? 'model-check.html' : 'https://claude.ai/artifact/7SbgsLtiTZPxiqPTBjU82j';
-const bizName = () => { const g = DB.game; return !g ? 'Your business' : g.biz === 'idea' ? g.idea.name : BIZ[g.biz].name; };
+const bizName = () => { const g = DB.game; return !g ? 'Your business' : isTy(g) ? g.name : g.biz === 'idea' ? g.idea.name : BIZ[g.biz].name; };
 const RIVAL_NAME = {cafe:'Bean Counter Café', saas:'Rival Software Ltd', shop:'Discount Bags', agency:'Freelancers Hub', idea:'The competition'};
 
 /* ---------- Glue the shared engine calls ---------- */
@@ -76,8 +80,13 @@ function go(name){
 function render(){
   updateHud(); syncWorld();
   const g = DB.game;
+  if (isTy(g) && g.status === 'rescue'){ closePanel(); showRescue(); return; }
   if (g && g.status !== 'playing'){ closePanel(); showResult(); return; }
   if (panel) renderPanel();
+  if (isTy(g) && (!modalKind || ['mile', 'year', 'event'].includes(modalKind))){
+    if (g.msNew.length){ if (modalKind !== 'mile'){ modalKind = null; showMilestone(); } return; }
+    if (g.yr && g.yrSeen !== g.yr.year){ if (modalKind !== 'year'){ modalKind = null; showYear(); } return; }
+  }
   if (g && g.event) showEvent(); else if (modalKind === 'event') hideModal();
 }
 
@@ -89,12 +98,15 @@ function updateHud(){
   const g = DB.game, top = $('#dTop'), mon = $('#dMoney'), badge = $('#badgeReport');
   if (!g || g.status !== 'playing'){ top.innerHTML = `<span class="line ol">Start a Business</span>`; mon.innerHTML = ''; badge.hidden = true; prevCash = null; updatePlan(); return; }
   const F = FEAT(g.level), k = goalKey(g), p = Math.max(0, Math.min(1, k.value/k.target)), yr = Math.floor(g.month/12) + 1, small = innerWidth < 640;
-  const when = F.season || g.biz === 'idea' ? (small ? `${MONTHS[g.month % 12].slice(0, 3)} · Y${yr}` : `${MONTHS[g.month % 12]}, Year ${yr}`) : `Month ${g.month + 1} of ${g.months}`;
-  const goalTxt = small ? (k.count ? `${k.value}/${k.target}` : `${kfmt(k.value)} / ${kfmt(k.target)}`) : goalText(g, k);
+  const when = F.season || g.biz === 'idea' || isTy(g) ? (small ? `${MONTHS[g.month % 12].slice(0, 3)} · Y${yr}` : `${MONTHS[g.month % 12]}, Year ${yr}`) : `Month ${g.month + 1} of ${g.months}`;
+  const num = v => k.count ? int(v) : kfmt(v);
+  const goalTxt = k.ready ? k.label : isTy(g) ? (small ? `${num(k.value)} / ${num(k.target)}` : `Next: ${k.label} · ${num(k.value)} of ${num(k.target)}`)
+    : small ? (k.count ? `${k.value}/${k.target}` : `${kfmt(k.value)} / ${kfmt(k.target)}`) : goalText(g, k);
   top.innerHTML = `<span class="line ol">${esc(small ? when : bizName() + ' · ' + when)}</span>
-    <div class="d-goal" title="${esc(k.label)}"><span class="d-lvl shine ol">${['I','II','III','IV','V','R'][g.level - 1]}</span><div class="d-bar"><i style="width:${p*100}%"></i><span class="ol-sm">${esc(goalTxt)}</span></div></div>`;
+    <div class="d-goal${isTy(g) ? ' click' : ''}${k.ready ? ' ready' : ''}" title="${esc(k.label)}" ${isTy(g) ? 'role="button" tabindex="0" data-miles="1"' : ''}><span class="d-lvl shine ol">${['I','II','III','IV','V','R'][g.level - 1]}</span><div class="d-bar"><i style="width:${p*100}%"></i><span class="ol-sm">${esc(goalTxt)}</span></div></div>`;
   const cash = Math.round(g.bs.cash), ni = g.last ? g.last.ni : null;
-  mon.innerHTML = `<div class="d-cash${cash < 0 ? ' neg' : ''}" id="dCash"><span class="d-coin shine ol">$</span><b class="ol">${cash.toLocaleString('en-US')}</b></div>
+  const runway = ni !== null && ni < 0 ? g.bs.cash/-ni : 99;
+  mon.innerHTML = `<div class="d-cash${cash < 0 ? ' neg' : runway < 1 ? ' danger' : runway < 3 ? ' warn' : ''}" id="dCash" title="${runway < 3 ? 'Cash lasts about ' + Math.max(0, Math.floor(runway)) + ' month(s) at this rate' : ''}"><span class="d-coin shine ol">$</span><b class="ol">${cash.toLocaleString('en-US')}</b></div>
     ${ni === null ? '' : `<div class="d-last ${ni >= 0 ? 'up' : 'down'}"><i>${ni >= 0 ? '▲' : '▼'}</i><b class="ol-sm">${money(ni)} last month</b></div>`}`;
   if (prevCash !== null && cash !== prevCash){ const c = $('#dCash'), d = cash - prevCash, pop = document.createElement('span');
     pop.className = 'd-pop ol'; pop.style.color = d > 0 ? '#7CF0A8' : '#FF9A8C'; pop.textContent = (d > 0 ? '+' : '−') + kfmt(Math.abs(d)).replace('−', ''); c.appendChild(pop); c.classList.add('d-bump'); }
@@ -109,7 +121,8 @@ const SHEETS = {
   desk:    {title:() => 'All decisions', kicker:g => bizName() + ' · ' + cap1(whenLabel(g)), needGame:true, ic:['clip', 'blu']},
   news:    {title:() => 'The Town Ledger', kicker:g => g && g.last ? cap1(whenLabel(g, g.month - 1)) : '', needGame:true, ic:['news', 'red']},
   bank:    {title:() => 'Bank', kicker:g => pct(BIZ[g.biz].loanRate, 0) + ' a year · 3 years', needGame:true, need:F => F.loan, lock:'The bank lends from Level IV.', ic:['bank', 'grn']},
-  investor:{title:() => 'Investors’ tower', kicker:g => { const L = BIZ[g.biz].levels[g.level]; return L.kind === 'stake' ? 'Goal: your share worth ' + kfmt(L.t) : 'Funding'; }, needGame:true, need:F => F.equity, lock:'Investors meet you from Level V.', ic:['tower', 'pur']},
+  investor:{title:() => 'Investors’ tower', kicker:g => { const L = BIZ[g.biz].levels[g.level]; return L.kind === 'stake' && !isTy(g) ? 'Goal: your share worth ' + kfmt(L.t) : 'Funding'; }, needGame:true, need:F => F.equity, lock:'Investors meet you from Level V.', ic:['tower', 'pur']},
+  miles:   {title:() => 'Milestones', kicker:g => g ? g.name : '', needGame:true, ic:['trophy', 'sun']},
   library: {title:() => 'Business School', kicker:'', ic:['book', 'sun']},
   places:  {title:() => 'Places', kicker:'', ic:['map', 'blu']},
   menu:    {title:() => 'Menu', kicker:'', ic:['menu', 'pur']},
@@ -129,7 +142,7 @@ function renderPanel(){
   $('#sheetIcon').innerHTML = svgIc(ic[0], 32); $('#sheet').style.setProperty('--c', HEX[ic[1]]);
   const body = $('#sheetBody'), view = panel + (panel === 'library' ? ':' + (lessonView || '') : ''), top = body.dataset.panel === view ? body.scrollTop : 0; body.dataset.panel = view; $('#sheet').dataset.panel = panel;
   if (panel === 'news' && g && g.last && g.seenRep !== g.month){ g.seenRep = g.month; save(); updateHud(); }
-  body.innerHTML = ({desk:deskHtml, station:stationHtml, rival:rivalHtml, news:newsHtml, bank:bankHtml, investor:investorHtml, library:libraryHtml, places:placesHtml, menu:menuHtml})[panel](g);
+  body.innerHTML = ({desk:deskHtml, station:stationHtml, rival:rivalHtml, news:newsHtml, bank:bankHtml, investor:investorHtml, miles:milesHtml, library:libraryHtml, places:placesHtml, menu:menuHtml})[panel](g);
   body.scrollTop = top;
 }
 /* =========================================================
@@ -166,6 +179,10 @@ const IC = {
   storm:'<path d="M6 15a4 4 0 0 1 .5-8A6 6 0 0 1 18 8a3.5 3.5 0 0 1 0 7z"/><path d="M12 15l-2 4h3l-2 3" fill="none" stroke-width="2"/>',
   play:'<path d="M7 4l13 8-13 8z"/>',
   ff:'<path d="M4 5l8 7-8 7z"/><path d="M12 5l8 7-8 7z"/>',
+  city:'<path d="M3 21V10l5-3v14M8 21V5l6-3v19M14 21V9l7 3v9z"/>',
+  close:'<path d="M6 6l12 12M18 6L6 18" fill="none" stroke-width="3.2" stroke-linecap="round"/>',
+  plus:'<path d="M12 5v14M5 12h14" fill="none" stroke-width="3.2" stroke-linecap="round"/>',
+  flag:'<path d="M5 21V4l13 4-13 5"/>',
   clock:'<circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2" fill="none"/><path d="M9 2h6" fill="none"/>',
 };
 const svgIc = (k, size = 24) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="#FFFFFF" stroke="#1F2430" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true">${IC[k] || ''}</svg>`;
@@ -179,7 +196,7 @@ const tile = (l, v, k = '', sub = '') => `<div class="tile${k ? ' t-' + k : ''}"
 const chip = (t, k = '') => `<span class="chip${k ? ' t-' + k : ''}">${esc(t)}</span>`;
 const note = (html, k = 'blu') => `<div class="note t-${k}">${html}</div>`;
 const cap1 = s => s.charAt(0).toUpperCase() + s.slice(1);
-const whenLabel = (g, m = g.month) => FEAT(g.level).season || g.biz === 'idea' ? MONTHS[((m % 12) + 12) % 12] : 'month ' + (m + 1);
+const whenLabel = (g, m = g.month) => FEAT(g.level).season || g.biz === 'idea' || isTy(g) ? MONTHS[((m % 12) + 12) % 12] : 'month ' + (m + 1);
 const lessonBtn = (s, text) => SUBJ[s] ? `<button type="button" class="study" data-act="lesson" data-subj="${s}">${esc(text || 'Lesson: ' + SUBJ[s])}</button>` : '';
 function fmtVal(x, v){ return x.fmt === 'money2' ? money2(v) : x.fmt === 'money' ? money(v) : int(v); }
 function decStation(g, id){ const map = STATION_DECS[g.biz] || {}; for (const k in map) if (map[k].includes(id)) return k; return Object.keys(map)[0] || 'price'; }
@@ -282,11 +299,12 @@ function newsHtml(g){
 function bankHtml(g){
   const B = BIZ[g.biz], bs = g.bs, r = B.loanRate/12, lim = loanLimit(g), cur = g.dec.loan || 'none';
   const pay = P => P*r/(1 - Math.pow(1 + r, -36));
+  const rescueNote = g.rescue ? note(`Rescue loan at ${pct(g.rate, 0)}: repay it before borrowing again.`, 'red') : '';
   const opt = (v, big, small, dis) => `<button type="button" class="opt" data-seg="loan" data-v="${v}" aria-pressed="${cur === v}" ${dis ? 'disabled' : ''}><b>${esc(big)}</b><span>${esc(small)}</span></button>`;
   const opts = [opt('none', 'No loan', 'This month', false)]
     .concat(B.loanSizes.map((a, i) => { const over = bs.loan + a > lim; return opt('b' + i, money(a), over ? 'Over your limit' : money(pay(bs.loan + a)) + '/month', over); }))
     .concat([opt('repay', 'Repay all', bs.loan > 0 ? money(bs.loan) : 'No loan', bs.loan <= 0 || bs.cash < bs.loan)]);
-  return `<div class="tiles">${tile('You owe', money(bs.loan))}${tile('Monthly repayment', bs.loan > 0 ? money(g.loanPay) : 'None')}${tile('Most you can borrow', money(lim), '', '≈ 4 months of sales')}</div>
+  return `${rescueNote}<div class="tiles">${tile('You owe', money(bs.loan))}${tile('Monthly repayment', bs.loan > 0 ? money(g.loanPay) : 'None')}${tile('Most you can borrow', money(lim), '', '≈ 4 months of sales')}</div>
     <h3>Borrow</h3><div class="opts">${opts.join('')}</div>
     <div class="notes">${note('Interest is a cost. Repaying isn’t, but it uses cash.')}${note('Real loans: 6–11% a year.', 'sun')}</div>
     <div class="foot"><span class="foot-note">Happens when you run ${esc(cap1(whenLabel(g)))}. ${lessonBtn('corpfin', 'Lesson')}</span><button class="btn primary big" data-act="close">Done</button></div>`;
@@ -297,7 +315,7 @@ function investorHtml(g){
   const B = BIZ[g.biz], v = valuation(g), own = ownership(g), L = B.levels[g.level], stk = stake(g);
   const tiles = `<div class="tiles">${tile('Company value', money(v.equity), '', B.valMult ? `${B.valMult}× yearly profit + cash` : 'Revenue-based + cash')}
     <div class="tile pie-tile">${pie(own)}<span>You own</span><b>${pctS(own)}</b></div>
-    ${tile('Your share is worth', money(stk), '', L.kind === 'stake' ? pct(Math.min(1, stk/L.t), 0) + ' of goal' : '')}</div>`;
+    ${tile('Your share is worth', money(stk), '', L.kind === 'stake' && !isTy(g) ? pct(Math.min(1, stk/L.t), 0) + ' of goal' : '')}</div>`;
   if (g.offer){
     const o = g.offer, card = (k, name) => { const t = o[k], post = t.pre + o.amt, keep = own*(t.pre/post);
       return `<button type="button" class="offer" data-act="of-${k}"><span class="offer-top">${pie(keep, 1)}<span><b>${esc(name)}</b><small>Value ${esc(kfmt(t.pre))}</small></span></span>
@@ -342,21 +360,21 @@ function placesHtml(g){
 }
 function menuHtml(g){
   const st = S(), playing = g && g.status === 'playing';
-  return `<div class="row">${playing ? `<button class="btn primary" data-act="close">Continue</button>` : ''}<button class="btn ${playing ? '' : 'primary'}" data-act="new">New game</button></div>
+  return `<div class="row">${playing ? `<button class="btn primary" data-act="close">Continue</button>` : ''}<button class="btn ${playing ? '' : 'primary'}" data-act="new">Home</button>${isTy(g) ? `<button class="btn" data-act="miles">Milestones</button>` : ''}</div>
     <div class="field"><span class="lab">Difficulty (new games)</span><div class="seg" role="group" aria-label="Difficulty">${['easy', 'normal', 'hard'].map(k => `<button data-act="diff" data-diff="${k}" aria-pressed="${st.diff === k}">${DIFF[k].label}</button>`).join('')}</div></div>
     <div class="field"><label class="switch" for="m-free"><input type="checkbox" id="m-free" data-set="free" ${st.free ? 'checked' : ''}><span>Free play: every level open</span></label>
       <label class="switch" for="m-form"><input type="checkbox" id="m-form" data-set="formulas" ${st.formulas ? 'checked' : ''}><span>Hints and maths (new games)</span></label>
       <label class="switch" for="m-day"><input type="checkbox" id="m-day" data-set="nightOff" ${st.nightOff ? 'checked' : ''}><span>Always daytime</span></label></div>
     <div class="field"><span class="lab">Controls</span><div class="chips">${['WASD: walk', 'E: enter', 'Space: run month', 'Drag or Z/C: turn', 'X: reset view', 'Scroll: zoom', 'Esc: close'].map(c => chip(c)).join('')}</div></div>
     <div class="field"><span class="lab">3D models</span><p class="help">${esc(modelSummary())}</p><div class="row"><a class="btn" href="${esc(CHECK_URL)}" target="_blank" rel="noopener">Model check ↗</a></div></div>
-    ${playing ? `<div class="row"><button class="btn danger" data-act="abandon">Abandon game</button></div>` : ''}`;
+    ${playing ? `<div class="row"><button class="btn danger" data-act="abandon">${isTy(g) ? 'Close this company' : 'Abandon game'}</button></div>` : ''}`;
 }
 
 /* ---------- Modals: start screen, news card, results ---------- */
 const LV_SHORT = {1:'Basics', 2:'Costs', 3:'Customers', 4:'Finances', 5:'Growth', 6:'Real life'};
 function showSetup(){
   const pk = DB.pick; if (!BIZ_ORDER.includes(pk.biz)) pk.biz = 'cafe'; if (!unlocked(pk.biz, pk.level)) pk.level = 1;
-  const g = DB.game, L = BIZ[pk.biz].levels[pk.level], won = prog(pk.biz);
+  const g = storyGame(), L = BIZ[pk.biz].levels[pk.level], won = prog(pk.biz);
   const pips = b => `<span class="pips" aria-label="${prog(b) ? 'Won up to ' + lvName(prog(b)) : 'Not started'}">${[1, 2, 3, 4, 5, 6].map(n => `<i class="${prog(b) >= n ? 'on' : ''}"></i>`).join('')}</span>`;
   const biz = k => { const [ik, ic] = BIZ_IC[k]; return `<button type="button" class="bizc" data-biz="${k}" aria-pressed="${pk.biz === k}"><span class="bizc-top" style="--c:${HEX[ic]}">${svgIc(ik, 52)}</span><span class="bizc-b"><b>${esc(BIZ[k].name)}</b>${pips(k)}</span></button>`; };
   const node = n => { const ok = unlocked(pk.biz, n), done = won >= n, cur = pk.level === n;
@@ -372,7 +390,7 @@ function showSetup(){
           <div class="chips">${chip('Goal: ' + L.text, 'sun')}${chip(L.months + ' months', 'blu')}${chip(money(L.start) + ' to start', 'grn')}</div></div>
         <div class="foot"><button class="btn primary big" data-m="start">${svgIc('play', 26)}Start ${esc(L.title.replace(/^The /, 'the '))}</button>
           <button class="btn diffbtn" data-m="diff"><small>Difficulty</small>${esc(envFrom(S(), pk.level === 6).label)}</button>
-          ${g && g.status === 'playing' ? `<button class="btn" data-m="cont">Continue</button>` : ''}</div>
+          ${g && g.status === 'playing' ? `<button class="btn" data-m="cont">Continue</button>` : ''}<button class="btn" data-m="home">‹ Home</button></div>
       </div>
     </div>`);
 }
@@ -403,6 +421,127 @@ function showResult(){
         <div class="revisit"><span class="cap">Lessons to revisit</span>${review.length ? review.map(([f, n]) => `<button type="button" class="rv" data-m="lesson" data-subj="${FLAGS[f].s}">${icon('book', 'sun')}<span><b>${esc(SUBJ[FLAGS[f].s])}</b><small>${esc(FLAGS[f].t)} · ${n} month${n > 1 ? 's' : ''}</small></span></button>`).join('') : '<p class="muted">No weak spots this time.</p>'}</div></div>
       ${canNext ? note(`Unlocked: <b>${esc(next === 6 ? 'Real life' : lvName(next) + ' · ' + LEVELS[next - 1].name)}</b>`, 'grn') : ''}
       <div class="foot">${canNext ? `<button class="btn primary big" data-m="next">Play ${esc(lvName(next))}</button>` : ''}<button class="btn${canNext ? '' : ' primary big'}" data-m="again" title="Same luck and events">Replay</button><button class="btn" data-m="new">New game</button></div></div>`);
+}
+
+/* ---------- Tycoon mode: start screen, save slots, milestones, rescue, yearly review ----------
+   DB.game is always the game being played. Tycoon companies live in DB.slots
+   (three save slots) and a Story game waits in DB.story while a company plays;
+   DB.cur says which one DB.game is ('story' or a slot number). */
+const isTy = g => !!(g && g.mode === 'tycoon');
+function useSlot(cur){
+  stopLive();
+  if (DB.cur === 'story') DB.story = DB.game; else DB.slots[DB.cur] = DB.game;
+  DB.cur = cur; DB.game = cur === 'story' ? (DB.story || null) : DB.slots[cur];
+  save();
+}
+const storyGame = () => DB.cur === 'story' ? DB.game : DB.story;
+const yearOf = g => Math.floor(g.month/12) + 1;
+function showStart(){
+  const sg = storyGame(), best = Math.max(0, ...BIZ_ORDER.map(prog)), cols = ['sun', 'blu', 'pur'];
+  const slot = (c, i) => { if (!c) return '';
+    const [ik] = BIZ_IC[c.biz], here = DB.cur === i, v = c.hist.length ? valuation(c).equity : c.bs.cash;
+    return `<div class="slot${here ? ' here' : ''}"><button type="button" class="slot-b" data-m="slot" data-i="${i}">${icon(ik, cols[i], 'big')}
+      <span class="slot-t"><b>${esc(c.name)}</b><span class="chips">${chip('Year ' + yearOf(c), 'blu')}${chip('Level ' + ROMAN[c.level - 1], 'grn')}${chip('Worth ' + kfmt(v), 'sun')}</span></span>
+      <span class="slot-go${here ? ' primary' : ''}">${here ? '<span class="ol">Continue</span>' : 'Load'}</span></button>
+      <button type="button" class="slot-x" data-m="del" data-i="${i}" aria-label="Delete ${esc(c.name)}">${svgIc('close', 18)}</button></div>`; };
+  const free = DB.slots.findIndex(s => !s);
+  const dots = [1, 2, 3, 4, 5].map(n => `<span class="sdot${best >= n ? ' on' : ''}">${best >= n ? svgIc('check', 24) : `<span class="ol">${ROMAN[n - 1]}</span>`}</span>`).join('');
+  showModal('start', `<h1>Start a <em>Business</em></h1>
+    <div class="start">
+      <section class="mcard ty" aria-label="Tycoon"><div class="mcard-h" style="--c:${HEX.grn}">${svgIc('city', 40)}<span><b class="ol">Tycoon</b><small class="ol-sm">Grow a small start into an empire</small></span></div>
+        <div class="mcard-b">${DB.slots.map(slot).join('')}
+          ${free >= 0 ? `<button type="button" class="newslot" data-m="newco" data-i="${free}">${svgIc('plus', 26)}New company</button>` : `<p class="help">All 3 slots are full. Delete one for a new company.</p>`}
+          <small class="muted-note">3 save slots · no end date</small></div></section>
+      <section class="mcard st" aria-label="Story mode"><div class="mcard-h" style="--c:${HEX.pur}">${svgIc('book', 40)}<span><b class="ol">Story mode</b><small class="ol-sm">Learn the basics, level by level</small></span></div>
+        <div class="mcard-b"><div class="sdots">${dots}</div>
+          <div class="card"><b>${sg && sg.status === 'playing' ? esc(BIZ[sg.biz].name + ' · ' + lvName(sg.level)) : best ? 'Next: ' + esc(LEVELS[Math.min(4, best)].name) : 'Start with the basics'}</b><small>4 businesses × 5 levels, plus Real life.</small></div>
+          <button type="button" class="btn primary big story-go" data-m="story">${sg && sg.status === 'playing' ? 'Continue Story' : 'Play Story'}</button></div></section>
+    </div>`);
+}
+let newco = {slot:0, biz:'cafe'};
+function showNewCo(slot){
+  if (slot !== undefined) newco = {slot, biz:newco.biz};
+  const kind = k => { const [ik, ic] = BIZ_IC[k]; return `<button type="button" class="bizc" data-kind="${k}" aria-pressed="${newco.biz === k}"><span class="bizc-top" style="--c:${HEX[ic]}">${svgIc(ik, 52)}</span>
+    <span class="bizc-b"><b>${esc(TYCOON.first[k])}</b><span class="chips">${chip(money(BIZ[k].levels[1].start*envFrom(S()).cash) + ' to start', 'grn')}</span></span></button>`; };
+  showModal('newco', `<div class="mhead" style="--c:${HEX.grn}">${svgIc('city', 30)}<span class="ol">New company · Slot ${newco.slot + 1}</span></div>
+    <div class="mbody"><h3 class="nc-h">1. Start as</h3><div class="bizgrid four">${BIZ_ORDER.map(kind).join('')}</div>
+      <label class="nc-name"><span class="cap">2. Company name</span><input id="coName" maxlength="24" value="${esc(TYCOON.names[newco.biz])}"></label>
+      <div class="foot"><button class="btn primary big" data-m="costart">${svgIc('play', 26)}Start the company</button><button class="btn" data-m="home">Back</button></div></div>`);
+}
+function startCompany(){
+  const name = ($('#coName').value || '').trim().slice(0, 24) || TYCOON.names[newco.biz];
+  useSlot(newco.slot);
+  DB.game = DB.slots[newco.slot] = newCompany({biz:newco.biz, name, settings:Object.assign({}, S(), {seed:Math.floor(Math.random()*1e6)})});
+  meetLevel(DB.game); save(); go('play');
+}
+const MS_IC = {profit:['coin', 'sun'], cash:['coin', 'grn'], cust:['people', 'blu'], months:['clock', 'pur'], value:['trophy', 'sun']};
+function msTarget(g, m){
+  const L = custLabel(g).toLowerCase();
+  switch (m.kind){
+    case 'profit': return kfmt(m.t) + '+ profit in a month';
+    case 'cash': return kfmt(m.t) + ' in cash';
+    case 'cust': return int(m.t) + ' ' + L + ' in a month';
+    case 'months': return m.t + ' months in business';
+    case 'value': return 'Company worth ' + kfmt(m.t);
+  }
+  return '';
+}
+function showMilestone(){
+  const g = DB.game, id = g.msNew[0], m = milestoneList(g).find(x => x.id === id); if (!m || modalKind === 'mile') return;
+  const nx = milestoneList(g).find(x => x.next), offer = m.unlock === 2 && g.canUp;
+  showModal('mile', `<div class="mhead center" style="--c:${HEX.grn}"><div class="medal won">${svgIc('trophy', 60)}</div><h2 class="ol">Milestone!</h2><span class="ol-sm">${esc(g.name)} · ${esc(cap1(whenLabel(g, g.month - 1)))}</span></div>
+    <div class="mbody"><div class="ev-top">${icon(...(MS_IC[m.kind] || ['trophy', 'sun']), 'huge')}<span><h2>${esc(m.l)}</h2><p>${esc(msTarget(g, m))}</p></span></div>
+      ${m.opens.length ? `<div class="unlocks"><span class="cap">${offer ? 'Ready to open' : 'Now open'}</span><span class="chips">${m.opens.map(t => chip(t, 'grn')).join('')}</span></div>` : ''}
+      ${offer ? note('Costs more each month. Have 2–3 months of costs saved.', 'sun') : ''}
+      ${nx && !offer ? `<div class="nextms">${svgIc('flag', 22)}<span>Next: <b>${esc(nx.l)}</b> · ${esc(msTarget(g, nx))}</span></div>` : ''}
+      <div class="foot">${offer ? `<button class="btn primary big" data-m="up">${esc(TYCOON.up2[g.biz])} now</button><button class="btn" data-m="mdone">Later</button>`
+        : `<button class="btn primary big" data-m="mdone">Keep going</button>`}<button class="btn" data-m="lesson" data-subj="${m.s}">Lesson</button></div></div>`);
+}
+function milesHtml(g){
+  const list = milestoneList(g), k = goalKey(g);
+  const row = m => { const [ik, ic] = MS_IC[m.kind] || ['trophy', 'sun'];
+    const p = m.next && !k.ready ? Math.max(0, Math.min(1, k.value/k.target)) : 0;
+    return `<div class="msrow${m.done ? ' done' : m.next ? ' next' : ' later'}">${m.done ? `<span class="ico grn">${svgIc('check')}</span>` : m.next ? icon(ik, ic) : `<span class="ico ink">${svgIc('lock')}</span>`}
+      <span class="ms-t"><b>${esc(m.l)}</b><small>${esc(msTarget(g, m))}</small>${m.next && !k.ready ? `<span class="ms-bar"><i style="width:${p*100}%"></i></span>` : ''}
+      ${m.opens.length ? `<span class="chips">${m.opens.map(t => chip(t, m.done ? 'grn' : '')).join('')}</span>` : ''}</span></div>`; };
+  return `${g.canUp ? `<div class="card upcard">${icon('home', 'grn', 'big')}<span><b>${esc(TYCOON.up2[g.biz])}</b><small>Unlocked. Open it when you’re ready.</small></span><button class="btn primary" data-act="up">Open now</button></div>` : ''}
+    <div class="mslist">${list.map(row).join('')}</div>
+    <div class="foot"><button class="btn" data-act="close">Close</button></div>`;
+}
+function doUpgrade(){
+  const g = DB.game; if (!g || !g.canUp) return;
+  upgrade(g); if (g.msNew[0] === 'level2') g.msNew.shift();
+  meetLevel(g); save(); hideModal(); rebuildBusiness(); render(); openPanel('desk');
+}
+function showRescue(){
+  const g = DB.game; if (modalKind === 'rescue') return;
+  autoOn = false; updateLiveDock();
+  const o = rescueOptions(g), card = (how, ic, c, title, chips, dis) => `<button type="button" class="choice" data-m="rescue" data-how="${how}" ${dis ? 'disabled' : ''}><span class="ch-top">${icon(ic, c)}<b>${esc(title)}</b></span><span class="chips">${chips.map(([t, k]) => chip(t, k)).join('')}</span></button>`;
+  showModal('rescue', `<div class="mhead center" style="--c:${HEX.red}"><div class="medal lost">${svgIc('storm', 60)}</div><h2 class="ol">Out of cash</h2><span class="ol-sm">${esc(g.name)} · short by ${money(o.gap)}</span></div>
+    <div class="mbody"><div class="choices three">
+      ${card('loan', 'bank', 'grn', 'Rescue loan', [['+' + money(o.amt), 'grn'], [pct(o.loan.rate, 0) + ' a year', 'red'], ['No new loans till repaid', 'red']])}
+      ${o.partner ? card('partner', 'people', 'pur', 'Bring in a partner', [['+' + money(o.amt), 'grn'], ['They get ' + pct(o.partner.pct, 0), 'red']]) : card('partner', 'people', 'pur', 'Bring in a partner', [['No one will buy in', '']], true)}
+      ${card('close', 'storm', 'red', 'Close and start fresh', [['Company closes', 'red'], ['New small start', 'blu']])}</div>
+      <p class="help center">Lesson: cash runway. Keep 3 months of costs in the bank.</p></div>`);
+}
+function answerRescue(how, btn){
+  const g = DB.game;
+  if (how === 'close'){
+    if (!btn.dataset.sure){ btn.dataset.sure = '1'; btn.querySelector('b').textContent = 'Click again to close'; return; }
+    (DB.tyHist = DB.tyHist || []).push({name:g.name, biz:g.biz, months:g.month, ended:'closed'});
+    const slot = DB.cur; DB.slots[slot] = DB.game = null; DB.cur = 'story'; DB.game = DB.story || null; newco.biz = g.biz; save(); hideModal(); rebuildBusiness(); render(); showNewCo(slot); return;
+  }
+  if (!rescue(g, how)) return;
+  meetSubjects(['corpfin']); save(); hideModal(); render();
+}
+function showYear(){
+  const g = DB.game, y = g.yr; if (!y || modalKind === 'year') return;
+  const run = y.runway === null ? '12+ months' : y.runway > 12 ? '12+ months' : Math.max(0, Math.floor(y.runway)) + ' months', fx = y.fix && FLAGS[y.fix.k];
+  showModal('year', `<div class="mhead center" style="--c:${HEX.blu}"><div class="medal won">${svgIc('trophy', 60)}</div><h2 class="ol">Year ${y.year} review</h2><span class="ol-sm">${esc(g.name)}</span></div>
+    <div class="mbody"><div class="tiles four">${tile('Profit', money(y.profit), y.profit >= 0 ? 'grn' : 'red')}${tile('Sales growth', y.growth === null ? 'First year' : (y.growth >= 0 ? '+' : '') + pct(y.growth, 0), 'blu')}
+      ${tile('Cash runway', run, y.runway !== null && y.runway < 3 ? 'red' : 'sun')}${tile('Best month', money(y.best), 'pur')}</div>
+      ${fx ? `<div class="card fixnext">${icon('wrench', 'red')}<span><span class="cap">Fix next year</span><b>${esc(fx.t)}</b><small>${y.fix.n} month${y.fix.n > 1 ? 's' : ''} this year</small></span><button class="btn" data-m="lesson" data-subj="${fx.s}">Lesson</button></div>` : note('A clean year: nothing to fix.', 'grn')}
+      <div class="foot"><button class="btn primary big" data-m="ydone">Keep going</button></div></div>`);
 }
 
 /* ---------- HUD: goal in a few words, and the plan + Run button ---------- */
@@ -478,13 +617,17 @@ sheetBody.addEventListener('click', e => {
   if (a === 'lesson') return openLesson(t.dataset.subj);
   if (a === 'lessons'){ lessonView = null; renderPanel(); return; }
   if (a === 'close') return closePanel();
-  if (a === 'new'){ closePanel(); return showSetup(); }
+  if (a === 'new'){ closePanel(); return showStart(); }
+  if (a === 'miles') return openPanel('miles');
+  if (a === 'up') return doUpgrade();
   if (a === 'diff'){ S().diff = t.dataset.diff; save(); renderPanel(); return; }
-  if (a === 'abandon'){ if (t.dataset.sure){ DB.game = null; save(); closePanel(); rebuildBusiness(); render(); showSetup(); } else { t.dataset.sure = '1'; t.textContent = 'Click again to abandon'; } }
+  if (a === 'abandon'){ if (t.dataset.sure){ stopLive(); if (typeof DB.cur === 'number'){ DB.slots[DB.cur] = null; DB.cur = 'story'; DB.game = DB.story || null; } else DB.game = null; save(); closePanel(); rebuildBusiness(); render(); showStart(); } else { t.dataset.sure = '1'; t.textContent = 'Click again to abandon'; } }
 });
 $('#sheetClose').onclick = closePanel;
 sheetBody.addEventListener('change', () => updatePlan());
 $('#runBtn').onclick = () => doRun();
+$('#dTop').addEventListener('click', e => { if (e.target.closest('[data-miles]')) openPanel('miles'); });
+$('#dTop').addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.closest('[data-miles]')){ e.preventDefault(); e.stopPropagation(); openPanel('miles'); } });
 $('#plan').addEventListener('click', e => { if (e.target.closest('[data-plan]')) openPanel('desk'); });
 $('#bPlaces').onclick = () => openPanel('places');
 $('#bReport').onclick = () => openPanel('news');
@@ -602,7 +745,7 @@ function updateLiveCard(){
     $('#lvDay').textContent = autoWait > 0 && !panel && !modalKind ? 'Next month…' : 'Paused';
     $('#lvSales').textContent = o ? money(o.rev) : '—'; $('#lvCust').textContent = o ? int(o.cust || 0) : '—';
     const bars = $('#lvBars').children; for (let i = 0; i < 30; i++){ bars[i].style.height = '6%'; bars[i].className = ''; } return; }
-  const fs = FEAT(g.level).season || g.biz === 'idea';
+  const fs = FEAT(g.level).season || g.biz === 'idea' || isTy(g);
   $('#lvTitle').textContent = (fs ? mon : 'Month ' + (L.m0 + 1)) + ' so far';
   $('#lvDay').textContent = `Day ${Math.max(1, Math.ceil(L.day))} of 30`;
   $('#lvSales').textContent = money(liveVal(L, 'rev')); $('#lvCust').textContent = int(liveVal(L, 'cust'));
@@ -662,23 +805,36 @@ $('#live').addEventListener('click', e => {
 });
 
 /* ---------- Modals: setup, event, result ---------- */
+let lessonBack = null;
 function showModal(kind, html){ modalKind = kind; document.body.classList.add('modal-open'); $('#modalBox').className = 'modal-box k-' + kind; $('#modalBox').innerHTML = html; $('#modal').hidden = false; const b = $('#modalBox').querySelector('button'); if (b) b.focus(); }
 function hideModal(){ modalKind = null; document.body.classList.remove('modal-open'); $('#modal').hidden = true; }
 $('#modalBox').addEventListener('click', e => {
-  const t = e.target.closest('[data-m],[data-biz],[data-lvl]'); if (!t) return; const pk = DB.pick, g = DB.game;
+  const t = e.target.closest('[data-m],[data-biz],[data-lvl],[data-kind]'); if (!t) return; const pk = DB.pick, g = DB.game;
+  if (t.dataset.kind){ const nm = $('#coName'), was = nm && nm.value === TYCOON.names[newco.biz]; newco.biz = t.dataset.kind; modalKind = null; showNewCo(); if (!was && nm && nm.value) $('#coName').value = nm.value; return; }
   if (t.dataset.biz){ pk.biz = t.dataset.biz; if (!unlocked(pk.biz, pk.level)) pk.level = 1; save(); modalKind = null; showSetup(); return; }
   if (t.dataset.lvl){ pk.level = +t.dataset.lvl; save(); modalKind = null; showSetup(); return; }
   const m = t.dataset.m;
   if (m === 'start'){ hideModal(); startGame(); }
-  if (m === 'cont'){ hideModal(); render(); }
+  if (m === 'cont'){ useSlot('story'); hideModal(); rebuildBusiness(); render(); }
+  if (m === 'story'){ modalKind = null; showSetup(); }
+  if (m === 'home'){ modalKind = null; showStart(); }
+  if (m === 'newco'){ modalKind = null; showNewCo(+t.dataset.i); }
+  if (m === 'costart') startCompany();
+  if (m === 'slot'){ const i = +t.dataset.i; if (DB.cur !== i) useSlot(i); hideModal(); rebuildBusiness(); render(); }
+  if (m === 'del'){ const i = +t.dataset.i; if (!t.dataset.sure){ t.dataset.sure = '1'; t.classList.add('sure'); t.setAttribute('aria-label', 'Click again to delete'); toast('Click × again to delete'); return; }
+    if (DB.cur === i){ stopLive(); DB.cur = 'story'; DB.game = DB.story || null; rebuildBusiness(); render(); } DB.slots[i] = null; save(); modalKind = null; showStart(); }
+  if (m === 'up') doUpgrade();
+  if (m === 'mdone'){ g.msNew.shift(); save(); hideModal(); rebuildBusiness(); render(); }
+  if (m === 'ydone'){ g.yrSeen = g.yr.year; save(); hideModal(); render(); }
+  if (m === 'rescue') answerRescue(t.dataset.how, t);
   if (m === 'ev'){ hideModal(); answerEvent(g, +t.dataset.i); }
   if (m === 'mom') answerMoment(+t.dataset.i);
   if (m === 'next'){ DB.pick = {biz:g.biz, level:g.level + 1}; save(); modalKind = null; showSetup(); }
   if (m === 'again'){ DB.pick = {biz:g.biz, level:g.level}; S().seed = g.seed; save(); hideModal(); startGame(); }
   if (m === 'new'){ modalKind = null; showSetup(); }
   if (m === 'diff'){ const order = ['easy', 'normal', 'hard']; S().diff = order[(order.indexOf(S().diff) + 1) % 3]; save(); modalKind = null; showSetup(); }
-  if (m === 'lesson'){ const s = t.dataset.subj; markRead(s); showModal('lesson', lessonHtml(s) + `<div class="row"><button class="btn primary" data-m="back-result">Back to results</button></div>`); }
-  if (m === 'back-result'){ modalKind = null; showResult(); }
+  if (m === 'lesson'){ const s = t.dataset.subj, from = modalKind; lessonBack = from; markRead(s); showModal('lesson', lessonHtml(s) + `<div class="row"><button class="btn primary" data-m="back-result">${from === 'result' ? 'Back to results' : 'Back'}</button></div>`); }
+  if (m === 'back-result'){ modalKind = null; ({mile:showMilestone, year:showYear})[lessonBack] ? ({mile:showMilestone, year:showYear})[lessonBack]() : showResult(); }
 });
 
 /* =========================================================
@@ -838,7 +994,7 @@ function rebuildBusiness(){
   [bizSlot, rivalSlot, loc2Slot].forEach(clearSlot); bizSlot = rivalSlot = loc2Slot = null;
   for (let i = targets.length - 1; i >= 0; i--) if (['desk','rival','loc2'].includes(targets[i].id)) targets.splice(i, 1);
   const g = DB.game, look = g ? BIZ_LOOK[g.biz] : {color:0xDAD2C2, roofColor:0x8A8172, sign:['For rent', 'Start a business in Menu']};
-  const sign = g && g.biz === 'idea' ? [g.idea.name.slice(0, 22), 'My business'] : look.sign;
+  const sign = g && g.biz === 'idea' ? [g.idea.name.slice(0, 22), 'My business'] : isTy(g) ? [g.name.slice(0, 22), look.sign[1] || ''] : look.sign;
   bizSlot = makeBuilding(Object.assign({x:0, z:-26, w:11, d:9, h:look.h || 5.5, face:'s'}, look, {sign, role: g ? 'business:' + g.biz : 'business:empty'}));
   targets.push({id:'desk', name: g ? bizName() : 'the empty shop', door:bizSlot.door, r:3.2});
   if (g){ const rl = Object.assign({}, look, {color:0xC8B8A6, roofColor:0x6B6355, awning:look.awning ? 0x6B6355 : undefined, sign:[RIVAL_NAME[g.biz], 'Your rival']});
@@ -877,7 +1033,7 @@ function syncWorld(){
 
 /* Input */
 addEventListener('keydown', e => {
-  if (e.key === 'Escape'){ if (modalKind === 'setup' && DB.game && DB.game.status === 'playing'){ hideModal(); } else if (panel) closePanel(); return; }
+  if (e.key === 'Escape'){ if ((modalKind === 'setup' || modalKind === 'start' || modalKind === 'newco') && DB.game && DB.game.status === 'playing'){ hideModal(); } else if (panel) closePanel(); return; }
   const busy = panel || modalKind; const tag = (e.target.tagName || '').toLowerCase(); if (busy || tag === 'input' || tag === 'select' || tag === 'textarea') return;
   const k = e.key.toLowerCase();
   if (k === ' ' && DB.game && DB.game.status === 'playing'){ e.preventDefault(); doRun(); return; }
@@ -1766,9 +1922,9 @@ if (!webgl){
   document.body.appendChild(d);
 } else {
   rebuildBusiness(); render(); loadModels();
-  if (!DB.game || DB.game.status !== 'playing') showSetup();
+  if (!DB.game || (!isTy(DB.game) && DB.game.status !== 'playing')) showStart();
   requestAnimationFrame(t => { last = t; frame(t); });
 }
-window.__town = {city:() => ({npcs, sitters, DOORS, weatherKind, lampGlows, skyline, setDay:v => { dayT = v; }, setWeather}), cam:() => ({yaw:camYaw, pitch:camPitch, pos:camera.position.clone()}), DB:() => DB, runMonth, doRun, live:() => live, setSpeed, skipLive, answerMoment, showMoment, chooseEvent:answerEvent, startGame, openPanel, closePanel, openLesson, openStation, showEvent, showResult, showSetup, player:() => player, targets, MODELS, tryModelFile, slots:() => ({bldgs, bizSlot, people, trees, props}),
+window.__town = {city:() => ({npcs, sitters, DOORS, weatherKind, lampGlows, skyline, setDay:v => { dayT = v; }, setWeather}), cam:() => ({yaw:camYaw, pitch:camPitch, pos:camera.position.clone()}), DB:() => DB, runMonth, doRun, hideModal, showStart, showNewCo, useSlot, showRescue, showYear, showMilestone, doUpgrade, live:() => live, setSpeed, skipLive, answerMoment, showMoment, chooseEvent:answerEvent, startGame, openPanel, closePanel, openLesson, openStation, showEvent, showResult, showSetup, player:() => player, targets, MODELS, tryModelFile, slots:() => ({bldgs, bizSlot, people, trees, props}),
   interior:() => ({inside, iRoom, iPeople, iDyn, inTargets, iBounds, iObstacles}), enterInterior, exitInterior, streetPlaced, interact, near:() => nearTarget, traffic:() => ({cars, occupied, busDwell}), stepCity:(n, dt) => { for (let i = 0; i < n; i++){ T += dt; updateWalkers(dt); updateTraffic(dt); updateCompanions(dt); } }, view:(x, z, yaw, pitch, zm) => { player.position.set(x, 0, z); camYaw = yaw; camPitch = pitch; zoom = zm; camManual = T + 1e6; }, city4:() => ({parkOn, parkGroup, billboard, construction, foodTruck, skyModels, companions})};
 })();

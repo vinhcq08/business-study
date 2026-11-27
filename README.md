@@ -26,6 +26,9 @@ A map of 28 business subjects in 9 areas, arranged by what to learn first. Every
 
 A 3D business game: walk around a small town and run your business from inside the world, one month at a time.
 
+- **Two ways to play:** **Tycoon** (one company with no end date, three save slots) and **Story mode** (five short levels per business that teach the basics).
+- **Tycoon:** start as a coffee cart, side project, market stall or freelance desk. Milestones open the next level's features (renting a shop is your choice, since it costs money every month); the goal bar always shows the next one. Running out of cash brings a rescue card (an 18% loan, a partner, or closing and starting fresh), and every 12 months there's a yearly review.
+
 - **The town is a grid** of 10 m road tiles: a 3 × 3 set of blocks with the square in the middle, your business across the crossing to the north, the bank and the rival to the west and east, and the Business School and investors' tower to the south.
 - **Your business** is a building on the main street. Customers queue at the door, the online store's stock piles up outside, a rival opens across the street from Level III, and a second location appears when you expand. Step inside to make decisions and run the month.
 - **Walk to find things out.** Ask a customer queuing at your door (or sitting in your café) what they thought of last month. Walk past your rival to see their prices. Your monthly report only includes the rival's numbers for months when you went to look, and customer comments only once you've asked.
@@ -38,7 +41,7 @@ A 3D business game: walk around a small town and run your business from inside t
 - **Traffic:** cars, taxis and vans drive the right-hand lanes of the grid, wait at the traffic lights round the square and stop for anyone in the road. A bus runs a loop and stops for the people at the bus stop. A food truck is parked in the square.
 - **Street life:** a market stall, an ice-cream cart, café parasols, a newspaper box, an ATM by the bank, a phone booth and a parked bike. One neighbour plot is a pocket park with a fountain and a playground. The billboard shows your business while you spend on marketing, and at Levels V and Real life a building site waits on your second-location plot until you expand.
 - **People:** some townspeople walk dogs, carry shopping bags or coffee, and put up umbrellas in the rain.
-- **Running the month:** the green **Run** button (bottom right, or the space bar) runs the month with your current plan, shown just above it. Decisions are set at the stations inside your business, or all at once in the short **All decisions** list. The monthly report has three tabs: Summary, Statements and Why it happened (the maths is folded away until you ask for it).
+- **Running the month:** the green **Run** button (bottom right, or the space bar) plays the month as a short time-lapse with your current plan: days tick by, sales and customers count up, and sometimes a mid-month surprise pauses it for a quick choice. Speed: 1×, 2× or Auto (months keep coming until something needs you); Skip jumps ahead. Decisions are set at the stations inside your business, or all at once in the short **All decisions** list. The monthly report has three tabs: Summary, Statements and Why it happened (the maths is folded away until you ask for it).
 - **Controls:** WASD or arrow keys and E on a computer; an on-screen joystick and Enter button on a phone. The camera follows behind you as you walk; drag the view (or press Z and C) to turn it, X to put it back behind you, and it swings round to face a building when you stand at its door. The **Places** menu opens every building without walking.
 
 It uses Three.js (r128) from cdnjs and needs a browser with 3D graphics (WebGL).
@@ -113,7 +116,7 @@ Progress for both pages is saved in your own browser only (`localStorage`): the 
 - `index.html`: Business Skill Tree, one file with no build step
 - `world/index.html`: Start a Business, one built file (loads Three.js from cdnjs and its glTF loader from jsDelivr)
 - `world/engine/`, `world/src/`: the game's source (see "How the game is built")
-- `tools/build_world.py`, `tools/golden_test.js`: build the game page; test the rules
+- `tools/build_world.py`, `tools/golden_test.js`, `tools/tycoon_test.js`: build the game page; test the Story and Tycoon rules
 - `docs/roblox-port.md`: how to port the game to Roblox
 - `world/model-check.html`: model check page for .glb files
 - `world/models/`: Blender models and `manifest.json`, the list the town loads
