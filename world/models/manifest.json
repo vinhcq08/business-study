@@ -1,4 +1,373 @@
 {
   "version": 1,
-  "models": []
+  "models": [
+    {
+      "id": "avatar",
+      "file": "characters/avatar.glb",
+      "role": "avatar",
+      "type": "person",
+      "tris": 286,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "bank",
+      "file": "buildings/bank.glb",
+      "role": "bank",
+      "type": "building",
+      "tris": 1300,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "bench",
+      "file": "props/bench.glb",
+      "role": "bench",
+      "type": "prop",
+      "tris": 184,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "agency-exterior",
+      "file": "buildings/agency-exterior.glb",
+      "role": "business:agency",
+      "type": "building",
+      "tris": 908,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "cafe-exterior",
+      "file": "buildings/cafe-exterior.glb",
+      "role": "business:cafe",
+      "type": "building",
+      "tris": 1178,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "idea-exterior",
+      "file": "buildings/idea-exterior.glb",
+      "role": "business:idea",
+      "type": "building",
+      "tris": 916,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "saas-exterior",
+      "file": "buildings/saas-exterior.glb",
+      "role": "business:saas",
+      "type": "building",
+      "tris": 1076,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "shop-exterior",
+      "file": "buildings/shop-exterior.glb",
+      "role": "business:shop",
+      "type": "building",
+      "tris": 888,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "crate",
+      "file": "props/crate.glb",
+      "role": "crate",
+      "type": "prop",
+      "tris": 104,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "cafe-table",
+      "file": "props/cafe-table.glb",
+      "role": "furniture:cafe-table",
+      "type": "prop",
+      "tris": 272,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "design-desk",
+      "file": "props/design-desk.glb",
+      "role": "furniture:design-desk",
+      "type": "prop",
+      "tris": 248,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "espresso-basic",
+      "file": "props/espresso-basic.glb",
+      "role": "furniture:espresso-basic",
+      "type": "prop",
+      "tris": 144,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "espresso-pro",
+      "file": "props/espresso-pro.glb",
+      "role": "furniture:espresso-pro",
+      "type": "prop",
+      "tris": 280,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "office-desk",
+      "file": "props/office-desk.glb",
+      "role": "furniture:office-desk",
+      "type": "prop",
+      "tris": 220,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "packing-bench",
+      "file": "props/packing-bench.glb",
+      "role": "furniture:packing-bench",
+      "type": "prop",
+      "tris": 196,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "parcel",
+      "file": "props/parcel.glb",
+      "role": "furniture:parcel",
+      "type": "prop",
+      "tris": 80,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "server-rack",
+      "file": "props/server-rack.glb",
+      "role": "furniture:server-rack",
+      "type": "prop",
+      "tris": 292,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "warehouse-shelf",
+      "file": "props/warehouse-shelf.glb",
+      "role": "furniture:warehouse-shelf",
+      "type": "prop",
+      "tris": 216,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "house",
+      "file": "buildings/house.glb",
+      "role": "house",
+      "type": "building",
+      "tris": 944,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "agency-interior",
+      "file": "interiors/agency-interior.glb",
+      "role": "interior:agency",
+      "type": "interior",
+      "tris": 1300,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "cafe-interior",
+      "file": "interiors/cafe-interior.glb",
+      "role": "interior:cafe",
+      "type": "interior",
+      "tris": 1744,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "saas-interior",
+      "file": "interiors/saas-interior.glb",
+      "role": "interior:saas",
+      "type": "interior",
+      "tris": 1252,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "shop-interior",
+      "file": "interiors/shop-interior.glb",
+      "role": "interior:shop",
+      "type": "interior",
+      "tris": 1228,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "investors",
+      "file": "buildings/investors.glb",
+      "role": "investors",
+      "type": "building",
+      "tris": 654,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "kiosk",
+      "file": "buildings/kiosk.glb",
+      "role": "kiosk",
+      "type": "building",
+      "tris": 572,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "library",
+      "file": "buildings/library.glb",
+      "role": "library",
+      "type": "building",
+      "tris": 1656,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "staff-designer",
+      "file": "characters/staff-designer.glb",
+      "role": "staff:agency",
+      "type": "person",
+      "tris": 288,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "staff-barista",
+      "file": "characters/staff-barista.glb",
+      "role": "staff:cafe",
+      "type": "person",
+      "tris": 294,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "staff-developer",
+      "file": "characters/staff-developer.glb",
+      "role": "staff:saas",
+      "type": "person",
+      "tris": 294,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "staff-packer",
+      "file": "characters/staff-packer.glb",
+      "role": "staff:shop",
+      "type": "person",
+      "tris": 298,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "townsperson-backpack",
+      "file": "characters/townsperson-backpack.glb",
+      "role": "townsperson",
+      "type": "person",
+      "tris": 290,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "townsperson-bighair",
+      "file": "characters/townsperson-bighair.glb",
+      "role": "townsperson",
+      "type": "person",
+      "tris": 274,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "townsperson-broad",
+      "file": "characters/townsperson-broad.glb",
+      "role": "townsperson",
+      "type": "person",
+      "tris": 274,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "townsperson-cap",
+      "file": "characters/townsperson-cap.glb",
+      "role": "townsperson",
+      "type": "person",
+      "tris": 270,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "townsperson-child",
+      "file": "characters/townsperson-child.glb",
+      "role": "townsperson",
+      "type": "person",
+      "tris": 278,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "townsperson-elder",
+      "file": "characters/townsperson-elder.glb",
+      "role": "townsperson",
+      "type": "person",
+      "tris": 278,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "townsperson-glasses",
+      "file": "characters/townsperson-glasses.glb",
+      "role": "townsperson",
+      "type": "person",
+      "tris": 292,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "townsperson-headphones",
+      "file": "characters/townsperson-headphones.glb",
+      "role": "townsperson",
+      "type": "person",
+      "tris": 294,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "townsperson-overalls",
+      "file": "characters/townsperson-overalls.glb",
+      "role": "townsperson",
+      "type": "person",
+      "tris": 286,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "townsperson-ponytail",
+      "file": "characters/townsperson-ponytail.glb",
+      "role": "townsperson",
+      "type": "person",
+      "tris": 270,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "townsperson-round",
+      "file": "characters/townsperson-round.glb",
+      "role": "townsperson",
+      "type": "person",
+      "tris": 290,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "townsperson-slim",
+      "file": "characters/townsperson-slim.glb",
+      "role": "townsperson",
+      "type": "person",
+      "tris": 254,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "townsperson-stripes",
+      "file": "characters/townsperson-stripes.glb",
+      "role": "townsperson",
+      "type": "person",
+      "tris": 278,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "townsperson-teen",
+      "file": "characters/townsperson-teen.glb",
+      "role": "townsperson",
+      "type": "person",
+      "tris": 258,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "townsperson-tshirt",
+      "file": "characters/townsperson-tshirt.glb",
+      "role": "townsperson",
+      "type": "person",
+      "tris": 298,
+      "updated": "2026-11-27"
+    },
+    {
+      "id": "tree",
+      "file": "props/tree.glb",
+      "role": "tree",
+      "type": "prop",
+      "tris": 232,
+      "updated": "2026-11-27"
+    }
+  ]
 }
