@@ -17,9 +17,9 @@ Ask for the reference before modelling. Build one model at a time. Never overwri
 
 ### Palette (material name, hex)
 
-Every material is named after its colour: `pal_clear_blue` #7CC8FF, `pal_grass_green` #5DBB4A, `pal_asphalt` #4A4F59, `pal_sun_yellow` #F4C430, `pal_brick_red` #E74C3C, `pal_bright_blue` #3A86FF, `pal_purple` #9B59B6, `pal_mint_green` #2ECC71, `pal_coral` #FF6B5A, `pal_night` #1F2430, `pal_white` #FFFFFF, `pal_cream` #FFF1D6, `pal_wood` #A86B3C, `pal_glass` #BFE6FF, `pal_stone` #D9D5CC (pavements, warehouse floors).
+Every material is named after its colour: `pal_clear_blue` #7CC8FF, `pal_grass_green` #5DBB4A, `pal_asphalt` #4A4F59, `pal_sun_yellow` #F4C430, `pal_brick_red` #E74C3C, `pal_bright_blue` #3A86FF, `pal_purple` #9B59B6, `pal_mint_green` #2ECC71, `pal_coral` #FF6B5A, `pal_night` #1F2430, `pal_white` #FFFFFF, `pal_cream` #FFF1D6, `pal_wood` #A86B3C, `pal_glass` #BFE6FF, `pal_stone` #D9D5CC (pavements, warehouse floors), `pal_glow` #FFE9A8 (lamp bulbs and lit signs; the game makes it glow at night, as it does `pal_glass` windows).
 
-Parts the game recolours use `swap_` materials (their Blender colour is only a preview): `swap_shirt`, `swap_pants`, `swap_skin`, `swap_hair`, `swap_wall`, `swap_roof`, `swap_leaves`.
+Parts the game recolours use `swap_` materials (their Blender colour is only a preview): `swap_shirt`, `swap_pants`, `swap_skin`, `swap_hair`, `swap_wall`, `swap_roof`, `swap_leaves`, `swap_paint` (vehicle body colour).
 
 Base Color in Blender is linear: convert hex with the sRGB-to-linear formula (the add-on's `ensure_palette()` does this). Add new palette colours only if the user agrees, and add them to `PALETTE` in the add-on too.
 
@@ -33,11 +33,11 @@ Base Color in Blender is linear: convert hex with the sRGB-to-linear formula (th
 
 ### Roles (what each model replaces in the town)
 
-`avatar`, `townsperson` (several files become variants), `business:cafe|saas|shop|agency|idea`, `rival:<same>`, `kiosk`, `bank`, `library`, `investors`, `house`, `tree`, `bench`, `crate`, `interior:<business>`, `staff:<business>`, `furniture:<file name>` and `street:<file name>` (roles **Furniture** and **Street piece** in the add-on).
+`avatar`, `townsperson` (several files become variants), `business:cafe|saas|shop|agency|idea`, `rival:<same>`, `kiosk`, `bank`, `library`, `investors`, `house`, `tree`, `bench`, `crate`, `interior:<business>`, `staff:<business>`, `furniture:<file name>`, `street:<file name>`, `filler:<file name>` (neighbour buildings) and `vehicle:<file name>` (type **Vehicle**, wheels named `wheel_*`).
 
 Interiors use extra markers: numbered slots (`table_1`, `staff_1`, `desk_1`, `shelf_1`, `bench_1`, `rack_1`, `support_1`, `equip_1`, `stock_1`), stations (`station_price`, `station_staff`, `station_stock`, `station_marketing`, `station_clients`, `station_desk`), `wall_front` and `ceiling` objects the game hides, and an `rt_level` custom property for things that unlock at a level.
 
-**Current task list: `docs/model-tasks.md`.**
+**Current task list: `docs/model-tasks-3.md`** (earlier rounds: `docs/model-tasks.md`).
 
 ### Tools
 

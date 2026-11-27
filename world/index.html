@@ -1499,7 +1499,8 @@ function menuHtml(g){
     <div class="row">${g && g.status === 'playing' ? `<button class="btn primary" data-act="close">Continue</button>` : ''}<button class="btn ${g && g.status === 'playing' ? '' : 'primary'}" data-act="new">New game</button></div>
     <div class="field"><span class="lab">Difficulty (for new games)</span><div class="seg" role="group" aria-label="Difficulty">${['easy','normal','hard'].map(k => `<button data-act="diff" data-diff="${k}" aria-pressed="${st.diff===k}">${DIFF[k].label}</button>`).join('')}</div></div>
     <div class="field"><label class="switch" for="m-free"><input type="checkbox" id="m-free" data-set="free" ${st.free?'checked':''}><span>Free play: open every level</span></label>
-      <label class="switch" for="m-form"><input type="checkbox" id="m-form" data-set="formulas" ${st.formulas?'checked':''}><span>Show formulas and hints (new games)</span></label></div>
+      <label class="switch" for="m-form"><input type="checkbox" id="m-form" data-set="formulas" ${st.formulas?'checked':''}><span>Show formulas and hints (new games)</span></label>
+      <label class="switch" for="m-day"><input type="checkbox" id="m-day" data-set="nightOff" ${st.nightOff?'checked':''}><span>Always daytime (no night or dusk)</span></label></div>
     <div class="field"><span class="lab">Controls</span><p class="help">Walk with WASD or the arrow keys, or the joystick on a touch screen. Press E or tap Enter beside a building. Drag the view (or press Z and C) to turn the camera, and X to put it back behind you. Scroll or pinch to zoom. Esc closes a panel. The Places button opens any building without walking.</p></div>
     <div class="field"><span class="lab">3D models</span><p class="help">${esc(modelSummary())} Drop a .glb exported from Blender onto the town to try it until you reload.</p><div class="row" style="margin-top:8px"><a class="btn" href="${esc(CHECK_URL)}" target="_blank" rel="noopener">Model check ↗</a></div></div>
     <div class="row"><a class="btn" href="${esc(TREE_URL)}" target="_blank" rel="noopener">Skill Tree ↗</a>${g && g.status === 'playing' ? `<button class="btn danger" data-act="abandon">Abandon game</button>` : ''}</div>`;
@@ -1624,22 +1625,24 @@ function textTexture(lines, opts = {}){
 }
 function addBox(parent, w, h, d, color, x, y, z, cast = true){ const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(color)); m.position.set(x, y, z); m.castShadow = cast; m.receiveShadow = true; parent.add(m); return m; }
 const ROT = {s:0, n:Math.PI, e:Math.PI/2, w:-Math.PI/2};
+const winShared = {};
+function winMat(c){ if (!winShared[c]){ winShared[c] = mat(c); WIN_MATS.push(winShared[c]); } return winShared[c]; }
 function makeBuilding(o){
   const g = new THREE.Group(), w = o.w, d = o.d, h = o.h || 5;
   addBox(g, w, h, d, o.color, 0, h/2, 0);
   if (o.roof === 'gable'){ const r = new THREE.Mesh(new THREE.ConeGeometry(Math.SQRT1_2, 1, 4), mat(o.roofColor)); r.rotation.y = Math.PI/4; r.scale.set(w*1.08, 2.4, d*1.08); r.position.y = h + 1.2; r.castShadow = true; g.add(r); }
   else addBox(g, w + 0.4, 0.35, d + 0.4, o.roofColor || 0x8A8172, 0, h + 0.17, 0);
   addBox(g, 1.6, 2.4, 0.12, C.door, 0, 1.2, d/2 + 0.06, false);
-  if (w >= 6) for (const sx of [-1, 1]) for (let i = 0; i < Math.max(1, Math.floor((w - 3)/3)); i++) addBox(g, 1.1, 1.1, 0.1, o.window || C.glass, sx*(1.9 + i*2.2), Math.min(h - 1.3, 2.4), d/2 + 0.05, false);
-  if (h > 7) for (let y = 4.6; y < h - 1; y += 2.4) for (let x = -w/2 + 1.4; x < w/2 - 0.8; x += 2) addBox(g, 1.1, 1.3, 0.1, o.window || C.glass, x, y, d/2 + 0.05, false);
+  if (w >= 6) for (const sx of [-1, 1]) for (let i = 0; i < Math.max(1, Math.floor((w - 3)/3)); i++) addBox(g, 1.1, 1.1, 0.1, o.window || C.glass, sx*(1.9 + i*2.2), Math.min(h - 1.3, 2.4), d/2 + 0.05, false).material = winMat(o.window || C.glass);
+  if (h > 7) for (let y = 4.6; y < h - 1; y += 2.4) for (let x = -w/2 + 1.4; x < w/2 - 0.8; x += 2) addBox(g, 1.1, 1.3, 0.1, o.window || C.glass, x, y, d/2 + 0.05, false).material = winMat(o.window || C.glass);
   const sign = new THREE.Mesh(new THREE.PlaneGeometry(Math.min(w - 0.6, 6), 1.5), new THREE.MeshBasicMaterial({map:textTexture(o.sign, {bg:o.signBg || '#FBF8F2', fg:o.signFg || '#23201A'})}));
-  sign.position.set(0, Math.min(h - 0.6, 3.6) + (h > 7 ? 0 : 0.2), d/2 + 0.08); g.add(sign); g.userData.sign = sign;
+  sign.position.set(0, Math.min(h - 0.6, 3.6) + (h > 7 ? 0 : 0.2), d/2 + 0.08); g.add(sign); g.userData.sign = sign; if (o.noSign) sign.visible = false;
   if (o.awning){ const a = new THREE.Mesh(new THREE.BoxGeometry(w*0.8, 0.15, 1.4), mat(o.awning)); a.position.set(0, 2.75, d/2 + 0.7); a.rotation.x = 0.25; a.castShadow = true; g.add(a); }
   g.rotation.y = ROT[o.face]; g.position.set(o.x, 0, o.z); scene.add(g);
   const swap = o.face === 'e' || o.face === 'w', hw = (swap ? d : w)/2, hd = (swap ? w : d)/2;
   const box = {minX:o.x - hw, maxX:o.x + hw, minZ:o.z - hd, maxZ:o.z + hd, on:true}; obstacles.push(box);
   const v = new THREE.Vector3(0, 0, d/2 + 1.7).applyAxisAngle(new THREE.Vector3(0, 1, 0), ROT[o.face]);
-  const slot = {group:g, box, door:{x:o.x + v.x, z:o.z + v.z}, face:o.face, roles:[].concat(o.role || []), variant:o.variant || 0, tint:o.tint || null, stand:g.children.filter(c => c !== sign), extras:[], signLines:[].concat(o.sign)};
+  const slot = {group:g, box, door:{x:o.x + v.x, z:o.z + v.z}, face:o.face, roles:[].concat(o.role || []), variant:o.variant || 0, tint:o.tint || null, stand:g.children.filter(c => c !== sign), extras:[], signLines:[].concat(o.sign), noSign:!!o.noSign};
   bldgs.push(slot); dressBuilding(slot); return slot;
 }
 function makePerson(shirt, pants, skin, hair, role = 'townsperson', variant = 0){
@@ -1694,12 +1697,13 @@ function initWorld(){
   const big = innerWidth > 700; renderer.shadowMap.enabled = big; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   scene = new THREE.Scene();
   const sky = getComputedStyle(document.documentElement).getPropertyValue('--sky').trim() || '#CFDCE0';
-  scene.background = new THREE.Color(sky); scene.fog = new THREE.Fog(sky, 60, 120);
+  scene.background = new THREE.Color(sky); scene.fog = new THREE.Fog(sky, 60, 150);
   camera = new THREE.PerspectiveCamera(50, 1, 0.1, 300);
-  scene.add(new THREE.HemisphereLight(0xFFFFFF, 0xA9C98A, 0.58));
-  const sun = new THREE.DirectionalLight(0xFFF6E5, 0.5); sun.position.set(-30, 50, 25); sun.castShadow = big;
+  townHemi = new THREE.HemisphereLight(0xFFFFFF, 0xA9C98A, 0.58); scene.add(townHemi);
+  const sun = townSun = new THREE.DirectionalLight(0xFFF6E5, 0.5); sun.position.set(-30, 50, 25); sun.castShadow = big;
   Object.assign(sun.shadow.camera, {left:-60, right:60, top:60, bottom:-60}); sun.shadow.mapSize.set(2048, 2048); scene.add(sun);
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(160, 160), mat(C.grass)); ground.rotation.x = -Math.PI/2; ground.receiveShadow = true; scene.add(ground);
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(260, 260), mat(C.grass)); ground.rotation.x = -Math.PI/2; ground.receiveShadow = true; scene.add(ground);
+  buildSkyline();
   const flat = (w, d, color, x, z, y = 0.02) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), mat(color)); m.rotation.x = -Math.PI/2; m.position.set(x, y, z); m.receiveShadow = true; scene.add(m); };
   buildRoads();
   flat(20, 20, C.pave, 0, 0, 0.03);   // the square
@@ -1718,16 +1722,15 @@ function initWorld(){
   // Houses and trees
   [[-36, -26, 0xFFF1D6, 0xE74C3C], [-24, -26, 0xBFE6FF, 0x3A86FF], [25, 26, 0xFFE8A3, 0x9B59B6], [35, 26, 0xD9F2D0, 0xFF6B5A]].forEach(([x, z, c, r], i) =>
     makeBuilding({x, z, w:6, d:6, h:4, color:c, roofColor:r, roof:'gable', face: z > 0 ? 'n' : 's', sign:['Home','Flats','Home','Workshop'][i], role:'house', variant:i, tint:{wall:c, roof:r}}));
-  [[-8, -8], [8, -8], [-8, 8], [8, 8], [-37, -37], [-23, -37], [-8, -37], [8, -37], [37, -37], [-37, -8], [-37, 8], [37, -8], [37, 8], [-37, 37], [-23, 37], [-8, 37], [8, 37], [23, 37], [37, 37], [22, -35], [38, -26]]
+  makeFillers();
+  [[-8, -8], [8, -8], [-8, 8], [8, 8], [-30, -26], [30, 26], [-25, -8], [-25, 8], [25, -8], [25, 8], [-7.5, 24], [7.5, 24], [21.8, -24], [-22, 24], [-38, 24], [-8, -24], [8, -24]]
     .forEach(([x, z], i) => makeTree(x, z, i < 4 ? 0.8 : 1 + (i % 3)*0.15));
   for (let i = 0; i < 6; i++){ const b = addBox(scene, 2, 0.45, 0.6, 0x6A4B32, i < 3 ? -5 : 5, 0.45, -6 + (i % 3)*6); addProp(b, 'bench', 0.45, i); obstacles.push({minX:b.position.x - 1, maxX:b.position.x + 1, minZ:b.position.z - 0.3, maxZ:b.position.z + 0.3, on:true}); }
   // Player
   player = makePerson(0x3A86FF, 0x1F2430, C.skin[0], 0x3B2A20, 'avatar'); player.position.set(0, 0, 6);
   // Pedestrians
-  const loop = [[-9, -9], [9, -9], [9, 9], [-9, 9]], outer = [[-19, -19], [19, -19], [19, 19], [-19, 19]];   // the square's edge, and the pavements round it
   const shirts = SHIRTS;
-  for (let i = 0; i < 12; i++){ const path = i % 2 ? loop : outer, n = makePerson(shirts[i % shirts.length], PANTS[i % PANTS.length], C.skin[i % 4], HAIRS[i % HAIRS.length], 'townsperson', i);
-    npcs.push({g:n, path:i % 4 === 0 ? path.slice().reverse() : path, s:i*7.3, speed:1.6 + (i % 3)*0.35}); }
+  makeWalkers(18); makeLoiterers();
   for (let i = 0; i < 16; i++){ const n = makePerson(shirts[(i + 3) % shirts.length], PANTS[(i + 2) % PANTS.length], C.skin[(i + 1) % 4], HAIRS[(i + 3) % HAIRS.length], 'townsperson', i + 12); n.visible = false; customers.push(n); }
   for (let i = 0; i < 30; i++){ const b = addBox(scene, 0.8, 0.6, 0.8, 0xB58B55, 0, 0.3, 0); b.visible = false; crates.push(b); addProp(b, 'crate', 0.3, i); }
   bubble = makeSprite('…'); bubble.visible = false;
@@ -1780,6 +1783,7 @@ function syncWorld(){
   trees.forEach(t => { t.season = col; t.mats.forEach(m => m.color.setHex(col)); });
   for (let i = targets.length - 1; i >= 0; i--) if (targets[i].talk) targets.splice(i, 1);
   if (g && customers[0] && customers[0].visible) targets.push({talk:true, name:'a customer', verb:'Ask a customer', door:{x:customers[0].position.x, z:customers[0].position.z}, r:1.7});
+  setWeather(weatherFor(g));
   syncInterior();
   bubbleText = g && g.last && g.last.voices && g.last.voices.length && g.heard !== g.month ? 'Ask me about last month' : '';
   if (bubbleText && bubble.userData.text !== bubbleText){ bubble.material.map.dispose(); bubble.material.map = textTexture(['“' + bubbleText + '”'], {w:900, h:150, size:40}); bubble.material.needsUpdate = true; bubble.scale.set(9, 1.5, 1); bubble.userData.text = bubbleText; }
@@ -1848,9 +1852,7 @@ function frame(now){
       if (Math.abs(diff) < 0.9) camYaw += diff*(1 - Math.exp(-dt*0.9)); } }
   animatePerson(player, T, moving);
   // pedestrians
-  for (const n of npcs){ n.s += n.speed*dt; const path = n.path; let segs = [], tot = 0; for (let i = 0; i < path.length; i++){ const a = path[i], b = path[(i + 1) % path.length], l = Math.hypot(b[0]-a[0], b[1]-a[1]); segs.push([a, b, l]); tot += l; }
-    let s = n.s % tot; for (const [a, b, l] of segs){ if (s <= l){ const f = s/l; n.g.position.set(a[0] + (b[0]-a[0])*f, 0, a[1] + (b[1]-a[1])*f); n.g.rotation.y = Math.atan2(b[0]-a[0], b[1]-a[1]); break; } s -= l; }
-    animatePerson(n.g, T + n.speed, true); }
+  updateWalkers(dt); updateSky(dt); if (!inside) updateWeather(dt);
   customers.forEach((c, i) => { if (c.visible) c.position.y = Math.abs(Math.sin(T*2 + i))*0.05; });
   if (inside) iPeople.forEach(g => { if (!g.userData.seated) g.position.y = Math.abs(Math.sin(T*1.6 + g.userData.t))*0.03; });
   // camera
@@ -1899,6 +1901,7 @@ function convertMaterials(root){
     const glossy = typeof m.roughness === 'number' && m.roughness < 0.6;
     const n = glossy ? new THREE.MeshPhongMaterial(Object.assign(p, {shininess: 12 + (1 - m.roughness)*60, specular: 0x2B2B2B})) : new THREE.MeshLambertMaterial(p);
     n.name = m.name || ''; const k = /^swap_(\w+)/.exec(n.name); n.userData.swap = k ? k[1] : null;
+    if (/^pal_(glass|glow)/.test(n.name)) nightMats.add(n);
     cache.set(m, n); return n; };
   root.traverse(o => { if (!o.isMesh) return; o.castShadow = true; o.receiveShadow = true; o.material = Array.isArray(o.material) ? o.material.map(conv) : conv(o.material); });
 }
@@ -1930,7 +1933,7 @@ function dressBuilding(slot){
   slot.model = cloneModel(m, slot.tint); slot.group.add(slot.model); slot.dressed = m;
   const sign = slot.group.userData.sign, sp = m.markers.sign;
   if (sp) sign.position.set(sp.x, sp.y, sp.z + 0.03); else sign.position.set(0, Math.min(m.box.max.y - 0.8, 3.6), m.box.max.z + 0.06);
-  sign.visible = !m.boards.sign_board && !!sp;   // no board and no sign marker (houses): no name sign
+  sign.visible = !m.boards.sign_board && !!sp && !slot.noSign;   // no board and no sign marker (houses): no name sign
   if (m.boards.sign_board) paintBoard(slot.model, m.boards.sign_board, slot.signLines);
   slot.group.updateMatrixWorld(true);
   const wb = (m.col || m.box).clone().applyMatrix4(slot.group.matrixWorld);
@@ -1968,7 +1971,9 @@ function modelSummary(){
 function addModel(role, gltf, file, replace){
   const info = analyse(gltf.scene, file, role);
   if (replace || !MODELS[role]) MODELS[role] = [];
-  MODELS[role].push(info); return info;
+  MODELS[role].push(info);
+  const fam = /^(filler|vehicle):/.exec(role); if (fam){ MODELS[fam[1]] = (MODELS[fam[1]] || []).filter(x => x.role !== role).concat(MODELS[role]); }
+  return info;
 }
 function roleFromName(name){
   const n = name.toLowerCase().replace(/\.(glb|gltf)$/, '');
@@ -2231,10 +2236,11 @@ const streetPlaced = [];
 function placeStreet(){
   buildRoads();
   streetPlaced.forEach(s => { scene.remove(s.o); s.box.on = false; }); streetPlaced.length = 0;
+  lampGlows.forEach(s => scene.remove(s)); lampGlows.length = 0;
   for (const [name, x, z, ry] of STREET_SPOTS){ const m = pickModel(['street:' + name], 0); if (!m) continue;
     const o = cloneModel(m, null); o.position.set(x, 0, z); o.rotation.y = ry; scene.add(o); o.updateMatrixWorld(true);
     const b = (m.col || m.box).clone().applyMatrix4(o.matrixWorld), box = {minX:b.min.x, maxX:b.max.x, minZ:b.min.z, maxZ:b.max.z, on:true};
-    if (name !== 'bus-stop') obstacles.push(box); streetPlaced.push({o, box}); }
+    if (name !== 'bus-stop') obstacles.push(box); streetPlaced.push({o, box}); if (name === 'street-lamp') addLampGlow(o); }
 }
 
 /* Buildings standing between the camera and the player turn see-through. */
@@ -2258,6 +2264,155 @@ function fadeBlockers(p){
     setFaded(slot, between); }
 }
 
+
+/* =========================================================
+   City life: a skyline beyond the edge, neighbours filling the blocks,
+   people with somewhere to go, day and night, and seasonal weather.
+   ========================================================= */
+let townHemi = null, townSun = null, skyline = null, dayT = 0.3, weatherFx = null, weatherKind = '';
+const WIN_MATS = [], lampGlows = [], DOORS = [];
+const nightMats = new Set();   // Blender materials named pal_glass or pal_glow light up at night
+
+/* Skyline: rows of taller blocks past the outer roads, fading into the haze. */
+function buildSkyline(){
+  const N = 150, geo = new THREE.BoxGeometry(1, 1, 1); geo.translate(0, 0.5, 0);
+  const mesh = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial({color:0xffffff}), N);
+  const cols = [0xBFD8EE, 0xD6E4F0, 0xC9D6E8, 0xE3D9EE, 0xD9E8DA, 0xEADFCF], m = new THREE.Matrix4(), c = new THREE.Color();
+  let seed = 7; const R = () => (seed = (seed*16807) % 2147483647)/2147483647;
+  for (let i = 0; i < N; i++){
+    const side = i % 4, along = -110 + R()*220, out = 62 + R()*48, w = 6 + R()*10, d = 6 + R()*10, h = 8 + Math.pow(R(), 1.6)*46;
+    const x = side < 2 ? along : (side === 2 ? -out : out), z = side < 2 ? (side === 0 ? -out : out) : along;
+    m.makeScale(w, h, d).setPosition(x, 0, z); mesh.setMatrixAt(i, m); mesh.setColorAt(i, c.setHex(cols[i % cols.length]));
+  }
+  mesh.instanceMatrix.needsUpdate = true; if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+  scene.add(mesh); skyline = mesh;
+}
+
+/* Neighbours: two plots at the back or side of each block. Blender buildings with role filler:<name>
+   replace the code-built stand-ins; several files become variants. */
+const FILLER_SLOTS = [[-35, -36, 'n'], [-25, -36, 'n'], [-5, -36, 'n'], [5, -36, 'n'], [25, -36, 'n'], [35, -36, 'n'],
+  [-35.5, -5, 'w'], [-35.5, 5, 'w'], [35.5, -5, 'e'], [35.5, 5, 'e'],
+  [-35, 35.5, 's'], [-25, 35.5, 's'], [-5, 35.5, 's'], [5, 35.5, 's'], [25, 35.5, 's'], [35, 35.5, 's']];
+const FILLER_LOOK = [[0xFFF1D6, 0x4A4F59], [0xBFE6FF, 0x3A86FF], [0xFFD9D2, 0xE74C3C], [0xD9F2D0, 0x2ECC71], [0xFFE8A3, 0x9B59B6], [0xE8DDF5, 0x4A4F59]];
+const FILLER_NAMES = ['Corner Shop', 'Bakery', 'Books', 'Flowers', 'Barber', 'Deli', 'Launderette', 'Pharmacy'];
+function makeFillers(){
+  FILLER_SLOTS.forEach(([x, z, face], i) => {
+    const [c, r] = FILLER_LOOK[i % FILLER_LOOK.length], h = [7.5, 10.5, 13.5, 9, 12.5, 7.5, 11, 15][i % 8];
+    const slot = makeBuilding({x, z, w:9, d:8, h, color:c, roofColor:r, face, window:0xBFE6FF, sign:[FILLER_NAMES[i % FILLER_NAMES.length]], role:'filler', variant:i, tint:{wall:c, roof:r}, noSign:true});
+    DOORS.push(slot.door);
+  });
+}
+
+/* Walkers follow the pavements round every block and cross at the corners; some pop into a building for a while. */
+const WALK = {nodes:[], adj:[]};
+function buildWalkGraph(){
+  const key = (x, z) => x + ',' + z, idx = {};
+  const node = (x, z) => { const k = key(x, z); if (idx[k] === undefined){ idx[k] = WALK.nodes.length; WALK.nodes.push([x, z]); WALK.adj.push([]); } return idx[k]; };
+  const link = (a, b) => { if (!WALK.adj[a].includes(b)){ WALK.adj[a].push(b); WALK.adj[b].push(a); } };
+  for (const cx of [-30, 0, 30]) for (const cz of [-30, 0, 30]){
+    const a = node(cx - 11, cz - 11), b = node(cx + 11, cz - 11), c = node(cx + 11, cz + 11), d = node(cx - 11, cz + 11);
+    link(a, b); link(b, c); link(c, d); link(d, a);
+  }
+  // zebra-style crossings between neighbouring blocks at each junction corner
+  WALK.nodes.forEach(([x, z], i) => WALK.nodes.forEach(([x2, z2], j) => { if (j > i && ((Math.abs(x - x2) === 8 && z === z2) || (Math.abs(z - z2) === 8 && x === x2))) link(i, j); }));
+}
+function makeWalkers(n){
+  buildWalkGraph();
+  for (let i = 0; i < n; i++){
+    const g = makePerson(SHIRTS[(i*3) % SHIRTS.length], PANTS[i % PANTS.length], C.skin[i % 4], HAIRS[(i*2) % HAIRS.length], 'townsperson', i);
+    const at = (i*7) % WALK.nodes.length, [x, z] = WALK.nodes[at];
+    g.position.set(x, 0, z);
+    npcs.push({g, from:at, to:WALK.adj[at][0], prev:-1, speed: i % 6 === 0 ? 3.4 : 1.4 + (i % 3)*0.3, door:null, hideUntil:0, t:i*1.7});
+  }
+}
+function sitPose(g, seatY){ const P = g.userData.p, hip = P.legL.position.y || 0.62; g.position.y = seatY + 0.04 - hip; P.legL.rotation.x = P.legR.rotation.x = -Math.PI/2; P.armL.rotation.x = P.armR.rotation.x = -0.35; }
+const sitters = [];
+function makeLoiterers(){
+  // people on benches and at the bus stop
+  [[-4.6, -6], [5.4, 0], [-5.4, 6]].forEach(([x, z], i) => { const g = makePerson(SHIRTS[(i + 5) % SHIRTS.length], PANTS[(i + 1) % PANTS.length], C.skin[(i + 2) % 4], HAIRS[(i + 1) % HAIRS.length], 'townsperson', 40 + i);
+    g.position.set(x, 0, z + 0.05); g.rotation.y = 0; sitters.push({g, seat:0.45}); });
+  [[6.4, 18.7], [8.9, 18.6], [10.3, 18.9]].forEach(([x, z], i) => { const g = makePerson(SHIRTS[(i + 2) % SHIRTS.length], PANTS[(i + 3) % PANTS.length], C.skin[(i + 3) % 4], HAIRS[(i + 4) % HAIRS.length], 'townsperson', 50 + i);
+    g.position.set(x, 0, z); g.rotation.y = Math.PI; sitters.push({g, seat:null}); });
+}
+function updateWalkers(dt){
+  for (const w of npcs){
+    if (w.hideUntil){ if (T < w.hideUntil) continue; w.hideUntil = 0; w.g.visible = true; }
+    const tgt = w.door ? [w.door.x, w.door.z] : WALK.nodes[w.to], p = w.g.position, dx = tgt[0] - p.x, dz = tgt[1] - p.z, dist = Math.hypot(dx, dz), step = w.speed*dt;
+    if (dist > step){ p.x += dx/dist*step; p.z += dz/dist*step; w.g.rotation.y = Math.atan2(dx, dz); animatePerson(w.g, T*(w.speed/1.6) + w.t, true); continue; }
+    p.x = tgt[0]; p.z = tgt[1];
+    if (w.door){   // went inside: come out of another door a little later, then head for the nearest corner
+      w.g.visible = false; w.hideUntil = T + 4 + Math.random()*10;
+      const out = DOORS.concat(targets.map(t => t.door))[Math.floor(Math.random()*(DOORS.length + targets.length))] || w.door;
+      w.g.position.set(out.x, 0, out.z); w.door = null;
+      let best = 0, bd = 1e9; WALK.nodes.forEach(([x, z], i) => { const d = Math.hypot(x - out.x, z - out.z); if (d < bd){ bd = d; best = i; } });
+      w.prev = -1; w.to = best; continue;
+    }
+    const here = w.to, opts = WALK.adj[here].filter(j => j !== w.prev);
+    if (Math.random() < 0.14){   // pop into a nearby building
+      const near = DOORS.concat(targets.filter(t => !t.talk && !t.rival && !t.loc2).map(t => t.door)).filter(d => Math.hypot(d.x - WALK.nodes[here][0], d.z - WALK.nodes[here][1]) < 13);
+      if (near.length){ w.door = near[Math.floor(Math.random()*near.length)]; continue; }
+    }
+    w.prev = here; w.to = (opts.length ? opts : WALK.adj[here])[Math.floor(Math.random()*(opts.length || WALK.adj[here].length))];
+  }
+  for (const s of sitters){ if (s.seat !== null && s.g.userData.p && !s.posed){ sitPose(s.g, s.seat); s.posed = s.g.userData.look.dressed || 'stand-in'; }
+    if (s.seat !== null && s.posed && s.posed !== (s.g.userData.look.dressed || 'stand-in')) s.posed = null; }
+}
+
+/* Day and night: a five-minute day. Lamps and windows light up after sunset. Menu can keep it daytime. */
+const SKY_DAY = new THREE.Color(0x8FD3FF), SKY_DUSK = new THREE.Color(0xFFB98A), SKY_NIGHT = new THREE.Color(0x1C2A4E), SKY_RAIN = new THREE.Color(0x9AAAB8);
+let glowTex = null;
+function glowTexture(){ if (glowTex) return glowTex; const cv = document.createElement('canvas'); cv.width = cv.height = 64; const x = cv.getContext('2d'), gr = x.createRadialGradient(32, 32, 2, 32, 32, 32);
+  gr.addColorStop(0, 'rgba(255,240,190,1)'); gr.addColorStop(0.35, 'rgba(255,214,120,0.55)'); gr.addColorStop(1, 'rgba(255,200,100,0)'); x.fillStyle = gr; x.fillRect(0, 0, 64, 64); glowTex = new THREE.CanvasTexture(cv); return glowTex; }
+function addLampGlow(o){
+  const b = new THREE.Box3().setFromObject(o), s = new THREE.Sprite(new THREE.SpriteMaterial({map:glowTexture(), transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, opacity:0}));
+  s.position.set((b.min.x + b.max.x)/2, b.max.y - 0.55, (b.min.z + b.max.z)/2); s.scale.set(3.2, 3.2, 1); scene.add(s); lampGlows.push(s); return s;
+}
+function updateSky(dt){
+  const g = DB.game, off = S().nightOff;
+  dayT = (dayT + dt/300) % 1;
+  const f = 0.5 + 0.5*Math.cos((dayT - 0.5)*Math.PI*2), light = off ? 1 : Math.min(1, Math.max(0, (f - 0.18)/0.45));
+  const dusk = off ? 0 : Math.max(0, 1 - Math.abs(light - 0.45)/0.3)*0.55, wet = weatherKind === 'rain' ? 0.45 : weatherKind === 'snow' ? 0.25 : 0;
+  const sky = SKY_NIGHT.clone().lerp(SKY_DAY, light).lerp(SKY_DUSK, dusk*(1 - wet)).lerp(SKY_RAIN, wet*light);
+  scene.background.copy(sky); scene.fog.color.copy(sky);
+  townHemi.intensity = 0.28 + 0.32*light - wet*0.08; townHemi.color.setHex(light > 0.3 ? 0xFFFFFF : 0x9DB3FF);
+  townSun.intensity = 0.1 + 0.42*light*(1 - wet*0.5); townSun.color.copy(new THREE.Color(0xFFF6E5).lerp(new THREE.Color(0xFF9A5C), dusk));
+  const n = 1 - light, glow = Math.max(0, (n - 0.35)/0.65);
+  lampGlows.forEach(s => { s.material.opacity = glow; s.visible = glow > 0.01; });
+  const em = new THREE.Color(0xFFCE6E).multiplyScalar(glow*0.85);
+  WIN_MATS.forEach(m => m.emissive && m.emissive.copy(em)); nightMats.forEach(m => m.emissive && m.emissive.copy(em));
+  if (skyline) skyline.material.color.setScalar(0.45 + 0.55*light);
+}
+
+/* Weather follows the season from Level IV: snow in winter, rain in some spring and autumn months. */
+function weatherFor(g){
+  if (!g || g.status !== 'playing' || !FEAT(g.level).season) return '';
+  const moy = g.month % 12; if (moy === 11 || moy === 0 || moy === 1) return 'snow';
+  if ([3, 9, 10].includes(moy) && ((g.seed || 1)*31 + g.month*17) % 10 < 6) return 'rain';
+  return '';
+}
+function setWeather(kind){
+  if (kind === weatherKind) return; weatherKind = kind;
+  if (weatherFx){ scene.remove(weatherFx); weatherFx.geometry.dispose(); weatherFx = null; }
+  if (!kind) return;
+  const n = kind === 'snow' ? 1400 : 1100, pos = new Float32Array(n*(kind === 'rain' ? 6 : 3));
+  for (let i = 0; i < n; i++){ const x = (Math.random() - 0.5)*70, y = Math.random()*30, z = (Math.random() - 0.5)*70;
+    if (kind === 'rain'){ pos.set([x, y, z, x - 0.12, y - 0.9, z], i*6); } else pos.set([x, y, z], i*3); }
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  weatherFx = kind === 'rain' ? new THREE.LineSegments(geo, new THREE.LineBasicMaterial({color:0xCFE3FF, transparent:true, opacity:0.55}))
+    : new THREE.Points(geo, new THREE.PointsMaterial({color:0xFFFFFF, size:0.22, transparent:true, opacity:0.95}));
+  weatherFx.frustumCulled = false; scene.add(weatherFx);
+}
+function updateWeather(dt){
+  if (!weatherFx) return;
+  weatherFx.position.set(camera.position.x*0 + player.position.x, 0, player.position.z);
+  const a = weatherFx.geometry.attributes.position, arr = a.array, rain = weatherKind === 'rain', fall = (rain ? 22 : 2.2)*dt, stride = rain ? 6 : 3;
+  for (let i = 0; i < arr.length; i += stride){
+    arr[i + 1] -= fall; if (rain){ arr[i + 4] -= fall; arr[i] -= fall*0.13; arr[i + 3] -= fall*0.13; } else arr[i] += Math.sin(T + i)*0.004;
+    if (arr[i + 1] < 0){ const x = (Math.random() - 0.5)*70, z = (Math.random() - 0.5)*70; arr[i] = x; arr[i + 1] += 30; arr[i + 2] = z; if (rain){ arr[i + 3] = x - 0.12; arr[i + 4] = arr[i + 1] - 0.9; arr[i + 5] = z; } }
+  }
+  a.needsUpdate = true;
+}
+
 /* ---------- Start ---------- */
 let webgl = typeof THREE !== 'undefined';
 if (webgl){ try { initWorld(); } catch(e){ webgl = false; } }
@@ -2270,7 +2425,7 @@ if (!webgl){
   if (!DB.game || DB.game.status !== 'playing') showSetup();
   requestAnimationFrame(t => { last = t; frame(t); });
 }
-window.__town = {cam:() => ({yaw:camYaw, pitch:camPitch, pos:camera.position.clone()}), DB:() => DB, runMonth, chooseEvent, startGame, openPanel, closePanel, player:() => player, targets, MODELS, tryModelFile, slots:() => ({bldgs, bizSlot, people, trees, props}),
+window.__town = {city:() => ({npcs, sitters, DOORS, weatherKind, lampGlows, skyline, setDay:v => { dayT = v; }, setWeather}), cam:() => ({yaw:camYaw, pitch:camPitch, pos:camera.position.clone()}), DB:() => DB, runMonth, chooseEvent, startGame, openPanel, closePanel, player:() => player, targets, MODELS, tryModelFile, slots:() => ({bldgs, bizSlot, people, trees, props}),
   interior:() => ({inside, iRoom, iPeople, iDyn, inTargets, iBounds, iObstacles}), enterInterior, exitInterior, streetPlaced, interact, near:() => nearTarget};
 })();
 </script>

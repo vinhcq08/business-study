@@ -48,6 +48,7 @@ PALETTE = [
     ("pal_wood", "#A86B3C", 0.8),
     ("pal_glass", "#BFE6FF", 0.2),
     ("pal_stone", "#D9D5CC", 0.8),
+    ("pal_glow", "#FFE9A8", 0.5),
 ]
 
 # Parts the game recolours. Their colour in Blender is only a preview.
@@ -59,6 +60,7 @@ SWAPS = [
     ("swap_wall", "#FFF1D6", 0.8),
     ("swap_roof", "#E74C3C", 0.8),
     ("swap_leaves", "#5DBB4A", 0.8),
+    ("swap_paint", "#E74C3C", 0.35),
 ]
 SWAP_NAMES = {s[0] for s in SWAPS}
 
@@ -66,6 +68,7 @@ RULES = {
     "person": {"folder": "characters", "tris": 300, "mats": 6, "height": (1.3, 2.4), "width": 1.4},
     "prop": {"folder": "props", "tris": 500, "mats": 4, "height": (0.1, 6.0), "width": 4.0},
     "building": {"folder": "buildings", "tris": 2000, "mats": 8, "height": (2.0, 20.0), "width": 14.0},
+    "vehicle": {"folder": "vehicles", "tris": 800, "mats": 6, "height": (1.0, 4.5), "width": 12.0},
     "interior": {"folder": "interiors", "tris": 5000, "mats": 12, "height": (2.0, 8.0), "width": 20.0},
 }
 PERSON_PARTS = ["head", "body", "arm_L", "arm_R", "leg_L", "leg_R"]
@@ -86,7 +89,9 @@ ROLES = {
     "building": [("business:" + k, "Business: " + n, "Your business building") for k, n in BUSINESSES]
               + [("rival:" + k, "Rival: " + n, "The rival that opens nearby") for k, n in BUSINESSES]
               + [("kiosk", "Newspaper stand", ""), ("bank", "Bank", ""), ("library", "Library", ""),
-                 ("investors", "Investors' tower", ""), ("house", "House", "Six houses; recoloured with swap_wall and swap_roof")],
+                 ("investors", "Investors' tower", ""), ("house", "House", "Six houses; recoloured with swap_wall and swap_roof"),
+                 ("filler", "Neighbour building (named by file)", "Fills the town's spare plots; exported as filler:<file name>")],
+    "vehicle": [("vehicle", "Vehicle (named by file)", "Drives the roads; exported as vehicle:<file name>")],
     "prop": [("tree", "Tree", "Leaves use swap_leaves for seasons"), ("bench", "Bench", ""),
              ("crate", "Crate", "Stock crates for the online store"),
              ("furniture", "Furniture (named by file)", "Interior furniture; exported as furniture:<file name>"),
@@ -94,7 +99,8 @@ ROLES = {
     "interior": [("interior:" + k, "Interior: " + n, "The room you walk into") for k, n in BUSINESSES],
 }
 TYPES = [("person", "Person", "A character, 2 m tall"), ("prop", "Prop", "Tree, bench, crate"),
-         ("building", "Building", "A building exterior"), ("interior", "Interior", "A shop interior")]
+         ("building", "Building", "A building exterior"), ("interior", "Interior", "A shop interior"),
+         ("vehicle", "Vehicle", "Car, taxi, bus or van; wheels named wheel_*")]
 
 
 def role_items(self, context):
@@ -112,7 +118,7 @@ def hex_to_linear(hx):
 
 def full_role(role, name):
     """Furniture and street pieces are identified by file name, e.g. furniture:cafe-table, street:bin."""
-    return role + ":" + name if role in ("furniture", "street") else role
+    return role + ":" + name if role in ("furniture", "street", "vehicle", "filler") else role
 
 
 def default_name(role):
@@ -120,6 +126,10 @@ def default_name(role):
         return "cafe-table"
     if role == "street":
         return "street-lamp"
+    if role == "vehicle":
+        return "hatchback"
+    if role == "filler":
+        return "apartment-block"
     base = role.replace(":", "-")
     if role.startswith("business:"):
         base = role.split(":")[1] + "-exterior"
@@ -429,6 +439,16 @@ def check_objects(context, objs, mtype, role, name):
             warn("No COL_body box. The game will use the whole bounding box for walking collision.")
         if role.startswith(("business:", "rival:", "house")) and "swap_wall" not in mats:
             info("No swap_wall material: the rival and houses use it to change colour.")
+    if mtype == "vehicle":
+        wheels = sorted(n for n in names if n.startswith("wheel_"))
+        if len(wheels) >= 4:
+            ok("Wheels: " + ", ".join(wheels) + ".")
+        else:
+            warn("Name the wheels wheel_FL, wheel_FR, wheel_RL, wheel_RR (origin at the axle) so the game can spin them.")
+        if size.x > size.y:
+            err("The vehicle is wider than it is long. Its front must face -Y, so it runs along the Y axis.")
+    if role == "filler" and max(size.x, size.y) > 9.2:
+        warn("Neighbour buildings must fit a 9 x 8 m plot (front 9 m wide).")
     if role == "tree" and "swap_leaves" not in mats:
         warn("No swap_leaves material, so the leaves will not change with the seasons.")
     if mtype == "interior":

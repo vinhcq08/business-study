@@ -153,9 +153,10 @@ const RULES = {
   person:{label:'Person', tris:300, mats:6, h:[1.3, 2.4], w:1.4, folder:'characters'},
   prop:{label:'Prop', tris:500, mats:4, h:[0.1, 6], w:4, folder:'props'},
   building:{label:'Building', tris:2000, mats:8, h:[2, 20], w:14, folder:'buildings'},
+  vehicle:{label:'Vehicle', tris:800, mats:6, h:[1, 4.5], w:12, folder:'vehicles'},
   interior:{label:'Interior', tris:5000, mats:12, h:[2, 8], w:20, folder:'interiors'},
 };
-const SWAPS = ['swap_shirt', 'swap_pants', 'swap_skin', 'swap_hair', 'swap_wall', 'swap_roof', 'swap_leaves'];
+const SWAPS = ['swap_shirt', 'swap_pants', 'swap_skin', 'swap_hair', 'swap_wall', 'swap_roof', 'swap_leaves', 'swap_paint'];
 const PARTS = ['head', 'body', 'arm_L', 'arm_R', 'leg_L', 'leg_R'];
 const MARKERS = ['door', 'sign', 'counter', 'queue_start', 'stock_spot', 'seat_1', 'seat_2'];
 const MARKER_RE = /^(door|sign|counter|queue_start|stock_spot|returns_spot|client_seat|(seat|table|staff|desk|shelf|bench|rack|support|equip|stock)_\d+|station_[a-z]+)$/;
@@ -163,11 +164,12 @@ const BIZ = [['cafe', 'Café'], ['saas', 'Software company'], ['shop', 'Online s
 const ROLES = {
   person:[['avatar', 'Avatar (the player)'], ['townsperson', 'Townsperson']].concat(BIZ.filter(b => b[0] !== 'idea').map(([k, n]) => ['staff:' + k, 'Staff: ' + n])),
   building:BIZ.map(([k, n]) => ['business:' + k, 'Business: ' + n]).concat(BIZ.map(([k, n]) => ['rival:' + k, 'Rival: ' + n]),
-    [['kiosk', 'Newspaper stand'], ['bank', 'Bank'], ['library', 'Library'], ['investors', 'Investors’ tower'], ['house', 'House']]),
+    [['kiosk', 'Newspaper stand'], ['bank', 'Bank'], ['library', 'Library'], ['investors', 'Investors’ tower'], ['house', 'House'], ['filler', 'Neighbour building (named by file)']]),
+  vehicle:[['vehicle', 'Vehicle (named by file)']],
   prop:[['tree', 'Tree'], ['bench', 'Bench'], ['crate', 'Crate'], ['furniture', 'Furniture (named by file)'], ['street', 'Street piece (named by file)']],
   interior:BIZ.map(([k, n]) => ['interior:' + k, 'Interior: ' + n]),
 };
-const typeOfRole = r => /^(furniture|street)/.test(r || '') ? 'prop' : (Object.keys(ROLES).find(t => ROLES[t].some(x => x[0] === r)) || null);
+const typeOfRole = r => /^vehicle/.test(r || '') ? 'vehicle' : /^filler/.test(r || '') ? 'building' : /^(furniture|street)/.test(r || '') ? 'prop' : (Object.keys(ROLES).find(t => ROLES[t].some(x => x[0] === r)) || null);
 function roleFromName(name){
   const n = name.toLowerCase().replace(/\.(glb|gltf)$/, '');
   let k = /^(?:business-)?(cafe|saas|shop|agency|idea)(?:-exterior)?$/.exec(n); if (k) return 'business:' + k[1];
@@ -209,7 +211,7 @@ function loadBuffer(buf, name){
     const extras = gl.scene.userData || {};
     const role = extras.rt_role || roleFromName(name) || null;
     const type = extras.rt_type && RULES[extras.rt_type] ? extras.rt_type : (role ? typeOfRole(role) : null) || guessType(gl.scene);
-    typeSel.value = type; fillRoles(type, /^(furniture|street):/.test(role || '') ? role.split(':')[0] : role);
+    typeSel.value = type; fillRoles(type, /^(furniture|street|vehicle|filler):/.test(role || '') ? role.split(':')[0] : role);
     cur = {name, size:buf.byteLength, scene:gl.scene, extras, anims:gl.animations || [], roleKnown:!!role};
     runChecks(); show(gl.scene);
   }, err => {
@@ -269,7 +271,7 @@ function runChecks(){
   else add('warn', `File name ${cur.name} should be lowercase words joined by hyphens, for example cafe-exterior.glb.`);
   if (!cur.roleKnown) add('info', 'The file does not say what it replaces. Pick it above, or export with the Runway add-on so the town knows by itself.');
   if (type !== typeOfRole(role)) add('warn', 'The role does not match the type.');
-  const fullRole = role === 'furniture' || role === 'street' ? role + ':' + cur.name.replace(/\.glb$/i, '') : role;
+  const fullRole = ['furniture', 'street', 'vehicle', 'filler'].includes(role) ? role + ':' + cur.name.replace(/\.glb$/i, '') : role;
 
   if (meshes.length){
     const t = stats.tris;
@@ -326,6 +328,10 @@ function runChecks(){
     else add('ok', 'COL_body sets where people can walk.');
     if (/^(rival:|house)/.test(role) && !names.includes('swap_wall')) add('info', 'No swap_wall material, so the town cannot recolour this building.');
   }
+  if (type === 'vehicle'){ const wh = []; scene.traverse(o => { if (/^wheel_/.test(o.name)) wh.push(o.name); });
+    if (wh.length >= 4) add('ok', `Wheels: ${wh.join(', ')}.`); else add('warn', 'Name the wheels wheel_FL, wheel_FR, wheel_RL, wheel_RR (origin at the axle) so the game can spin them.');
+    if (size.x > size.z) add('error', 'The vehicle is wider than it is long. In Blender its front must face −Y.'); }
+  if (role === 'filler' && Math.max(size.x, size.z) > 9.2) add('warn', 'Neighbour buildings must fit a 9 × 8 m plot.');
   if (role === 'tree'){ if (names.includes('swap_leaves')) add('ok', 'Leaves use swap_leaves, so they change with the seasons.'); else add('warn', 'No swap_leaves material, so the leaves will not change with the seasons.'); }
   if (type === 'interior'){
     if (!door) add('error', 'No door marker where the player comes in (on the front wall).');
