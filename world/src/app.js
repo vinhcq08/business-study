@@ -542,7 +542,8 @@ function textTexture(lines, opts = {}){
   if (opts.border !== false){ x.strokeStyle = opts.fg || '#23201A'; x.lineWidth = 6; x.strokeRect(3, 3, W - 6, H - 6); }
   x.fillStyle = opts.fg || '#23201A'; x.textAlign = 'center'; x.textBaseline = 'middle';
   const arr = Array.isArray(lines) ? lines : [lines], size = opts.size || 54;
-  arr.forEach((l, i) => { x.font = `${i === 0 ? 700 : 600} ${i === 0 ? size : size*0.55}px Fredoka, Nunito, 'Arial Rounded MT Bold', sans-serif`; x.fillText(l, W/2, H/2 + (i - (arr.length - 1)/2)*size*0.85, W - 24); });
+  arr.forEach((l, i) => { x.font = `${i === 0 ? 700 : 600} ${i === 0 ? size : size*0.55}px Fredoka, Nunito, 'Arial Rounded MT Bold', sans-serif`; const y = H/2 + (i - (arr.length - 1)/2)*size*0.85;
+    if (opts.bold && i === 0){ x.lineJoin = 'round'; x.lineWidth = Math.max(2, size*0.07); x.strokeStyle = x.fillStyle; x.strokeText(l, W/2, y, W - 24); } x.fillText(l, W/2, y, W - 24); });
   const t = new THREE.CanvasTexture(cv); t.anisotropy = 4; return t;
 }
 function addBox(parent, w, h, d, color, x, y, z, cast = true){ const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(color)); m.position.set(x, y, z); m.castShadow = cast; m.receiveShadow = true; parent.add(m); return m; }
@@ -652,7 +653,7 @@ function initWorld(){
   player = makePerson(0x3A86FF, 0x1F2430, C.skin[0], 0x3B2A20, 'avatar'); player.position.set(0, 0, 6);
   // Pedestrians
   const shirts = SHIRTS;
-  makeWalkers(18); makeLoiterers();
+  makeWalkers(18); makeLoiterers(); makeTraffic();
   for (let i = 0; i < 16; i++){ const n = makePerson(shirts[(i + 3) % shirts.length], PANTS[(i + 2) % PANTS.length], C.skin[(i + 1) % 4], HAIRS[(i + 3) % HAIRS.length], 'townsperson', i + 12); n.visible = false; customers.push(n); }
   for (let i = 0; i < 30; i++){ const b = addBox(scene, 0.8, 0.6, 0.8, 0xB58B55, 0, 0.3, 0); b.visible = false; crates.push(b); addProp(b, 'crate', 0.3, i); }
   bubble = makeSprite('…'); bubble.visible = false;
@@ -688,6 +689,7 @@ function rebuildBusiness(){
 }
 function syncWorld(){
   if (!scene) return;
+  syncCity4();
   const g = DB.game, F = g ? FEAT(g.level) : null;
   const rivalOn = !!(g && F.rival && g.month >= (g.st.rivalAt || 99));
   if (rivalSlot){ rivalSlot.group.visible = rivalOn; rivalSlot.box.on = rivalOn; }
@@ -775,7 +777,7 @@ function frame(now){
       if (Math.abs(diff) < 0.9) camYaw += diff*(1 - Math.exp(-dt*0.9)); } }
   animatePerson(player, T, moving);
   // pedestrians
-  updateWalkers(dt); updateSky(dt); if (!inside) updateWeather(dt);
+  updateWalkers(dt); updateSky(dt); if (!inside){ updateWeather(dt); updateTraffic(dt); updateCompanions(dt); }
   customers.forEach((c, i) => { if (c.visible) c.position.y = Math.abs(Math.sin(T*2 + i))*0.05; });
   if (inside) iPeople.forEach(g => { if (!g.userData.seated) g.position.y = Math.abs(Math.sin(T*1.6 + g.userData.t))*0.03; });
   // camera
@@ -835,7 +837,7 @@ function analyse(root, file, role){
     const n = baseName(o.name);
     if (isCol(o) && o.isMesh){ o.geometry.computeBoundingBox(); info.col = o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld); return; }
     if (o.isMesh){ o.geometry.computeBoundingBox(); info.box.union(o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld)); }
-    if (['sign_board', 'menu_board', 'pinboard'].includes(n) && o.isMesh && !info.boards[n]){ const bb = o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld); info.boards[n] = {box:bb, color:[].concat(o.material)[0].color.getHex()}; }
+    if (['sign_board', 'menu_board', 'pinboard', 'ad_board'].includes(n) && o.isMesh && !info.boards[n]){ const bb = o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld); info.boards[n] = {box:bb, color:[].concat(o.material)[0].color.getHex()}; }
     if (['door', 'sign', 'counter', 'queue_start', 'stock_spot', 'seat_1', 'seat_2'].includes(n) && !info.markers[n]) info.markers[n] = o.getWorldPosition(new THREE.Vector3());
     if (['head', 'body', 'arm_L', 'arm_R', 'leg_L', 'leg_R'].includes(n)) info.parts[n] = true;
   });
@@ -857,7 +859,8 @@ function dressBuilding(slot){
   const sign = slot.group.userData.sign, sp = m.markers.sign;
   if (sp) sign.position.set(sp.x, sp.y, sp.z + 0.03); else sign.position.set(0, Math.min(m.box.max.y - 0.8, 3.6), m.box.max.z + 0.06);
   sign.visible = !m.boards.sign_board && !!sp && !slot.noSign;   // no board and no sign marker (houses): no name sign
-  if (m.boards.sign_board) paintBoard(slot.model, m.boards.sign_board, slot.signLines);
+  const bk = /^business:(\w+)/.exec(slot.roles[0] || '');
+  if (m.boards.sign_board) paintBoard(slot.model, m.boards.sign_board, slot.signFor ? slot.signFor(m) : slot.signLines, null, bk && SIGN_INK[bk[1]] ? {fg:SIGN_INK[bk[1]]} : null);
   slot.group.updateMatrixWorld(true);
   const wb = (m.col || m.box).clone().applyMatrix4(slot.group.matrixWorld);
   Object.assign(slot.box, {minX: wb.min.x, maxX: wb.max.x, minZ: wb.min.z, maxZ: wb.max.z});
@@ -885,7 +888,7 @@ function dressProp(pr){
   pr.mesh.material.visible = false; pr.mesh.castShadow = false;
   pr.model = cloneModel(m, null); pr.model.position.y = -pr.lift; pr.mesh.add(pr.model); pr.dressed = m;
 }
-function applyModels(){ if (!scene) return; bldgs.forEach(dressBuilding); people.forEach(dressPerson); trees.forEach(dressTree); props.forEach(dressProp); placeStreet(); syncWorld(); }
+function applyModels(){ if (!scene) return; sortModels(); bldgs.forEach(dressBuilding); people.forEach(dressPerson); trees.forEach(dressTree); props.forEach(dressProp); placeStreet(); placeCity4(); dressCars(); dressExtras(); syncWorld(); }
 function modelCount(){ return Object.values(MODELS).reduce((n, a) => n + a.length, 0); }
 function modelSummary(){
   const n = modelCount(); if (!n) return 'The town uses code-built stand-ins; no Blender models are loaded.';
@@ -961,13 +964,13 @@ function markersOf(root, lvl){
   Object.values(out).forEach(a => a.sort((x, y) => x.i - y.i)); return out;
 }
 // Paint text (or a drawing) onto a board mesh found in the model (sign_board, menu_board, pinboard).
-function paintBoard(root, bd, lines, draw){
+function paintBoard(root, bd, lines, draw, opt){
   const b = bd.box, w = b.max.x - b.min.x, h = b.max.y - b.min.y; if (w < 0.05 || h < 0.05) return null;
   const W = 1024, H = Math.max(64, Math.round(W*h/w)), hex = '#' + bd.color.toString(16).padStart(6, '0');
-  const lum = (((bd.color >> 16) & 255)*0.299 + ((bd.color >> 8) & 255)*0.587 + (bd.color & 255)*0.114)/255, fg = lum < 0.55 ? '#FFFFFF' : '#1F2430';
+  const lum = (((bd.color >> 16) & 255)*0.299 + ((bd.color >> 8) & 255)*0.587 + (bd.color & 255)*0.114)/255, bg = (opt && opt.bg) || hex, fg = (opt && opt.fg && (opt.bg || lum >= 0.55) ? opt.fg : null) || (lum < 0.55 && !(opt && opt.bg) ? '#FFFFFF' : '#1F2430');
   let tex;
   if (draw){ const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const x = cv.getContext('2d'); x.fillStyle = hex; x.fillRect(0, 0, W, H); draw(x, W, H, fg); tex = new THREE.CanvasTexture(cv); }
-  else tex = textTexture(lines, {w:W, h:H, bg:hex, fg, border:false, size:Math.min(H*(lines.length > 1 ? 0.46 : 0.62), 170)});
+  else tex = textTexture(lines, {w:W, h:H, bg, fg, border:false, bold:true, size:Math.min(H*(lines.length > 1 ? 0.5 : 0.68), 180)});
   tex.anisotropy = 4;
   const pl = new THREE.Mesh(new THREE.PlaneGeometry(w*0.96, h*0.9), new THREE.MeshBasicMaterial({map:tex}));
   pl.position.set((b.min.x + b.max.x)/2, (b.min.y + b.max.y)/2, b.max.z + 0.012); root.add(pl); return pl;
@@ -1198,8 +1201,9 @@ const FILLER_NAMES = ['Corner Shop', 'Bakery', 'Books', 'Flowers', 'Barber', 'De
 function makeFillers(){
   FILLER_SLOTS.forEach(([x, z, face], i) => {
     const [c, r] = FILLER_LOOK[i % FILLER_LOOK.length], h = [7.5, 10.5, 13.5, 9, 12.5, 7.5, 11, 15][i % 8];
-    const slot = makeBuilding({x, z, w:9, d:8, h, color:c, roofColor:r, face, window:0xBFE6FF, sign:[FILLER_NAMES[i % FILLER_NAMES.length]], role:'filler', variant:i, tint:{wall:c, roof:r}, noSign:true});
-    DOORS.push(slot.door);
+    const slot = makeBuilding({x, z, w:9, d:8, h, color:c, roofColor:r, face, window:0xBFE6FF, sign:[FILLER_NAMES[i % FILLER_NAMES.length]], role:'filler', variant:(i*3) % 8, tint:{wall:c, roof:r}, noSign:true});
+    slot.signFor = m => [FILLER_SIGN[fileId(m)] || FILLER_NAMES[i % FILLER_NAMES.length]];
+    if (i === PARK_SLOT) slot.parkPlot = true; else DOORS.push(slot.door);
   });
 }
 
@@ -1313,6 +1317,244 @@ function updateWeather(dt){
   a.needsUpdate = true;
 }
 
+
+/* =========================================================
+   Round 4 city: neighbours' shop signs, the four house variants, skyline
+   models, traffic, street life, a pocket park, the billboard and the
+   things people carry. Every piece uses its Blender model when loaded;
+   traffic falls back to simple code-built cars.
+   ========================================================= */
+const PARK_SLOT = 7;   // the plot (index in FILLER_SLOTS) that becomes a pocket park
+const FILLER_SIGN = {bakery:'Bakery', 'corner-shop':'Corner Shop', launderette:'Launderette', pharmacy:'Pharmacy'};
+const HOUSE_ORDER = ['house-home', 'house-flats', 'house-cottage', 'house-workshop'];
+const SIGN_INK = {cafe:'#9A5B00', saas:'#1F5FC9', shop:'#B8241A', agency:'#6E2F8E', idea:'#1E7A44'};
+const fileId = m => (m.file || '').split('/').pop().replace(/\.(glb|gltf)$/i, '');
+function sortModels(){
+  // The four round-4 houses replace the old one; the pine and blossom trees join the round tree.
+  const H = MODELS.house;
+  if (H && H.some(m => fileId(m) !== 'house'))
+    MODELS.house = H.filter(m => fileId(m) !== 'house').sort((a, b) => HOUSE_ORDER.indexOf(fileId(a)) - HOUSE_ORDER.indexOf(fileId(b)));
+  const more = ['street:tree-pine', 'street:tree-blossom'].map(r => (MODELS[r] || [])[0]).filter(Boolean);
+  if (MODELS.tree && MODELS.tree.length && more.length) MODELS.tree = [MODELS.tree.find(m => !more.includes(m)) || MODELS.tree[0]].concat(more);
+}
+const boxOf = (m, o) => { o.updateMatrixWorld(true); const b = (m.col || m.box).clone().applyMatrix4(o.matrixWorld); return {minX:b.min.x, maxX:b.max.x, minZ:b.min.z, maxZ:b.max.z, on:true}; };
+const quarter = a => Math.round(a/(Math.PI/2))*(Math.PI/2);
+
+/* ---------- Skyline: Blender towers past the outer roads ---------- */
+let skyModels = null;
+function placeSkylineModels(){
+  const list = Object.keys(MODELS).filter(r => /^skyline:/.test(r)).map(r => MODELS[r][0]).filter(Boolean);
+  if (!list.length) return;
+  if (skyModels) scene.remove(skyModels);
+  skyModels = new THREE.Group(); scene.add(skyModels); if (skyline) skyline.visible = false;
+  let seed = 11; const R = () => (seed = (seed*16807) % 2147483647)/2147483647;
+  const cols = [0xBFD8EE, 0xD6E4F0, 0xC9D6E8, 0xE3D9EE, 0xD9E8DA, 0xEADFCF, 0xFFF1D6, 0xCFE3F5];
+  for (let i = 0; i < 48; i++){
+    const side = i % 4, k = i >> 2, along = -100 + k*(200/11) + (R() - 0.5)*6, out = 68 + R()*34;
+    const x = side < 2 ? along : (side === 2 ? -out : out), z = side < 2 ? (side === 0 ? -out : out) : along;
+    const m = list[(i*5 + k) % list.length], o = cloneModel(m, {wall:cols[(i*3) % cols.length]});
+    o.position.set(x, 0, z); o.rotation.y = quarter(Math.atan2(-x, -z)); o.scale.setScalar(0.85 + R()*0.35);
+    o.traverse(q => { if (q.isMesh){ q.castShadow = false; q.receiveShadow = false; } });
+    skyModels.add(o);
+  }
+}
+
+/* ---------- Street life: stalls, carts, parasols, an ATM, a phone booth ---------- */
+const STREET4 = [['market-stall', -7.8, 3.5, Math.PI/2], ['ice-cream-cart', -3, 8.3, Math.PI], ['cafe-parasol-set', -4.2, -19.3, 0], ['cafe-parasol-set', 4.2, -19.3, 0],
+  ['newspaper-box', 2.3, -0.6, 0], ['atm', -20.3, 3.4, Math.PI/2], ['phone-booth', -11, -6, Math.PI/2], ['bicycle-parked', 11, 6.5, -Math.PI/2]];
+const city4 = [];   // {o, box}
+function clearCity4(){ city4.forEach(c => { if (c.o.parent) c.o.parent.remove(c.o); if (c.box) c.box.on = false; }); city4.length = 0; }
+function put4(name, x, z, ry, solid = true, parent = scene, tint = null){
+  const m = pickModel([name.includes(':') ? name : 'street:' + name], 0); if (!m) return null;
+  const o = cloneModel(m, tint); o.position.set(x, 0, z); o.rotation.y = ry; parent.add(o);
+  const box = solid ? boxOf(m, o) : null; if (box) obstacles.push(box); city4.push({o, box}); return {o, m};
+}
+let billboard = null, construction = null, foodTruck = null, parkOn = false;
+function placeCity4(){
+  if (!scene) return;
+  clearCity4();
+  placeSkylineModels();
+  STREET4.forEach(([n, x, z, ry]) => put4(n, x, z, ry));
+  foodTruck = put4('vehicle:food-truck', 7.8, -3, 0);
+  billboard = put4('billboard', -30, -21.4, 0); if (billboard) billboard.key = '';
+  construction = put4('construction-set', 30, -26, 0); if (construction){ construction.o.visible = false; city4[city4.length - 1].box.on = false; construction.box = city4[city4.length - 1].box; }
+  placePark();
+  syncCity4();
+}
+/* The billboard shows your business while you spend on marketing; a building
+   site fills the second-location plot at Levels V and Real life until you expand. */
+function syncCity4(){
+  const g = DB.game, playing = !!(g && g.status === 'playing');
+  if (billboard && billboard.m.boards.ad_board){
+    const spend = playing ? (g.dec.mkt || g.dec.ads || 0) : 0, key = spend > 0 ? bizName() + '|' + g.biz : 'empty';
+    if (key !== billboard.key){
+      if (billboard.plane) billboard.o.remove(billboard.plane);
+      const lines = spend > 0 ? [bizName(), {cafe:'Fresh coffee, just across the square', saas:'Try it free this month', shop:'Backpacks, delivered fast', agency:'Design that gets noticed', idea:'Open now'}[g.biz]] : ['Advertise here', 'Spend on marketing to fill this board'];
+      billboard.plane = paintBoard(billboard.o, billboard.m.boards.ad_board, lines, null, spend > 0 ? {bg:{cafe:'#F4C430', saas:'#3A86FF', shop:'#E74C3C', agency:'#9B59B6', idea:'#2ECC71'}[g.biz] || '#FFFFFF', fg:'#FFFFFF'} : null);
+      billboard.key = key;
+    }
+  }
+  if (construction){ const on = playing && FEAT(g.level).expand && !(g.st && g.st.expanded); construction.o.visible = on; construction.box.on = on; }
+}
+
+/* ---------- Pocket park on one neighbour plot ---------- */
+let parkGroup = null;
+function placePark(){
+  const need = ['fountain', 'playground', 'hedge', 'park-gate'].every(n => pickModel(['street:' + n], 0));
+  const slot = bldgs.find(s => s.parkPlot);
+  if (parkGroup){ scene.remove(parkGroup); parkGroup = null; }
+  if (!need || !slot){ if (slot){ slot.group.visible = true; slot.box.on = true; } parkOn = false; return; }
+  slot.group.visible = false; slot.box.on = false; parkOn = true;
+  const [x, z, face] = FILLER_SLOTS[PARK_SLOT], grp = new THREE.Group(); grp.position.set(x, 0, z); grp.rotation.y = ROT[face]; scene.add(grp); parkGroup = grp;
+  const lawn = new THREE.Mesh(new THREE.PlaneGeometry(9, 8), mat(0x6CC75A)); lawn.rotation.x = -Math.PI/2; lawn.position.y = 0.04; lawn.receiveShadow = true; grp.add(lawn);
+  const longX = n => { const m = pickModel(['street:' + n], 0), s = m.box.getSize(new THREE.Vector3()); return s.x >= s.z; };
+  const hedgeRy = along => (longX('hedge') === along) ? 0 : Math.PI/2;
+  const p = (n, lx, lz, ry, solid = true, tint = null) => put4(n, lx, lz, ry, solid, grp, tint);
+  grp.updateMatrixWorld(true);
+  p('hedge', -2.3, -3.6, hedgeRy(true), true, {leaves:0x4FA83D}); p('hedge', 2.3, -3.6, hedgeRy(true), true, {leaves:0x4FA83D});
+  p('hedge', -4.1, -1.4, hedgeRy(false), true, {leaves:0x4FA83D}); p('hedge', 4.1, -1.4, hedgeRy(false), true, {leaves:0x4FA83D});
+  p('fountain', -1.7, -0.7, 0); p('playground', 2.2, -1.3, 0);
+  p('flower-bed', -3.1, 2.4, 0); p('flower-bed', 3.1, 2.4, 0); p('picnic-table', 0.6, 2.0, Math.PI/2);
+  const gate = p('park-gate', 0, 3.7, 0, false);
+  if (gate && gate.m.boards.sign_board) paintBoard(gate.o, gate.m.boards.sign_board, ['Town Park']);
+  const gw = grp.localToWorld(new THREE.Vector3(0, 0, 4.8)); DOORS.push({x:gw.x, z:gw.z});
+}
+
+/* ---------- Traffic: cars, taxis and vans drive the right-hand lanes ---------- */
+const NODE_C = [-45, -15, 15, 45], LANE = 1.6, HALF = 5;
+const LIGHTS = new Set(['-15,-15', '15,-15', '-15,15', '15,15']);
+const BUS_ROUTE = [[-15, 15], [15, 15], [15, -15], [-15, -15]];
+const CAR_COLS = [0xE74C3C, 0x3A86FF, 0x2ECC71, 0x9B59B6, 0xFF6B5A, 0xF5F5F5, 0x1F2430, 0x7CC8FF];
+const cars = [], occupied = {};
+const nk = (a) => a[0] + ',' + a[1];
+function nbrs(n){ const i = NODE_C.indexOf(n[0]), j = NODE_C.indexOf(n[1]), o = [];
+  if (i > 0) o.push([NODE_C[i - 1], n[1]]); if (i < 3) o.push([NODE_C[i + 1], n[1]]); if (j > 0) o.push([n[0], NODE_C[j - 1]]); if (j < 3) o.push([n[0], NODE_C[j + 1]]); return o; }
+const dirOf = (a, b) => { const dx = b[0] - a[0], dz = b[1] - a[1], l = Math.hypot(dx, dz) || 1; return [dx/l, dz/l]; };
+const rightOf = d => [-d[1], d[0]];
+function roadPath(a, b){ const d = dirOf(a, b), r = rightOf(d);
+  const p0 = [a[0] + d[0]*HALF + r[0]*LANE, a[1] + d[1]*HALF + r[1]*LANE], p2 = [b[0] - d[0]*HALF + r[0]*LANE, b[1] - d[1]*HALF + r[1]*LANE];
+  return {p0, p1:[(p0[0] + p2[0])/2, (p0[1] + p2[1])/2], p2, len:Math.hypot(p2[0] - p0[0], p2[1] - p0[1])}; }
+function turnPath(a, b, c){ const d = dirOf(a, b), e = dirOf(b, c), r = rightOf(d), r2 = rightOf(e);
+  const p0 = [b[0] - d[0]*HALF + r[0]*LANE, b[1] - d[1]*HALF + r[1]*LANE], p2 = [b[0] + e[0]*HALF + r2[0]*LANE, b[1] + e[1]*HALF + r2[1]*LANE];
+  const straight = Math.abs(d[0]*e[0] + d[1]*e[1]) > 0.9, p1 = straight ? [(p0[0] + p2[0])/2, (p0[1] + p2[1])/2] : [b[0] + r[0]*LANE + r2[0]*LANE, b[1] + r[1]*LANE + r2[1]*LANE];
+  let len = 0, prev = p0; for (let i = 1; i <= 8; i++){ const q = bez({p0, p1, p2}, i/8); len += Math.hypot(q[0] - prev[0], q[1] - prev[1]); prev = q; }
+  return {p0, p1, p2, len}; }
+function bez(P, t){ const u = 1 - t; return [u*u*P.p0[0] + 2*u*t*P.p1[0] + t*t*P.p2[0], u*u*P.p0[1] + 2*u*t*P.p1[1] + t*t*P.p2[1]]; }
+function bezDir(P, t){ const u = 1 - t, x = 2*u*(P.p1[0] - P.p0[0]) + 2*t*(P.p2[0] - P.p1[0]), z = 2*u*(P.p1[1] - P.p0[1]) + 2*t*(P.p2[1] - P.p1[1]), l = Math.hypot(x, z) || 1; return [x/l, z/l]; }
+function standInCar(color, bus){
+  const g = new THREE.Group(), L = bus ? 10 : 4, W = bus ? 2.5 : 1.8, H = bus ? 2.9 : 1.05;
+  addBox(g, W, H, L, color, 0, 0.35 + H/2, 0); if (!bus) addBox(g, W*0.9, 0.6, L*0.5, 0xBFE6FF, 0, 0.35 + H + 0.3, -0.2);
+  for (const [n, x, z] of [['wheel_FL', W/2, L*0.32], ['wheel_FR', -W/2, L*0.32], ['wheel_RL', W/2, -L*0.32], ['wheel_RR', -W/2, -L*0.32]]){
+    const w = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.36, 0.3, 10), mat(0x1F2430)); w.rotation.z = Math.PI/2; const piv = new THREE.Group(); piv.name = n; piv.position.set(x, 0.36, z); piv.add(w); g.add(piv); }
+  return g;
+}
+function makeTraffic(){
+  const edges = []; NODE_C.forEach(x => NODE_C.forEach(z => nbrs([x, z]).forEach(n => edges.push([[x, z], n]))));
+  const pick = [3, 9, 14, 20, 27, 33, 38, 44].map(i => edges[i % edges.length]);
+  pick.forEach(([a, b], i) => addCar({from:a, to:b, s:4 + (i % 3)*5, color:CAR_COLS[i % CAR_COLS.length], variant:i}));
+  addCar({from:BUS_ROUTE[0], to:BUS_ROUTE[1], s:2, color:0x3A86FF, bus:true, route:1});
+}
+function addCar(o){
+  const c = Object.assign({phase:'road', speed:0, max:o.bus ? 5.5 : 7 + (o.variant % 3)*0.8, len:o.bus ? 10.2 : 4.3, wait:0, dressed:null}, o);
+  c.path = roadPath(c.from, c.to); c.grp = new THREE.Group(); scene.add(c.grp);
+  c.box = {minX:0, maxX:0, minZ:0, maxZ:0, on:true}; obstacles.push(c.box);
+  cars.push(c); dressCar(c); placeCar(c, 0);
+}
+function vehicleModels(){ return (MODELS.vehicle || []).filter(m => !/city-bus|food-truck/.test(fileId(m))); }
+function dressCar(c){
+  const m = c.bus ? pickModel(['vehicle:city-bus'], 0) : (vehicleModels()[c.variant % Math.max(1, vehicleModels().length)] || null);
+  const key = m || 'stand-in'; if (c.dressed === key) return;
+  c.grp.children.slice().forEach(ch => c.grp.remove(ch));
+  const obj = m ? cloneModel(m, {paint:c.color}) : standInCar(c.color, c.bus);
+  if (m){ const s = m.box.getSize(new THREE.Vector3()); c.len = s.z + 0.4; c.wid = s.x; } else c.wid = c.bus ? 2.5 : 1.8;
+  c.grp.add(obj); c.dressed = key;
+  c.wheels = []; obj.traverse(o => { if (/^wheel_/.test(o.name)) c.wheels.push(o); });
+}
+function dressCars(){ cars.forEach(dressCar); }
+function carPos(c){ const P = c.path, t = Math.min(1, c.s/(P.len || 1)); return {p:bez(P, t), d:bezDir(P, t)}; }
+function placeCar(c){
+  const {p, d} = carPos(c); c.grp.position.set(p[0], 0, p[1]); c.grp.rotation.y = Math.atan2(d[0], d[1]); c.dir = d;
+  const hx = Math.abs(d[0])*c.len/2 + Math.abs(d[1])*(c.wid || 1.8)/2, hz = Math.abs(d[1])*c.len/2 + Math.abs(d[0])*(c.wid || 1.8)/2;
+  Object.assign(c.box, {minX:p[0] - hx, maxX:p[0] + hx, minZ:p[1] - hz, maxZ:p[1] + hz});
+}
+function lightGreen(node, d){
+  if (!LIGHTS.has(nk(node))) return true;
+  const cyc = T % 18, alongX = Math.abs(d[0]) > 0.5;
+  if (cyc > 7.5 && cyc < 9 || cyc > 16.5) return false;   // all red between phases
+  return alongX ? cyc < 9 : cyc >= 9;
+}
+function nextNode(c){
+  if (c.bus){ c.route = (c.route + 1) % BUS_ROUTE.length; return BUS_ROUTE[c.route]; }
+  const opts = nbrs(c.to).filter(n => nk(n) !== nk(c.from)); return opts[Math.floor(Math.random()*opts.length)] || c.from;
+}
+function blockedAhead(c, pos, dir){   // a person (or the player) in front of the car
+  const ppl = [player].concat(npcs.filter(w => w.g.visible).map(w => w.g));
+  let best = 1e9;
+  for (const g of ppl){ const rx = g.position.x - pos[0], rz = g.position.z - pos[1], along = rx*dir[0] + rz*dir[1], lat = Math.abs(rx*dir[1] - rz*dir[0]);
+    if (along > c.len/2 - 0.5 && along < c.len/2 + 7 && lat < 1.9) best = Math.min(best, along - c.len/2 - 1.2); }
+  return best;
+}
+let busStopUntil = 0, busDwell = 0;
+function updateTraffic(dt){
+  for (const c of cars){
+    const {p, d} = carPos(c);
+    let room = c.path.len - c.s;                         // distance to the stop line (road) or the end of the turn
+    if (c.phase === 'road'){
+      for (const o of cars) if (o !== c && o.phase === 'road' && nk(o.from) === nk(c.from) && nk(o.to) === nk(c.to) && o.s > c.s) room = Math.min(room, o.s - c.s - (o.len + c.len)/2 - 1.5);
+      if (c.bus && nk(c.from) === nk(BUS_ROUTE[0]) && !busDwell && !c.leftStop && c.s < 15) room = Math.min(room, 15 - c.s);
+      const atLine = c.path.len - c.s < 0.6;
+      if (atLine){
+        if (!c.next) c.next = nextNode(c);
+        const free = !occupied[nk(c.to)], green = lightGreen(c.to, d);
+        const exitRoom = cars.every(o => o === c || !(o.phase === 'road' && nk(o.from) === nk(c.to) && nk(o.to) === nk(c.next) && o.s < c.len + 2));
+        if (free && green && exitRoom){ occupied[nk(c.to)] = c; c.phase = 'turn'; c.path = turnPath(c.from, c.to, c.next); c.s = 0; room = c.path.len + 10; }
+      }
+    } else room = c.path.len - c.s + 10;
+    room = Math.min(room, blockedAhead(c, p, d));
+    if (c.bus && busDwell){ busDwell -= dt; room = 0; if (busDwell <= 0){ busDwell = 0; c.leftStop = true; } }
+    const want = Math.max(0, Math.min(c.max, Math.sqrt(Math.max(0, 2*6*Math.max(0, room)))));
+    c.speed += clamp(want - c.speed, -12*dt, 4*dt); if (room <= 0.05) c.speed = Math.min(c.speed, 0);
+    c.s += c.speed*dt;
+    if (c.bus && c.phase === 'road' && nk(c.from) === nk(BUS_ROUTE[0]) && !busDwell && !c.leftStop && c.s >= 14.8){ busDwell = 5; c.speed = 0; boardBus(); }
+    if (c.phase === 'road' && c.s > c.path.len) c.s = c.path.len;
+    if (c.phase === 'turn' && c.s >= c.path.len){ occupied[nk(c.to)] = null; c.from = c.to; c.to = c.next; c.next = null; c.phase = 'road'; c.path = roadPath(c.from, c.to); c.s = 0; c.leftStop = false; }
+    placeCar(c);
+    if (c.wheels) c.wheels.forEach(w => w.rotation.x += c.speed*dt/0.36);
+  }
+}
+/* People waiting at the bus stop get on, and others turn up later. */
+function boardBus(){
+  const waiting = sitters.filter(s => s.seat === null && s.g.visible);
+  waiting.forEach((s, i) => setTimeout(() => { s.g.visible = false; setTimeout(() => { s.g.visible = true; }, 30000 + i*9000); }, 600 + i*700));
+}
+
+/* ---------- Things people carry: dogs on walks, shopping bags, coffee, umbrellas in the rain ---------- */
+const companions = [];
+function dressExtras(){
+  companions.forEach(c => { if (c.o.parent) c.o.parent.remove(c.o); }); companions.length = 0;
+  const dog = pickModel(['extra:dog'], 0), bag = pickModel(['extra:shopping-bag'], 0), cup = pickModel(['extra:coffee-cup'], 0), umb = pickModel(['extra:umbrella'], 0);
+  npcs.forEach((w, i) => {
+    const P = w.g.userData.p || {};
+    if (dog && i % 6 === 1){ const o = cloneModel(dog, {hair:[0x8C5A2B, 0xF5F0E6, 0x1F2430][i % 3]}); scene.add(o);
+      companions.push({kind:'dog', w, o, legs:['leg_FL', 'leg_FR', 'leg_RL', 'leg_RR'].map(n => o.getObjectByName(n)).filter(Boolean)}); }
+    if (bag && i % 5 === 2 && P.armL && P.armL.isObject3D){ const o = cloneModel(bag, null); o.position.set(0, -0.8, 0); P.armL.add(o); companions.push({kind:'held', o}); }
+    if (cup && i % 7 === 3 && P.armR && P.armR.isObject3D){ const o = cloneModel(cup, null); o.position.set(0, -0.82, 0.1); P.armR.add(o); companions.push({kind:'held', o}); }
+    if (umb){ const o = cloneModel(umb, null); o.position.set(0.28, 1.15, 0.1); o.visible = false; w.g.add(o); companions.push({kind:'umbrella', o, w}); }
+  });
+}
+function updateCompanions(dt){
+  const rain = weatherKind === 'rain';
+  for (const c of companions){
+    if (c.kind === 'umbrella'){ c.o.visible = rain; continue; }
+    if (c.kind !== 'dog') continue;
+    const g = c.w.g, ry = g.rotation.y, fx = Math.sin(ry), fz = Math.cos(ry);
+    c.o.visible = g.visible; if (!g.visible) continue;
+    const want = new THREE.Vector3(g.position.x - fx*1.1 - fz*0.6, 0, g.position.z - fz*1.1 + fx*0.6), moved = c.o.position.distanceTo(want);
+    c.o.position.lerp(want, 1 - Math.exp(-dt*6)); c.o.rotation.y = ry;
+    const s = moved > 0.02 ? Math.sin(T*14 + c.w.t)*0.7 : 0; c.legs.forEach((l, k) => l.rotation.x = (k === 0 || k === 3) ? s : -s);
+  }
+}
+
 /* ---------- Start ---------- */
 let webgl = typeof THREE !== 'undefined';
 if (webgl){ try { initWorld(); } catch(e){ webgl = false; } }
@@ -1326,5 +1568,5 @@ if (!webgl){
   requestAnimationFrame(t => { last = t; frame(t); });
 }
 window.__town = {city:() => ({npcs, sitters, DOORS, weatherKind, lampGlows, skyline, setDay:v => { dayT = v; }, setWeather}), cam:() => ({yaw:camYaw, pitch:camPitch, pos:camera.position.clone()}), DB:() => DB, runMonth, chooseEvent:answerEvent, startGame, openPanel, closePanel, openLesson, openStation, showEvent, showResult, showSetup, player:() => player, targets, MODELS, tryModelFile, slots:() => ({bldgs, bizSlot, people, trees, props}),
-  interior:() => ({inside, iRoom, iPeople, iDyn, inTargets, iBounds, iObstacles}), enterInterior, exitInterior, streetPlaced, interact, near:() => nearTarget};
+  interior:() => ({inside, iRoom, iPeople, iDyn, inTargets, iBounds, iObstacles}), enterInterior, exitInterior, streetPlaced, interact, near:() => nearTarget, traffic:() => ({cars, occupied, busDwell}), stepCity:(n, dt) => { for (let i = 0; i < n; i++){ T += dt; updateWalkers(dt); updateTraffic(dt); updateCompanions(dt); } }, view:(x, z, yaw, pitch, zm) => { player.position.set(x, 0, z); camYaw = yaw; camPitch = pitch; zoom = zm; camManual = T + 1e6; }, city4:() => ({parkOn, parkGroup, billboard, construction, foodTruck, skyModels, companions})};
 })();
