@@ -2736,7 +2736,9 @@ function updateWalkers(dt){
     const tgt = w.door ? [w.door.x, w.door.z] : WALK.nodes[w.to], p = w.g.position, dx = tgt[0] - p.x, dz = tgt[1] - p.z, dist = Math.hypot(dx, dz), step = w.speed*dt;
     if (dist > step){ const nx = p.x + dx/dist*step, nz = p.z + dz/dist*step;
       if (cars.some(c => (c.speed > 0.4 || c.blocker !== w.g) && nx > c.box.minX - 0.35 && nx < c.box.maxX + 0.35 && nz > c.box.minZ - 0.35 && nz < c.box.maxZ + 0.35) && (w.waited = (w.waited || 0) + dt) < 8){ animatePerson(w.g, 0, false); continue; }
-      w.waited = 0; p.x = nx; p.z = nz; w.g.rotation.y = Math.atan2(dx, dz); animatePerson(w.g, T*(w.speed/1.6) + w.t, true); continue; }
+      w.waited = 0; p.x = nx; p.z = nz; w.g.rotation.y = Math.atan2(dx, dz); animatePerson(w.g, T*(w.speed/1.6) + w.t, true);
+      for (const c of cars) nudgeOut(p, c);   // never inside a vehicle: step aside instead
+      continue; }
     p.x = tgt[0]; p.z = tgt[1];
     if (w.door){   // went inside: come out of another door a little later, then head for the nearest corner
       w.g.visible = false; w.hideUntil = T + 4 + Math.random()*10;
@@ -2972,8 +2974,9 @@ function dressCars(){ cars.forEach(dressCar); }
    as soon as they're through. */
 const front = c => bez(c.path, Math.min(1, Math.max(0, c.s)/(c.path.len || 1)));
 function placeCar(c){
-  const f = front(c), W = c.len*0.6, tr = c.trail, last = tr[tr.length - 1];
-  if (Math.hypot(f[0] - last[0], f[1] - last[1]) > 0.12) tr.push(f); else tr[tr.length - 1] = f;
+  // the last trail point follows the front; a new point is kept every 25 cm, whatever the frame rate
+  const f = front(c), W = c.len*0.6, tr = c.trail, n = tr.length;
+  if (n >= 2 && Math.hypot(f[0] - tr[n - 2][0], f[1] - tr[n - 2][1]) < 0.25) tr[n - 1] = f; else tr.push(f);
   let need = W, prev = f, rear = null;
   for (let i = tr.length - 2; i >= 0; i--){ const q = tr[i], d = Math.hypot(prev[0] - q[0], prev[1] - q[1]);
     if (d >= need){ const t = need/d; rear = [prev[0] + (q[0] - prev[0])*t, prev[1] + (q[1] - prev[1])*t]; if (i > 1) tr.splice(0, i - 1); break; }
@@ -2996,12 +2999,22 @@ function nextNode(c){
   if (c.bus){ c.route = (c.route + 1) % BUS_ROUTE.length; return BUS_ROUTE[c.route]; }
   const opts = nbrs(c.to).filter(n => nk(n) !== nk(c.from)); return opts[Math.floor(Math.random()*opts.length)] || c.from;
 }
+/* Push a person standing inside a vehicle's outline out to its nearest side. */
+function nudgeOut(p, c){
+  if (!c.mid) return;
+  const d = c.dir, rx = p.x - c.mid[0], rz = p.z - c.mid[1], along = rx*d[0] + rz*d[1], side = -rx*d[1] + rz*d[0], L = c.len/2 + 0.25, W = (c.wid || 1.8)/2 + 0.25;
+  if (Math.abs(along) >= L || Math.abs(side) >= W) return;
+  const outSide = W - Math.abs(side), outEnd = L - Math.abs(along);
+  if (outSide <= outEnd){ const k = (side >= 0 ? 1 : -1)*outSide; p.x += -d[1]*k; p.z += d[0]*k; }
+  else { const k = (along >= 0 ? 1 : -1)*outEnd; p.x += d[0]*k; p.z += d[1]*k; }
+}
 function blockedAhead(c){   // a person (or the player) in front of the vehicle
   const ppl = [player].concat(npcs.filter(w => w.g.visible).map(w => w.g)), d = c.dir, m = c.mid, half = (c.wid || 1.8)/2 + 0.7;
+  const waiting = new Set(npcs.filter(w => w.waited > 0).map(w => w.g));   // people beside the car who are already giving way
   let best = 1e9; c.blocker = null;
   for (const g of ppl){ const rx = g.position.x - m[0], rz = g.position.z - m[1], along = rx*d[0] + rz*d[1], lat = Math.abs(rx*d[1] - rz*d[0]);
     // ahead of the bumper, or beside the front half of the vehicle (where a turning car would sweep)
-    const near = (along > c.len/2 - 0.4 && along < c.len/2 + 6 && lat < half) || (along > -0.2 && along <= c.len/2 - 0.4 && lat < (c.wid || 1.8)/2 + 0.55);
+    const near = !waiting.has(g) && ((along > c.len/2 - 0.4 && along < c.len/2 + 6 && lat < half) || (along > -0.2 && along <= c.len/2 - 0.4 && lat < (c.wid || 1.8)/2 + 0.55));
     if (near){ const room = Math.max(0, along - c.len/2 - 1.2); if (room < best){ best = room; c.blocker = g; } } }
   return best;
 }
@@ -3009,6 +3022,7 @@ let busStopUntil = 0, busDwell = 0;
 const BUS_STOP_S = 15.5;   // where the bus's front axle stops beside the shelter
 const rearS = c => c.s - c.len*0.8;   // how far the back bumper is along the current road
 function updateTraffic(dt){
+  for (const w of npcs) if (w.g.visible) for (const c of cars) nudgeOut(w.g.position, c);
   for (const c of cars){
     let room;                                   // how far the front bumper may still go
     if (c.phase === 'road'){
