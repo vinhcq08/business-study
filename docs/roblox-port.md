@@ -94,11 +94,16 @@ Also keep the **order** in which the engine draws random numbers. Each `R()` cal
 | `stepMonth(g)` | Runs one month with `g.dec`. Returns `{ok, msg}`; when `ok` is false nothing changed (for example, the bank refused the loan) |
 | `chooseEvent(g, i)` | Answers the news card in `g.event` with choice `i` |
 | `makeOffer(g)`, `acceptOffer(g, 'fair' \| 'rich' \| 'none')` | The investor pitch |
+| `drawMoment(g)` | Call when Run is pressed: may set `g.moment = {id, day}`, a mid-month surprise (its own random stream; Level I has none). `stepMonth` refuses while it is open |
+| `momentView(g)`, `chooseMoment(g, i)` | The moment's card as plain data (title, text, choices with effect chips, `safe` = the cautious choice auto-run takes), and the answer. Effects that last "the rest of the month" scale with the days left |
+| `daySplit(g)` | 30 weights (adding up to 1) that spread the month's sales over its days, for the time-lapse only |
 | `goalKey(g)`, `valuation(g)`, `stake(g)`, `ownership(g)`, `loanLimit(g)` | Numbers for the HUD and report |
+
+**The live month:** the page plays each month as a short time-lapse. It runs `stepMonth` on a copy of `g` to get the month's totals, spreads them over the days with `daySplit`, pauses on `g.moment.day` for the moment card, runs the copy again after the answer, and only then runs the real `stepMonth`, so the report matches what was shown. On Roblox the same works with a deep copy of the state table.
 
 `BIZ[biz].hint(g)` returns the break-even tiles for the decision windows as a list of `{l, v, k}` (label, value, colour); no HTML.
 
-After a month, `g.last` holds the report: `rows` (income statement), `cf` (cash flow), `metrics`, `why` (the "what happened and why" cards, each with a subject `s` that opens a lesson), `voices` (customer comments). The balance sheet is `g.bs`.
+After a month, `g.last` holds the report: `rows` (income statement), `cf` (cash flow), `cust` (customers, sign-ups, orders or hours that month), `news` (the moment and event outcomes), `metrics`, `why` (the "what happened and why" cards, each with a subject `s` that opens a lesson), `voices` (customer comments). The balance sheet is `g.bs`.
 
 ## 4. Checking the port
 

@@ -541,3 +541,46 @@ body.panel-open .rundock{display:none}
 .pie-tile b{white-space:nowrap}
 body.modal-open .rundock{display:none}
 @media (max-width:700px){ .lvn .nm{display:none} .lvn{width:46px} }
+
+/* The live month (time-lapse): week strip, live card, coin pops, moment card */
+.weekpill{position:fixed;left:50%;transform:translateX(-50%);top:110px;z-index:5;display:flex;align-items:center;gap:10px;background:rgba(31,36,48,0.82);border:3px solid var(--ink);border-radius:999px;padding:5px 14px;pointer-events:none}
+.weekpill .ol-sm{font:700 16px var(--f-display);white-space:nowrap}
+.weekpill .wk{display:flex;gap:4px}
+.weekpill .wk i{width:46px;height:12px;border-radius:999px;border:2px solid var(--ink);background:linear-gradient(90deg,#4BE08A 0 var(--f),#2B3140 var(--f))}
+.weekpill.paused{background:rgba(240,168,14,0.92)}
+.live{background:#FFFFFF;border:3px solid var(--ink);border-radius:18px;box-shadow:0 5px 0 var(--ink);padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.live-h{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.live-h b{font:700 17px var(--f-display)}
+.live-h span{font:800 13px var(--f-body);color:#4A5163;white-space:nowrap}
+.live-tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.lt{border:2px solid var(--ink);border-radius:12px;padding:5px 10px;display:flex;flex-direction:column;min-width:0}
+.lt.grn{background:#E8F9EF} .lt.blu{background:#EAF4FF}
+.lt span{font:800 12px var(--f-body);color:#4A5163;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lt b{font:700 22px var(--f-display);font-variant-numeric:tabular-nums}
+.live-bars{display:flex;align-items:flex-end;gap:2px;height:40px}
+.live-bars i{flex:1;height:6%;background:#D5DAE3;border-radius:3px 3px 0 0;transition:height .25s}
+.live-bars i.on{background:var(--grn2)}
+.live-ctl{display:flex;gap:8px;align-items:center}
+.speed{display:flex;border:3px solid var(--ink);border-radius:12px;overflow:hidden;flex:1}
+.speed button{flex:1;background:#FFFFFF;border:0;border-right:3px solid var(--ink);padding:8px 0;font:700 16px var(--f-display);color:var(--ink);cursor:pointer;min-height:40px}
+.speed button:last-child{border-right:0}
+.speed button[aria-pressed="true"]{background:linear-gradient(var(--blu1),var(--blu2))}
+.speed .ol-sm{font:700 16px var(--f-display)}
+.live .skip{background:#FFFFFF;border:3px solid var(--ink);border-radius:12px;box-shadow:0 3px 0 var(--ink);padding:8px 14px;font:700 16px var(--f-display);color:var(--ink);cursor:pointer;min-height:40px}
+.live .skip:active{transform:translateY(2px);box-shadow:0 1px 0 var(--ink)}
+.coinpop{position:fixed;z-index:4;pointer-events:none;font:700 22px var(--f-display);color:#FFE27A;transform:translate(-50%,-50%);animation:coinup 1.4s ease-out forwards}
+@keyframes coinup{0%{opacity:0;transform:translate(-50%,-20%) scale(.7)}15%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-240%)}}
+.coinpop.at-cash{font-size:17px;animation-name:coinfall}
+@keyframes coinfall{0%{opacity:0;transform:translate(-50%,40%)}20%{opacity:1;transform:translate(-50%,0)}100%{opacity:0;transform:translate(-50%,-120%)}}
+.choices.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+.mom-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.mom-foot small{font:800 14px var(--f-body);color:#4A5163}
+body.live-on .d-last{visibility:hidden}
+@media (max-width:700px){
+  .live{width:min(330px, calc(100vw - 36px))}
+  .live-bars{height:28px}
+  .weekpill .wk i{width:30px}
+  .choices.two{grid-template-columns:1fr}
+}
+@media (max-width:640px){ .weekpill{left:max(12px, env(safe-area-inset-left, 0px));transform:none} .weekpill .ol-sm{font-size:14px} }
+@media (prefers-reduced-motion: reduce){ .coinpop{display:none} }

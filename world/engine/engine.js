@@ -83,7 +83,7 @@ BIZ.cafe = {
     const flags = [];
     if (waste > 2){ why.push({t:'Coffee poured away', p:`Made ${int(d.prep)} a day, sold ${int(sold)}. Waste cost ${money(waste*cupCost*30)}.`, f:`waste cost = ${int(waste)} cups × ${money2(cupCost)} × 30 days`, s:'excel'}); if (waste > 0.1*d.prep) flags.push('waste'); }
     if (lost > 2){ why.push({t:'You ran out', p:`${int(lost)} a day came after you sold out: ${money(lost*d.price*30)} of sales missed.`, f:`missed sales = ${int(lost)} × ${money2(d.price)} × 30 days`, s:'micro'}); if (lost > 0.1*demand) flags.push('stockout'); }
-    return {op, rev, rows:[['Sales', rev, 'rev'], ['Ingredients (every cup made)', -ingr, 'cost'], ['Cart permit', -permit, 'cost']],
+    return {op, rev, cust:sold*30, rows:[['Sales', rev, 'rev'], ['Ingredients (every cup made)', -ingr, 'cost'], ['Cart permit', -permit, 'cost']],
       metrics:[['Customers who wanted coffee', int(demand)+' a day'], ['Cups sold', int(sold)+' a day'], ['Cups wasted', int(waste)+' a day'], ['Customers turned away', int(lost)+' a day']], why, flags};
   },
   hint(g){ const d = g.dec, E = g.env, F = FEAT(g.level); const vc = (((F.seg && d.quality==='premium') ? 2.2 : 1.6)*1.06 + 0.2)*E.cost;
@@ -147,7 +147,7 @@ BIZ.cafe = {
     if (F.seg) metrics.push(['Reputation', (next.rep || rep).toFixed(2) + ' (1.00 is average)']);
     if (rivalOn) metrics.push(['Rival’s price', money2(st.rivalP)]);
     if (st.locs > 1) metrics.push(['Locations', '2']);
-    return {op, rev, rows, metrics, why, voices, flags, capex, dAP, next, rivalOn};
+    return {op, rev, cust:served*30, rows, metrics, why, voices, flags, capex, dAP, next, rivalOn};
   },
 };
 
@@ -174,7 +174,7 @@ BIZ.saas = {
       {t:'Visitors who paid', p:`${int(visitors)} visitors × ${pct(conv)} = ${int(signups)} new customers.`, f:`sign-up rate = 3% × (1 − price ÷ 120) = ${pct(conv)}`, s:'pricing'},
       {t:'Subscriptions add up', p:`You kept 97% of customers and added ${int(signups)}. Revenue stacks up.`, f:`customers = ${int(st.all)} − ${int(lostC)} cancelled + ${int(signups)} new = ${int(customers)}`, s:'micro'},
       {t:'Profit this month', p:`${money(mrr)} revenue − ${money(servers)} servers = ${money(op)} profit.`, f:`MRR = customers × price = ${int(customers)} × ${money(d.price)}`, s:'finacct'}];
-    return {op, rev:mrr, mrr, rows:[['Subscription revenue (MRR)', mrr, 'rev'], ['Servers and hosting', -servers, 'cost']],
+    return {op, rev:mrr, mrr, cust:signups, rows:[['Subscription revenue (MRR)', mrr, 'rev'], ['Servers and hosting', -servers, 'cost']],
       metrics:[['Visitors', int(visitors)], ['New customers', int(signups)], ['Cancelled', int(lostC)], ['Paying customers', int(customers)], ['MRR', money(mrr)]], why, flags: d.price < 8 ? ['lowMargin'] : [], next:{all:customers}};
   },
   hint(g){ const d = g.dec, E = g.env, F = FEAT(g.level), st = g.st; const p = F.seg ? d.pp : d.price;
@@ -255,7 +255,7 @@ BIZ.saas = {
     const metrics = [['Paying customers', int(custTotal)], ['New this month', int(newAll)], ['Churn', pct(churn)], ['CAC', cac ? money(cac) : '—'], ['LTV (' + (F.seg ? 'Pro' : 'average') + ')', money(ltv)], ['LTV ÷ CAC', cac ? (ltv/cac).toFixed(1) + '×' : '—'], ['Product quality', q.toFixed(2)]];
     if (st.expanded || st.ent > 0) metrics.push(['Enterprise customers', int(next.ent || 0)]);
     if (rivalOn) metrics.push(['Rival’s Pro price', money(st.rivalP)]);
-    return {op, rev:recRev, mrr, churn, rows, metrics, why, voices, flags, capex, dDef, next, rivalOn, cashRev};
+    return {op, rev:recRev, mrr, cust:newAll, churn, rows, metrics, why, voices, flags, capex, dDef, next, rivalOn, cashRev};
   },
   value(g){ const h = g.hist, n = h.length; const mrr = n ? h[n-1].mrr || 0 : 0; const prev = n > 6 ? h[n-7].mrr || 0 : 0;
     const gr = prev > 0 ? Math.pow(mrr/prev, 1/6) - 1 : 0; const scale = mrr*12 < 1000000 ? 0.8 : 1; const mult = n > 6 ? clamp(2 + 25*gr, 2, 6)*scale : 2.5; return {op: mrr*12*mult, label:`${mult.toFixed(1)}× annual recurring revenue`}; },
@@ -287,7 +287,7 @@ BIZ.shop = {
     if (buy < d.order) why.push({t:'Not enough cash for stock', p:`You wanted ${int(d.order)} bags but could only afford ${int(buy)}.`, f:`bags you can afford = cash ÷ ${money2(c)}`, s:'budget'});
     if (missed > 1) why.push({t:'Sold out', p:`${int(missed)} more wanted one: ${money(missed*(d.price - c))} of profit missed.`, f:`missed orders = orders − bags available`, s:'excel'});
     if (left > 0) why.push({t:'Stock left over', p:`${int(left)} bags left, ${money(g.bs.inv + dInv)} of cash tied up in stock.`, f:`stock value = bags left × average cost`, s:'mgmtacct'});
-    return {op, rev, rows:[['Sales', rev, 'rev'], ['Cost of bags sold', -cogs, 'cost'], ['Platform fee', -fee, 'cost']], dInv,
+    return {op, rev, cust:sold, rows:[['Sales', rev, 'rev'], ['Cost of bags sold', -cogs, 'cost'], ['Platform fee', -fee, 'cost']], dInv,
       metrics:[['Visitors', int(visitors)], ['Orders wanted', int(orders)], ['Bags sold', int(sold)], ['Missed (sold out)', int(missed)], ['Bags left in stock', int(left)], ['Cash tied up in stock', money(g.bs.inv + dInv)]], why, flags, next:{inv:left}};
   },
   hint(g){ const d = g.dec, E = g.env, F = FEAT(g.level); const c = ((F.seg && d.quality === 'premium') ? 32 : 24)*E.cost;
@@ -358,7 +358,7 @@ BIZ.shop = {
     if (F.seg) metrics.push(['Star rating', (next.rating || rating).toFixed(1)]);
     if (rivalOn) metrics.push(['Rival’s price', money(st.rivalP)]);
     if (buy < d.order) why.push({t:'Not enough cash for stock', p:`You wanted ${int(d.order)} bags but could only pay for ${int(buy)}${F.credit ? ' (including $15,000 of supplier credit)' : ''}.`, f:`bags you can afford = (cash${F.credit ? ' + supplier credit' : ''}) ÷ ${money2(c)}`, s:'budget'});
-    return {op, rev, rows, metrics, why, voices, flags, capex, dInv, dAP, next, rivalOn, rating:next.rating || rating};
+    return {op, rev, cust:canShip, rows, metrics, why, voices, flags, capex, dInv, dAP, next, rivalOn, rating:next.rating || rating};
   },
 };
 
@@ -380,7 +380,7 @@ BIZ.agency = {
       {t:'Price × hours = revenue', p:`${int(billed)} hours × ${money(d.rate)} = ${money(rev)}. Profit ${money(op)}.`, f:`revenue = billed hours × rate`, s:'finacct'}];
     if (demand > cap*1.15) why.push({t:'You’re too cheap', p:`${int(demand - cap)} hours more than you can work. Raise your rate.`, f:`spare demand = hours wanted − 120`, s:'pricing'});
     if (demand < cap*0.7) why.push({t:'Too many empty hours', p:`Busy only ${pct(billed/cap, 0)} of the time. A lower rate brings work.`, f:`busy share = billed ÷ 120 hours`, s:'pricing'});
-    return {op, rev, rows:[['Client fees', rev, 'rev'], ['Software', -tools, 'cost']], metrics:[['Hours wanted', int(demand)], ['Hours billed', int(billed)], ['Busy share', pct(billed/cap, 0)]], why, flags: billed/cap < 0.6 ? ['util'] : []};
+    return {op, rev, cust:billed, rows:[['Client fees', rev, 'rev'], ['Software', -tools, 'cost']], metrics:[['Hours wanted', int(demand)], ['Hours billed', int(billed)], ['Busy share', pct(billed/cap, 0)]], why, flags: billed/cap < 0.6 ? ['util'] : []};
   },
   hint(g){ const d = g.dec, E = g.env; const fixed = 5500*E.cost*d.staff + (1500 + (g.st.studios > 1 ? 2500 : 0))*E.cost + (200 + 100*d.staff)*E.cost + d.mkt;
     return [{l:'Break-even', v:`${int(fixed/d.rate)} hours/month`, k:'blu'}, {l:'You can bill', v:`${int(120 + 130*d.staff)} hours`, k:'grn'}]; },
@@ -442,7 +442,7 @@ BIZ.agency = {
     if (F.seg) metrics.push(['Reputation', (next.rep || rep).toFixed(2)]);
     if (F.credit) metrics.push(['Clients owe you', money(next.ar1 + next.ar2)]);
     if (rivalOn) metrics.push(['Freelancer rate', money(st.rivalR)]);
-    return {op, rev, rows, metrics, why, voices, flags, capex, dAR, next, rivalOn};
+    return {op, rev, cust:sold, rows, metrics, why, voices, flags, capex, dAR, next, rivalOn};
   },
 };
 
@@ -469,7 +469,7 @@ BIZ.idea = {
       {t:'Break-even point', p: unit > 0 ? `Need ${int(be)} a month to break even; served ${int(served)}.` : `Every sale loses money.`, f:`break-even = (fixed costs + marketing) ÷ (price − variable cost)`, s:'unitecon'},
       {t:'Demand at your price', p:`At ${money2(d.price)}${ramp < 1 ? ` (${pct(ramp, 0)} known)` : ''}: ${int(demand)} wanted to buy.`, f:`demand = expected × (1 − ${el} × (price − your price) ÷ your price)`, s:'pricing'}];
     if (lost > 1) why.push({t:'At capacity', p:`You can serve ${int(I.capacity)} a month; ${int(lost)} more wanted to buy.`, f:`served = smaller of demand and capacity`, s:'ops'});
-    return {op, rev, rows:[['Sales', rev, 'rev'], ['Variable costs', -varc, 'cost'], ['Gross profit', rev - varc, 'sub'], ['Fixed costs', -fixed, 'cost'], ['Marketing', -d.mkt, 'cost']],
+    return {op, rev, cust:served, rows:[['Sales', rev, 'rev'], ['Variable costs', -varc, 'cost'], ['Gross profit', rev - varc, 'sub'], ['Fixed costs', -fixed, 'cost'], ['Marketing', -d.mkt, 'cost']],
       metrics:[[`${I.unit[0].toUpperCase() + I.unit.slice(1)}s served`, int(served)], ['Wanted to buy', int(demand)], ['Break-even', isFinite(be) ? int(be) + ' a month' : '—'], ['Gross margin', rev > 0 ? pct((rev - varc)/rev) : '—']], why, flags};
   },
 };
@@ -550,6 +550,137 @@ const EV = [
 /* =========================================================
    Valuation, ownership, review
    ========================================================= */
+/* =========================================================
+   Mid-month moments (the live month)
+   A quick choice that pauses the month part-way through. Seeded on its own
+   stream, so a month with no moment runs exactly as before. f is the share
+   of the month still to come: effects that last "the rest of the month"
+   scale with it; one-off costs and orders don't.
+   Each moment: {id, biz, min (level), cond?, title, text, safe (the
+   cautious choice auto-run takes), choices:[{l, chips(g) → [[text, colour]], s, do(g, R, f)}]}
+   ========================================================= */
+const mM = (g, k, m, f) => addMod(g, {k, m:1 + (m - 1)*f, left:1});
+const mA = (g, k, a, f = 1) => addMod(g, {k, a:a*f, left:1});
+const priceOf = g => { const d = g.dec; return g.biz === 'agency' ? d.rate : g.biz === 'saas' && FEAT(g.level).seg ? d.pp : d.price; };
+const cst = (g, v) => v*g.env.cost;
+const NONE = () => [['No change', '']];
+const MOMENTS = [
+  /* Café */
+  {id:'beans', biz:['cafe'], min:2, title:'Beans running low', text:'You’ll run out by Thursday.', safe:1, choices:[
+    {l:'Rush order', chips:() => [['+20% bean cost', 'red'], ['No lost sales', 'grn']], s:'ops', do(g, R, f){ mM(g, 'cost', 1.2, f); return 'Rush order placed. Beans cost more this month.'; }},
+    {l:'Wait for delivery', chips:() => [['−8% customers', 'red']], s:'ops', do(g, R, f){ mM(g, 'demand', 0.92, f); return 'Some customers left without a coffee.'; }}]},
+  {id:'sick', biz:['cafe'], min:2, cond:g => g.dec.staff >= 2, title:'A barista calls in sick', text:'The queue is getting long.', safe:0, choices:[
+    {l:'Call in cover', chips:g => [['−' + money(cst(g, 450)), 'red'], ['Queue stays short', 'grn']], s:'ops', do(g){ charge(g, cst(g, 450), 'Cover barista'); return 'A cover barista kept the queue moving.'; }},
+    {l:'Stay short-handed', chips:() => [['−60 served a day', 'red'], ['Reputation dips', 'red']], s:'lead', do(g, R, f){ mA(g, 'tempcap', -60, f); mA(g, 'rep', -0.03); return 'The queue grew while you were short-handed.'; }}]},
+  {id:'office', biz:['cafe'], min:2, title:'A big office order', text:'200 coffees for Friday’s meeting.', safe:1, choices:[
+    {l:'Take it', chips:g => [['+' + money(200*priceOf(g)), 'grn'], ['−' + money(cst(g, 680)) + ' costs', 'red']], s:'sales', do(g){ mA(g, 'extraRev', 200*priceOf(g)); mA(g, 'wages', cst(g, 680)); return 'You delivered 200 coffees to the office.'; }},
+    {l:'Say no', chips:NONE, s:'sales', do(){ return 'You turned the order down.'; }}]},
+  {id:'review', biz:['cafe'], min:2, title:'A bad review online', text:'“My latte was cold.”', safe:0, choices:[
+    {l:'Reply and say sorry', chips:g => [['−' + money(cst(g, 60)) + ' free drinks', 'red'], ['Reputation up', 'grn']], s:'marketing', do(g){ charge(g, cst(g, 60), 'Free drinks'); mA(g, 'rep', 0.04); return 'Your kind reply won the customer back.'; }},
+    {l:'Ignore it', chips:() => [['−5% customers', 'red']], s:'marketing', do(g, R, f){ mM(g, 'demand', 0.95, f); mA(g, 'rep', -0.02); return 'A few people read the review and stayed away.'; }}]},
+  {id:'bulk', biz:['cafe'], min:2, title:'Bulk bean deal', text:'15% off if you buy three months’ worth.', safe:1, choices:[
+    {l:'Buy in bulk', chips:g => [['−' + money(cst(g, 300)) + ' storage', 'red'], ['−15% bean cost, 3 months', 'grn']], s:'unitecon', do(g){ charge(g, cst(g, 300), 'Extra storage'); addMod(g, {k:'cost', m:0.85, left:3}); return 'Beans are cheaper for three months.'; }},
+    {l:'No thanks', chips:NONE, s:'unitecon', do(){ return 'You kept buying as usual.'; }}]},
+  /* Software */
+  {id:'outage', biz:['saas'], min:2, title:'The servers go down', text:'Some users can’t log in.', safe:0, choices:[
+    {l:'Pay for a quick fix', chips:g => [['−' + money(cst(g, 1200)), 'red'], ['Customers stay', 'grn']], s:'ops', do(g){ charge(g, cst(g, 1200), 'Emergency fix'); return 'Back online within the hour.'; }},
+    {l:'Fix it tomorrow', chips:() => [['+1% cancellations', 'red']], s:'saas', do(g){ mA(g, 'churn', 0.01); return 'A day offline. Some customers cancelled.'; }}]},
+  {id:'feature', biz:['saas'], min:2, title:'A customer wants a feature', text:'They’ll pay $2,000 to get it.', safe:1, choices:[
+    {l:'Build it', chips:() => [['+$2,000', 'grn'], ['Product slips', 'red']], s:'product', do(g){ mA(g, 'extraRev', 2000); mA(g, 'q', -0.03); return 'You built it. Other work waited.'; }},
+    {l:'Stay on plan', chips:() => [['Product keeps improving', 'grn']], s:'product', do(){ return 'You kept to the plan.'; }}]},
+  {id:'adprice', biz:['saas'], min:2, cond:g => g.dec.mkt > 0, title:'Ad prices jump', text:'Clicks cost 30% more this week.', safe:0, choices:[
+    {l:'Pause ads a week', chips:g => [['+' + money(0.25*g.dec.mkt) + ' saved', 'grn'], ['−25% ad sign-ups', 'red']], s:'marketing', do(g){ charge(g, -0.25*g.dec.mkt, 'Ads paused'); addMod(g, {k:'ads', m:0.75, left:1}); return 'You paused ads for a week.'; }},
+    {l:'Keep them running', chips:() => [['−8% ad sign-ups', 'red']], s:'marketing', do(g){ addMod(g, {k:'ads', m:0.92, left:1}); return 'Ads kept running at the higher price.'; }}]},
+  {id:'shoutout', biz:['saas'], min:2, title:'A blogger mentions you', text:'Visitors are spiking today.', safe:1, choices:[
+    {l:'Launch discount', chips:g => [['+30% sign-ups', 'grn'], ['−' + money(cst(g, 400)) + ' discounts', 'red']], s:'pricing', do(g, R, f){ mM(g, 'conv', 1.3, f); charge(g, cst(g, 400), 'Launch discount'); return 'The discount turned visitors into customers.'; }},
+    {l:'Ride the wave', chips:() => [['+12% sign-ups', 'grn']], s:'growth', do(g, R, f){ mM(g, 'conv', 1.12, f); return 'Some visitors signed up.'; }}]},
+  {id:'bug', biz:['saas'], min:2, title:'A nasty bug', text:'Users report lost work.', safe:0, choices:[
+    {l:'Fix it this weekend', chips:g => [['−' + money(cst(g, 800)) + ' overtime', 'red']], s:'product', do(g){ mA(g, 'wages', cst(g, 800)); return 'Fixed over the weekend.'; }},
+    {l:'Next release', chips:() => [['+1.5% cancellations', 'red'], ['Product slips', 'red']], s:'saas', do(g){ mA(g, 'churn', 0.015); mA(g, 'q', -0.02); return 'Some users gave up waiting.'; }}]},
+  /* Online shop */
+  {id:'courier', biz:['shop'], min:2, title:'Courier strike', text:'Parcels are stuck at the depot.', safe:0, choices:[
+    {l:'Pricier courier', chips:g => [['+' + money2(cst(g, 2)) + ' an order', 'red'], ['Parcels on time', 'grn']], s:'ops', do(g, R, f){ mA(g, 'ship', cst(g, 2), f); return 'A pricier courier kept parcels moving.'; }},
+    {l:'Let them wait', chips:() => [['Rating drops', 'red'], ['More returns', 'red']], s:'ops', do(g, R, f){ mA(g, 'rating', -0.15); mA(g, 'returns', 0.02, f); return 'Late parcels annoyed customers.'; }}]},
+  {id:'influencer', biz:['shop'], min:2, title:'An influencer asks for bags', text:'She has 80,000 followers.', safe:1, choices:[
+    {l:'Send 10 free bags', chips:g => [['−' + money(cst(g, 240)), 'red'], ['+15% visitors', 'grn']], s:'marketing', do(g, R, f){ charge(g, cst(g, 240), 'Free bags'); mM(g, 'demand', 1.15, f); return 'Her post sent new visitors your way.'; }},
+    {l:'Say no', chips:NONE, s:'marketing', do(){ return 'You said no thanks.'; }}]},
+  {id:'scuffed', biz:['shop'], min:2, title:'A scuffed batch', text:'Some bags arrived marked.', safe:0, choices:[
+    {l:'Check every bag', chips:g => [['−' + money(cst(g, 500)) + ' extra hours', 'red']], s:'ops', do(g){ mA(g, 'wages', cst(g, 500)); return 'Every bag was checked before it shipped.'; }},
+    {l:'Ship them anyway', chips:() => [['+5% returns', 'red'], ['Rating drops', 'red']], s:'ops', do(g, R, f){ mA(g, 'returns', 0.05, f); mA(g, 'rating', -0.1); return 'Some customers sent marked bags back.'; }}]},
+  {id:'platformsale', biz:['shop'], min:2, title:'The platform runs a sale', text:'Join for an extra 5% fee.', safe:1, choices:[
+    {l:'Join the sale', chips:() => [['+25% buyers', 'grn'], ['+5% fee', 'red']], s:'pricing', do(g, R, f){ mM(g, 'conv', 1.25, f); mA(g, 'fee', 0.05, f); return 'The sale brought in more buyers.'; }},
+    {l:'Skip it', chips:NONE, s:'pricing', do(){ return 'You skipped the sale.'; }}]},
+  {id:'tiredads', biz:['shop'], min:2, cond:g => g.dec.ads > 0, title:'Your ads look tired', text:'Clicks dropped this week.', safe:0, choices:[
+    {l:'New ad photos', chips:g => [['−' + money(cst(g, 300)), 'red'], ['+15% ad visitors', 'grn']], s:'marketing', do(g, R, f){ charge(g, cst(g, 300), 'New ad photos'); mM(g, 'ads', 1.15, f); return 'Fresh photos won clicks back.'; }},
+    {l:'Leave them', chips:() => [['−15% ad visitors', 'red']], s:'marketing', do(g, R, f){ mM(g, 'ads', 0.85, f); return 'The ads kept fading.'; }}]},
+  /* Design studio */
+  {id:'rush', biz:['agency'], min:2, title:'A rush job', text:'A logo needed by Monday.', safe:1, choices:[
+    {l:'Take it at 1.5× rate', chips:g => [['+' + money(30*priceOf(g)), 'grn'], ['20 hours used', 'red']], s:'pricing', do(g){ mA(g, 'extraRev', 30*priceOf(g)); mA(g, 'cap', 20); return 'You delivered the logo by Monday.'; }},
+    {l:'Turn it down', chips:NONE, s:'pricing', do(){ return 'You turned the rush job down.'; }}]},
+  {id:'offsick', biz:['agency'], min:2, cond:g => g.dec.staff >= 1, title:'A designer is off sick', text:'Deadlines are at risk.', safe:0, choices:[
+    {l:'Hire a freelancer', chips:g => [['−' + money(cst(g, 1200)), 'red'], ['Deadlines met', 'grn']], s:'lead', do(g){ charge(g, cst(g, 1200), 'Freelancer'); return 'A freelancer covered the work.'; }},
+    {l:'Push deadlines', chips:() => [['−40 hours', 'red'], ['Reputation dips', 'red']], s:'lead', do(g){ mA(g, 'cap', 40); mA(g, 'rep', -0.04); return 'Clients waited longer than promised.'; }}]},
+  {id:'pitch', biz:['agency'], min:2, title:'Invited to pitch', text:'A big brand wants ideas by Friday.', safe:1, choices:[
+    {l:'Pitch for it', chips:() => [['−25 hours', 'red'], ['50%: +25% work', 'grn']], s:'sales', do(g, R, f){ mA(g, 'cap', 25); if (R() < 0.5){ mM(g, 'demand', 1.25, f); return 'You won the pitch!'; } return 'They chose another studio.'; }},
+    {l:'Skip it', chips:NONE, s:'sales', do(){ return 'You skipped the pitch.'; }}]},
+  {id:'redo', biz:['agency'], min:2, title:'A client hates the draft', text:'They want it all redone.', safe:0, choices:[
+    {l:'Redo it free', chips:() => [['−30 hours', 'red'], ['Reputation up', 'grn']], s:'sales', do(g){ mA(g, 'cap', 30); mA(g, 'rep', 0.04); return 'You redid it. The client is happy.'; }},
+    {l:'Charge for changes', chips:g => [['60%: +' + money(30*priceOf(g)), 'grn'], ['40%: they leave', 'red']], s:'nego', do(g, R){ if (R() < 0.6){ mA(g, 'extraRev', 30*priceOf(g)); mA(g, 'cap', 30); return 'They paid for the changes.'; } mA(g, 'rep', -0.06); return 'They left and told their friends.'; }}]},
+  {id:'tools', biz:['agency'], min:2, title:'Software prices rise', text:'Design tools cost more now.', safe:0, choices:[
+    {l:'Pay the new price', chips:g => [['−' + money(cst(g, 300)), 'red']], s:'budget', do(g){ charge(g, cst(g, 300), 'Software price rise'); return 'You paid the higher price.'; }},
+    {l:'Free tools', chips:() => [['−15 hours (slower)', 'red']], s:'budget', do(g){ mA(g, 'cap', 15); return 'Free tools slowed the team down.'; }}]},
+  /* Your own idea */
+  {id:'late', biz:['idea'], min:1, title:'Supplier is late', text:'Your stock arrives next week.', safe:1, choices:[
+    {l:'Pay for express', chips:() => [['+15% unit cost', 'red'], ['No lost sales', 'grn']], s:'ops', do(g, R, f){ mM(g, 'cost', 1.15, f); return 'Express delivery kept you selling.'; }},
+    {l:'Wait for it', chips:() => [['−10% sales', 'red']], s:'ops', do(g, R, f){ mM(g, 'demand', 0.9, f); return 'You lost some sales while you waited.'; }}]},
+  {id:'bigorder', biz:['idea'], min:1, title:'A big order', text:g => `${Math.round(0.1*g.idea.customers)} at once, for one customer.`, safe:1, choices:[
+    {l:'Take it', chips:g => { const n = Math.round(0.1*g.idea.customers); return [['+' + money(n*g.dec.price), 'grn'], ['−' + money(n*cst(g, g.idea.varCost) + 0.05*cst(g, g.idea.fixed)) + ' costs', 'red']]; }, s:'sales', do(g){ const n = Math.round(0.1*g.idea.customers); mA(g, 'extraRev', n*g.dec.price); mA(g, 'wages', n*cst(g, g.idea.varCost) + 0.05*cst(g, g.idea.fixed)); return 'You delivered the big order.'; }},
+    {l:'Say no', chips:NONE, s:'sales', do(){ return 'You turned the order down.'; }}]},
+  {id:'unhappy', biz:['idea'], min:1, title:'A bad review', text:'A customer is unhappy online.', safe:0, choices:[
+    {l:'Refund and say sorry', chips:g => [['−' + money(2*g.dec.price), 'red']], s:'marketing', do(g){ charge(g, 2*g.dec.price, 'Refund'); return 'The customer updated their review.'; }},
+    {l:'Ignore it', chips:() => [['−7% sales', 'red']], s:'marketing', do(g, R, f){ mM(g, 'demand', 0.93, f); return 'A few people were put off.'; }}]},
+  {id:'shorthelp', biz:['idea'], min:1, title:'Short on help', text:'Someone is off sick this week.', safe:0, choices:[
+    {l:'Pay for cover', chips:g => [['−' + money(0.06*cst(g, g.idea.fixed)), 'red']], s:'lead', do(g){ mA(g, 'wages', 0.06*cst(g, g.idea.fixed)); return 'Cover kept things running.'; }},
+    {l:'Manage alone', chips:() => [['−8% sales', 'red']], s:'lead', do(g, R, f){ mM(g, 'demand', 0.92, f); return 'You served fewer customers this week.'; }}]},
+];
+/* Draw this month's moment (call when the month starts to play). Sets g.moment
+   = {id, day} (the day it interrupts) or null. About two months in three get one;
+   the same moment doesn't come back within six months. Level I has none. */
+function drawMoment(g){
+  if (g.momMonth === g.month) return g.moment || null;   // already drawn (or answered) this month
+  g.moment = null; g.momMonth = g.month;
+  const F = FEAT(g.level), R = rng(g.seed*613 + (g.month + 1)*389 + 71);
+  if (g.status !== 'playing' || R() > 0.65) return null;
+  const log = g.momLog || [];
+  const pool = MOMENTS.filter(m => m.biz.includes(g.biz) && (g.biz === 'idea' || g.level > 1) && F.L >= m.min && (!m.cond || m.cond(g)) && !log.some(x => x.id === m.id && g.month - x.m < 6));
+  if (!pool.length) return null;
+  const m = pool[Math.floor(R()*pool.length)];
+  g.moment = {id:m.id, day:8 + Math.floor(R()*7)};
+  return g.moment;
+}
+/* The open moment as plain data for a card: {id, day, title, text, safe, choices:[{l, s, chips}]}. */
+function momentView(g){
+  const mo = g.moment, m = mo && MOMENTS.find(x => x.id === mo.id); if (!m) return null;
+  return {id:m.id, day:mo.day, title:m.title, text:typeof m.text === 'function' ? m.text(g) : m.text, safe:m.safe, choices:m.choices.map(c => ({l:c.l, s:c.s, chips:c.chips(g)}))};
+}
+/* Answer the open moment with choice i. Effects apply to this month. Returns the outcome line. */
+function chooseMoment(g, i){
+  const mo = g.moment, m = mo && MOMENTS.find(x => x.id === mo.id); g.moment = null; if (!m) return '';
+  const c = m.choices[i] || m.choices[m.safe], f = (30 - mo.day)/30, R = rng(g.seed*389 + g.month*61 + i);
+  const msg = c.do(g, R, f);
+  g.momLog = (g.momLog || []).concat([{id:m.id, m:g.month, i}]).slice(-12);
+  g.news.push({t:m.title, p:msg, s:c.s});
+  return msg;
+}
+/* How a month's sales spread over its 30 days (weights that add up to 1): the
+   business's weekly rhythm with a little day-to-day luck. For the time-lapse only. */
+const DAY_SHAPE = {cafe:[1, 1, 1, 1.05, 1.15, 1.1, 0.7], saas:[1.1, 1.1, 1.05, 1, 0.95, 0.45, 0.4], shop:[0.9, 0.85, 0.9, 0.95, 1.05, 1.25, 1.2], agency:[1.2, 1.2, 1.2, 1.2, 1.1, 0.05, 0.05], idea:[1, 1, 1, 1, 1.1, 1.1, 0.8]};
+function daySplit(g, month = g.month){
+  const sh = DAY_SHAPE[g.biz] || DAY_SHAPE.idea, R = rng(g.seed*53 + month*7 + 3), first = (month*30) % 7, w = [];
+  for (let d = 0; d < 30; d++) w.push(sh[(first + d) % 7]*(0.85 + 0.3*R()));
+  const t = w.reduce((a, b) => a + b, 0); return w.map(x => x/t);
+}
+
 function annualProfit(g){ const h = g.hist.slice(-12); if (!h.length) return 0; const avg = h.reduce((s, x) => s + (x.core !== undefined ? x.core : x.profit), 0)/h.length; return Math.max(0, avg*12*Math.min(1, h.length/6)); }
 function valuation(g){ const B = BIZ[g.biz]; let op, label;
   if (B.value){ const v = B.value(g); op = v.op; label = v.label; } else { op = B.valMult*annualProfit(g); label = `${B.valMult}× average yearly profit (no one-offs)`; }
@@ -622,7 +753,7 @@ function acceptOffer(g, which){
 function stepMonth(g){
   const B = BIZ[g.biz], F = FEAT(g.level), E = g.env, d = g.dec, bs = g.bs;
   let warn = '';
-  if (g.event || g.offer) return {ok:false, msg:'Choose an option on the card first'};
+  if (g.event || g.offer || g.moment) return {ok:false, msg:'Choose an option on the card first'};
   // Loan decisions
   let loanIn = 0, repayAll = false;
   if (F.loan && d.loan && d.loan !== 'none'){
@@ -664,7 +795,7 @@ function stepMonth(g){
   // Engine-level teaching cards
   if (F.stmts) o.why.push({t:'Profit vs cash', p:`Profit ${money(ni)}, cash ${money(bs.cash - open.cash)}. See the cash flow tab for why.`, f:`cash change = profit + depreciation − more owed to you − more stock + more owed by you ± equipment, loans and investment`, s:'fsa'});
   if (interest > 0) o.why.push({t:'Your bank loan', p:`You owe ${money(bs.loan)}. Paid ${money(interest)} interest (a cost) and ${money(principal)} back (not a cost).`, f:`interest = loan × ${pct(B.loanRate, 0)} ÷ 12`, s:'corpfin', b:BM.loan});
-  g.month += 1; g.last = Object.assign(o, {ni, rows, cf, interest});
+  g.month += 1; g.last = Object.assign(o, {ni, rows, cf, interest, news:g.news.slice()});
   // Flags for review
   (o.flags || []).forEach(f => g.flags[f] = (g.flags[f] || 0) + 1);
   if (ni < 0 && bs.cash > 0 && bs.cash/-ni < 3) g.flags.lowRunway = (g.flags.lowRunway || 0) + 1;
