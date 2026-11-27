@@ -60,7 +60,7 @@ A 3D town built on the same Runway engine, numbers, levels and events. Walk arou
 - **Walk inside your business.** The café, software company, online store and design studio each have a room, seen from the front and above like a dollhouse. What's inside follows your numbers: baristas behind the counter and customers at the tables, a desk for every developer and server racks that grow with your users, parcels on the shelves and packers at the benches, designers at their desks and jobs pinned on the board. Green rings on the floor are stations that open your decisions; the door takes you back outside. More of each room opens at Levels III and V.
 - Business names are painted on each building's sign, and the café's menu board shows your price.
 - Trees change with the seasons from Level IV. Lamps, benches, a bus stop and other street pieces dress the square.
-- **Controls:** WASD or arrow keys and E on a computer; an on-screen joystick and Enter button on a phone. The **Places** menu opens every building without walking.
+- **Controls:** WASD or arrow keys and E on a computer; an on-screen joystick and Enter button on a phone. The camera follows behind you as you walk; drag the view (or press Z and C) to turn it, X to put it back behind you, and it swings round to face a building when you stand at its door. The **Places** menu opens every building without walking.
 
 It uses Three.js (r128) from cdnjs. If 3D graphics aren't available, it links to Classic Runway instead. The town keeps its own save, separate from Classic Runway. "Use my idea" is only in Classic Runway for now.
 

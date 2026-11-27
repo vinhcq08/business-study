@@ -283,7 +283,7 @@ html,body{height:100%;overflow:hidden}
 </header>
 <div class="prompt" id="prompt" hidden><button class="btn" id="bAct">Enter</button><span>or press E</span></div>
 <div class="joy" id="joy" aria-hidden="true"><div class="knob" id="knob"></div></div>
-<div class="keys" id="keys">WASD or arrows to walk · E to enter · Esc to close</div>
+<div class="keys" id="keys">WASD or arrows to walk · drag or Z/C to turn · E to enter · Esc to close</div>
 <aside class="sheet" id="sheet" hidden aria-labelledby="sheetTitle" role="dialog">
   <div class="sheet-head"><div><span class="kicker" id="sheetKicker"></span><h2 id="sheetTitle"></h2></div><button class="sheet-close" id="sheetClose" aria-label="Close">×</button></div>
   <div class="sheet-body" id="sheetBody"></div>
@@ -1293,7 +1293,7 @@ function menuHtml(g){
     <div class="field"><span class="lab">Difficulty (for new games)</span><div class="seg" role="group" aria-label="Difficulty">${['easy','normal','hard'].map(k => `<button data-act="diff" data-diff="${k}" aria-pressed="${st.diff===k}">${DIFF[k].label}</button>`).join('')}</div></div>
     <div class="field"><label class="switch" for="m-free"><input type="checkbox" id="m-free" data-set="free" ${st.free?'checked':''}><span>Free play: open every level</span></label>
       <label class="switch" for="m-form"><input type="checkbox" id="m-form" data-set="formulas" ${st.formulas?'checked':''}><span>Show formulas and hints (new games)</span></label></div>
-    <div class="field"><span class="lab">Controls</span><p class="help">Walk with WASD or the arrow keys, or the joystick on a touch screen. Press E or tap Enter beside a building. Scroll or pinch to zoom. Esc closes a panel. The Places button opens any building without walking.</p></div>
+    <div class="field"><span class="lab">Controls</span><p class="help">Walk with WASD or the arrow keys, or the joystick on a touch screen. Press E or tap Enter beside a building. Drag the view (or press Z and C) to turn the camera, and X to put it back behind you. Scroll or pinch to zoom. Esc closes a panel. The Places button opens any building without walking.</p></div>
     <div class="field"><span class="lab">3D models</span><p class="help">${esc(modelSummary())} Drop a .glb exported from Blender onto the town to try it until you reload.</p><div class="row" style="margin-top:8px"><a class="btn" href="${esc(CHECK_URL)}" target="_blank" rel="noopener">Model check ↗</a></div></div>
     <div class="row"><a class="btn" href="${esc(CLASSIC_URL)}" target="_blank" rel="noopener">Classic Runway ↗</a><a class="btn" href="${esc(TREE_URL)}" target="_blank" rel="noopener">Skill Tree ↗</a>${g && g.status === 'playing' ? `<button class="btn danger" data-act="abandon">Abandon game</button>` : ''}</div>
     <p class="small muted">Classic Runway also has the “Use my idea” mode. The town has its own save, separate from Classic Runway.</p>`;
@@ -1579,11 +1579,21 @@ addEventListener('keydown', e => {
   if (e.key === 'Escape'){ if (modalKind === 'setup' && DB.game && DB.game.status === 'playing'){ hideModal(); } else if (panel) closePanel(); return; }
   const busy = panel || modalKind; const tag = (e.target.tagName || '').toLowerCase(); if (busy || tag === 'input' || tag === 'select' || tag === 'textarea') return;
   const k = e.key.toLowerCase();
-  if (['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].includes(k)){ keys.add(k); e.preventDefault(); }
+  if (['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright','z','c'].includes(k)){ keys.add(k); e.preventDefault(); }
+  if (k === 'x' && !inside){ camYaw = player.rotation.y + Math.PI; camManual = -9; }
   if ((k === 'e' || k === 'enter') && nearTarget) interact();
 });
 addEventListener('keyup', e => keys.delete(e.key.toLowerCase()));
 addEventListener('blur', () => keys.clear());
+/* Dynamic camera: drag to turn around the player and tilt; it eases in behind you while you walk. */
+let camYaw = 0, camPitch = 0.72, camManual = -9, camLook = null, camBoost = 1;
+const drag = new Map();
+canvas.addEventListener('pointerdown', e => { if (panel || modalKind) return; drag.set(e.pointerId, {x:e.clientX, y:e.clientY}); try { canvas.setPointerCapture(e.pointerId); } catch(_){} });
+canvas.addEventListener('pointermove', e => { const d = drag.get(e.pointerId); if (!d || drag.size > 1 || inside) return;
+  camYaw -= (e.clientX - d.x)*0.006; camPitch = clamp(camPitch + (e.clientY - d.y)*0.004, 0.32, 1.25); d.x = e.clientX; d.y = e.clientY; camManual = T; });
+const endDrag = e => drag.delete(e.pointerId);
+canvas.addEventListener('pointerup', endDrag); canvas.addEventListener('pointercancel', endDrag);
+canvas.addEventListener('contextmenu', e => e.preventDefault());
 canvas.addEventListener('wheel', e => { zoom = clamp(zoom + Math.sign(e.deltaY)*0.08, 0.55, 1.6); e.preventDefault(); }, {passive:false});
 const joyEl = $('#joy'), knob = $('#knob'); let joyId = null;
 joyEl.addEventListener('pointerdown', e => { joyId = e.pointerId; joyEl.setPointerCapture(joyId); moveJoy(e); });
@@ -1618,7 +1628,12 @@ function frame(now){
   let mx = 0, mz = 0;
   if (!busy){ if (keys.has('w') || keys.has('arrowup')) mz -= 1; if (keys.has('s') || keys.has('arrowdown')) mz += 1; if (keys.has('a') || keys.has('arrowleft')) mx -= 1; if (keys.has('d') || keys.has('arrowright')) mx += 1; mx += joy.x; mz += joy.y; }
   const m = Math.hypot(mx, mz), moving = m > 0.1;
-  if (moving){ const sp = 7*Math.min(1, m)/m; const p = player.position; p.x += mx*sp*dt; p.z += mz*sp*dt; if (inside) collideIn(p); else collide(p); player.rotation.y = Math.atan2(mx, mz); }
+  if (!inside && !busy){ if (keys.has('z')){ camYaw += 1.8*dt; camManual = T; } if (keys.has('c')){ camYaw -= 1.8*dt; camManual = T; } }
+  let wx = mx, wz = mz;
+  if (!inside){ const cy = Math.cos(camYaw), sy = Math.sin(camYaw); wx = mx*cy + mz*sy; wz = -mx*sy + mz*cy; }   // W walks away from the camera
+  if (moving){ const sp = 7*Math.min(1, m)/m; const p = player.position; p.x += wx*sp*dt; p.z += wz*sp*dt; if (inside) collideIn(p); else collide(p); player.rotation.y = Math.atan2(wx, wz);
+    if (!inside && T - camManual > 2.5){ let diff = (player.rotation.y + Math.PI) - camYaw; diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+      if (Math.abs(diff) < 0.9) camYaw += diff*(1 - Math.exp(-dt*0.9)); } }
   animatePerson(player, T, moving);
   // pedestrians
   for (const n of npcs){ n.s += n.speed*dt; const path = n.path; let segs = [], tot = 0; for (let i = 0; i < path.length; i++){ const a = path[i], b = path[(i + 1) % path.length], l = Math.hypot(b[0]-a[0], b[1]-a[1]); segs.push([a, b, l]); tot += l; }
@@ -1630,8 +1645,16 @@ function frame(now){
   const p = player.position;
   if (inside){ const cz = (iBounds.minZ + iBounds.maxZ)/2, span = Math.max(iBounds.maxX - iBounds.minX, (iBounds.maxZ - iBounds.minZ)*1.4);
     camPos.lerp(new THREE.Vector3(p.x*0.35, span*0.62*zoom + 2, iBounds.maxZ + span*0.5*zoom + 2), 1 - Math.pow(0.001, dt)); camera.position.copy(camPos); camera.lookAt(p.x*0.35, 0.6, cz + (p.z - cz)*0.3); }
-  else { const want = new THREE.Vector3(p.x, 13*zoom + 1, p.z + 15*zoom);
-    camPos.lerp(want, 1 - Math.pow(0.001, dt)); camera.position.copy(camPos); camera.lookAt(p.x, 1.2, p.z - 1.5); }
+  else {
+    const near = nearTarget && !nearTarget.exit; camBoost += ((near ? 0.82 : 1) - camBoost)*(1 - Math.exp(-dt*2));
+    if (near && T - camManual > 2.5){ const sl = bldgs.find(s => s.door === nearTarget.door);   // swing round to face the building's front
+      if (sl){ let diff = ROT[sl.face] - camYaw; diff = Math.atan2(Math.sin(diff), Math.cos(diff)); camYaw += diff*(1 - Math.exp(-dt*1.6)); } }
+    const dist = 19.8*zoom*camBoost, hz = dist*Math.cos(camPitch), fwdX = -Math.sin(camYaw), fwdZ = -Math.cos(camYaw);
+    const ahead = moving ? 2.2 : 0, want = new THREE.Vector3(p.x - fwdX*hz, dist*Math.sin(camPitch) + 1, p.z - fwdZ*hz);
+    camPos.lerp(want, 1 - Math.pow(0.002, dt));
+    const look = new THREE.Vector3(p.x + fwdX*(1.5 + ahead) + (moving ? (wx/m)*1.2 : 0), 1.2, p.z + fwdZ*(1.5 + ahead) + (moving ? (wz/m)*1.2 : 0));
+    if (!camLook) camLook = look.clone(); camLook.lerp(look, 1 - Math.pow(0.02, dt));
+    camera.position.copy(camPos); camera.lookAt(camLook); }
   // nearest building
   let best = null, bd = 1e9;
   for (const t of (inside ? inTargets : targets)){ if (!inside && (t.rival && !(rivalSlot && rivalSlot.group.visible)) || (t.loc2 && !(loc2Slot && loc2Slot.group.visible))) continue; const d = Math.hypot(t.door.x - p.x, t.door.z - p.z); if (d < t.r && d < bd){ best = t; bd = d; } }
@@ -1894,13 +1917,13 @@ function enterInterior(){
   fadeThen(bizName(), () => {
     buildInterior(m); inside = true; nearTarget = null; iScene.add(player);
     const dr = iRoom.userData.door; player.position.set(dr.x, 0, dr.z - 1.4); player.rotation.y = Math.PI;
-    camPos.set(player.position.x*0.4, 9.5, iBounds.maxZ + 8); syncInterior();
+    camPos.set(player.position.x*0.4, 9.5, iBounds.maxZ + 8); camLook = null; syncInterior();
     if (!iTip){ iTip = true; toast('Walk to a green ring to make decisions. The door takes you outside.'); }
   });
 }
 function leaveInterior(){
   inside = false; nearTarget = null; scene.add(player);
-  const d = bizSlot ? bizSlot.door : {x:0, z:6}; player.position.set(d.x, 0, d.z + 0.8); player.rotation.y = 0; camPos.set(d.x, 14, d.z + 16);
+  const d = bizSlot ? bizSlot.door : {x:0, z:6}; player.position.set(d.x, 0, d.z + 0.8); player.rotation.y = 0; camYaw = 0; camLook = null; camPos.set(d.x, 14, d.z + 16);
 }
 function exitInterior(){ fadeThen('Outside', leaveInterior); }
 function collideIn(p){
@@ -1934,9 +1957,16 @@ function setFaded(slot, on){
     if (on){ o.userData.solidMat = o.material; o.material = [].concat(o.material).map(mm => { let f = fadedMat.get(mm); if (!f){ f = mm.clone(); f.transparent = true; f.opacity = 0.25; f.depthWrite = false; fadedMat.set(mm, f); } return f; }); if (o.material.length === 1) o.material = o.material[0]; o.castShadow = false; }
     else if (o.userData.solidMat){ o.material = o.userData.solidMat; o.castShadow = true; } });
 }
+function segHitsBox(x0, z0, x1, z1, b, pad){
+  let t0 = 0.05, t1 = 1; const dx = x1 - x0, dz = z1 - z0;
+  for (const [o, dd, lo, hi] of [[x0, dx, b.minX - pad, b.maxX + pad], [z0, dz, b.minZ - pad, b.maxZ + pad]]){
+    if (Math.abs(dd) < 1e-6){ if (o < lo || o > hi) return false; continue; }
+    let a = (lo - o)/dd, c = (hi - o)/dd; if (a > c) [a, c] = [c, a]; t0 = Math.max(t0, a); t1 = Math.min(t1, c); if (t0 > t1) return false; }
+  return true;
+}
 function fadeBlockers(p){
   for (const slot of bldgs){ const b = slot.box;
-    const between = slot.group.visible && b.maxZ > p.z + 0.5 && b.minZ < camera.position.z && b.minX - 1 < p.x && b.maxX + 1 > p.x;
+    const between = slot.group.visible && segHitsBox(p.x, p.z, camera.position.x, camera.position.z, b, 0.6);
     setFaded(slot, between); }
 }
 
@@ -1952,7 +1982,7 @@ if (!webgl){
   if (!DB.game || DB.game.status !== 'playing') showSetup();
   requestAnimationFrame(t => { last = t; frame(t); });
 }
-window.__town = {DB:() => DB, runMonth, chooseEvent, startGame, openPanel, closePanel, player:() => player, targets, MODELS, tryModelFile, slots:() => ({bldgs, bizSlot, people, trees, props}),
+window.__town = {cam:() => ({yaw:camYaw, pitch:camPitch, pos:camera.position.clone()}), DB:() => DB, runMonth, chooseEvent, startGame, openPanel, closePanel, player:() => player, targets, MODELS, tryModelFile, slots:() => ({bldgs, bizSlot, people, trees, props}),
   interior:() => ({inside, iRoom, iPeople, iDyn, inTargets, iBounds, iObstacles}), enterInterior, exitInterior, streetPlaced, interact, near:() => nearTarget};
 })();
 </script>
