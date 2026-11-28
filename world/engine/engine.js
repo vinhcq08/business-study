@@ -70,6 +70,7 @@ BIZ.cafe = {
     {id:'price', label:'Average spend per customer', min:3, max:12, step:0.25, def:5.5, fmt:'money2', help:'Higher means fewer customers.'},
     {id:'staff', label:'Baristas', min:1, max:10, step:1, def:2, fmt:'int', help:'$2,600/month each · serves 80 a day.'},
     {id:'mkt', label:'Marketing per month', min:0, max:5000, step:100, def:500, fmt:'money', help:'Each extra dollar brings a little less.'},
+    {id:'assistant', kind:'check', lv:[3], label:'Assistant (runs errands)', def:false, help:'$1,800/month · does the bean runs.'},
     {id:'quality', kind:'select', lv:[3], label:'Coffee beans', def:'standard', opts:[['standard','Standard beans'],['premium','Premium beans (+$0.60 a customer)']], help:'Builds reputation.'}],
   init(g, F){ const R = rng(g.seed*13 + 5); g.st = {rep:1, rivalP:5.2, rivalAt:3 + Math.floor(R()*3), locs:1, loc2At:0, expanded:false, delivery:false}; },
   basic(g, d, E, R){
@@ -87,7 +88,7 @@ BIZ.cafe = {
       metrics:[['Customers who wanted coffee', int(demand)+' a day'], ['Cups sold', int(sold)+' a day'], ['Cups wasted', int(waste)+' a day'], ['Customers turned away', int(lost)+' a day']], why, flags};
   },
   hint(g){ const d = g.dec, E = g.env, F = FEAT(g.level); const vc = (((F.seg && d.quality==='premium') ? 2.2 : 1.6)*1.06 + 0.2)*E.cost;
-    const fixed = (3500 + (g.st.locs>1?3200:0))*E.cost + 2600*E.cost*d.staff + 1000*E.cost*g.st.locs + d.mkt, unit = d.price - vc;
+    const fixed = (3500 + (g.st.locs>1?3200:0))*E.cost + 2600*E.cost*d.staff + (F.seg && d.assistant ? 1800*E.cost : 0) + 1000*E.cost*g.st.locs + d.mkt, unit = d.price - vc;
     return unit <= 0 ? [{l:'Each customer', v:'Loses money', k:'red'}] : [{l:'Break-even', v:`${int(fixed/unit/30)} a day`, k:'blu'}, {l:'You can serve', v:`${int(d.staff*80)} a day`, k:'grn'}]; },
   model(g, d, E, R, F){
     const st = g.st, month = g.month + 1, moy = g.month % 12, M = k => modM(g, k), A = k => modA(g, k);
@@ -107,7 +108,7 @@ BIZ.cafe = {
     const rev = served*d.price*30 + A('extraRev'), commission = served*fa*d.price*30*0.3;
     const ingr = served*varCost*30;
     const rent = (3500 + (st.locs > 1 ? 3200 : 0))*E.cost*M('rent');
-    const wages = 2600*E.cost*d.staff + A('wages'), util = 1000*E.cost*st.locs;
+    const wages = 2600*E.cost*d.staff + (F.seg && d.assistant ? 1800*E.cost : 0) + A('wages'), util = 1000*E.cost*st.locs;
     let capex = 0; const next = {};
     if (F.expand && d.expand && st.locs === 1){ capex = 60000; next.locs = 2; next.loc2At = month + 1; next.expanded = true; }
     const op = rev - commission - ingr - rent - wages - util - d.mkt;
@@ -643,6 +644,77 @@ const MOMENTS = [
     {l:'Pay for cover', chips:g => [['−' + money(0.06*cst(g, g.idea.fixed)), 'red']], s:'lead', do(g){ mA(g, 'wages', 0.06*cst(g, g.idea.fixed)); return 'Cover kept things running.'; }},
     {l:'Manage alone', chips:() => [['−8% sales', 'red']], s:'lead', do(g, R, f){ mM(g, 'demand', 0.92, f); return 'You served fewer customers this week.'; }}]},
 ];
+/* ---------- Errands (café): big moments played in the town ----------
+   A moment with `errand` is played: the page sends you to a place (the corner
+   shop) or runs a mini-task (the inspection), then reports what happened with
+   resolveErrand(g, res). The moment's own choices are the quick version (used
+   when the town can't be played, and by the tests): "Sort it out" counts as
+   done the day after, "Ignore" takes the full damage. Grading lives here, so the
+   page and a Roblox port grade the same way. */
+const BEAN = {cups:200, budget:9, premium:14};
+const cupsPerDay = g => g.last && g.last.cust ? g.last.cust/30 : 120;
+/* Bags needed to last from `day` to the end of the month. */
+const beanNeed = (g, day) => Math.max(1, Math.ceil(cupsPerDay(g)*(30 - day)/BEAN.cups));
+/* res for 'shop': {arrive (day), qty, sup:'budget'|'premium'} or null (ignored).
+   res for 'inspect': {found (0-3), late?} or null. Returns the graded result. */
+function errandOutcome(g, m, mo, res){
+  const E = g.env, out = mo.day + m.due, perDay = g.last ? g.last.rev/30 : cupsPerDay(g)*(g.dec.price || 5);   // sales a day (first month: an estimate)
+  const r = {id:m.id, errand:m.errand, out, ignored:!res, stars:[], lost:0, cost:0, ignoreCost:Math.round(perDay*(30 - out))};
+  if (m.errand === 'shop'){
+    let lost;
+    if (!res){ lost = 30 - out; mA(g, 'rep', -0.1); }
+    else {
+      const late = Math.max(0, res.arrive - out), lasts = res.arrive + res.qty*BEAN.cups/cupsPerDay(g), short = Math.max(0, 30 - lasts);
+      lost = Math.min(30 - out, late + short);
+      r.cost = res.qty*BEAN[res.sup]*E.cost; charge(g, r.cost, 'Beans from the corner shop');
+      if (res.sup === 'premium') mA(g, 'rep', 0.04);
+      if (lost > 0) mA(g, 'rep', -0.02*Math.min(lost, 5));
+      const need = beanNeed(g, res.arrive);
+      Object.assign(r, {late, qty:res.qty, need, sup:res.sup, arrive:res.arrive});
+      r.stars = [late === 0, res.qty >= need && res.qty <= Math.ceil(need*1.3), res.sup === 'premium'];
+    }
+    r.lost = Math.round(lost*10)/10;
+    if (lost > 0) addMod(g, {k:'demand', m:Math.max(0, 1 - lost/30), left:1});
+    r.lostSales = Math.round(perDay*lost);
+  } else if (m.errand === 'inspect'){
+    const found = res ? res.found : 0, pass = found >= 3 && !(res && res.late);
+    r.found = found; r.pass = pass; r.stars = [found >= 1, found >= 2, pass];
+    if (pass) mA(g, 'rep', 0.03);
+    else { r.cost = 800*E.cost; charge(g, r.cost, 'Inspection fine'); addMod(g, {k:'demand', m:1 - 1/30, left:1}); mA(g, 'rep', -0.03); r.lost = 1; r.lostSales = Math.round(perDay); }
+    r.ignoreCost = Math.round(800*E.cost + perDay);
+  }
+  return r;
+}
+const ERRANDS = [
+  {id:'beanrun', biz:['cafe'], min:2, w:2, errand:'shop', due:4, title:'Beans running low', text:(g, mo) => `Out by day ${mo.day + 4}.`, safe:0, choices:[
+    {l:'Sort it out', chips:() => [['Corner shop', 'blu'], ['No lost sales', 'grn']], s:'ops', do(g, R, f, mo){ const a = mo.day + 1; errandOutcome(g, this.m, mo, {arrive:a, qty:beanNeed(g, a), sup:'budget'}); return 'You restocked from the corner shop.'; }},
+    {l:'Ignore', chips:() => [['Out of stock', 'red'], ['Reputation drops', 'red']], s:'ops', do(g, R, f, mo){ errandOutcome(g, this.m, mo, null); return 'The café ran out of coffee beans.'; }}]},
+  {id:'inspection', biz:['cafe'], min:2, w:2, errand:'inspect', due:4, title:'Health inspection', text:(g, mo) => `The inspector comes on day ${mo.day + 4}.`, safe:0, choices:[
+    {l:'Get ready', chips:() => [['Find 3 hazards', 'blu'], ['Pass', 'grn']], s:'law', do(g, R, f, mo){ errandOutcome(g, this.m, mo, {found:3}); return 'You passed the inspection.'; }},
+    {l:'Ignore', chips:g => [['−' + money(800*g.env.cost) + ' fine', 'red'], ['1 day closed', 'red']], s:'law', do(g, R, f, mo){ errandOutcome(g, this.m, mo, null); return 'The inspector found problems: a fine and a day closed.'; }}]},
+];
+ERRANDS.forEach(m => m.choices.forEach(c => c.m = m));
+MOMENTS.push(...ERRANDS);
+/* Finish the open errand with what happened in the town (see errandOutcome). */
+function resolveErrand(g, res){
+  const mo = g.moment, m = mo && MOMENTS.find(x => x.id === mo.id); if (!m || !m.errand) return null;
+  g.moment = null;
+  const r = errandOutcome(g, m, mo, res);
+  g.momLog = (g.momLog || []).concat([{id:m.id, m:g.month, i:res ? 0 : 1}]).slice(-12);
+  const msg = m.errand === 'shop' ? (r.ignored ? 'The café ran out of coffee beans.' : r.lost > 0 ? `Beans arrived, but ${r.lost} day(s) without coffee.` : 'Beans restocked in time.')
+    : r.pass ? 'You passed the inspection.' : 'The inspector found problems: a fine and a day closed.';
+  g.news.push({t:m.title, p:msg, s:m.choices[0].s});
+  return r;
+}
+/* Your assistant (café, Level III+, decision `assistant`) does the bean run:
+   back the day after usually, a day late about one time in five. */
+const hasAssistant = g => g.biz === 'cafe' && FEAT(g.level).seg && !!g.dec.assistant;
+function assistantErrand(g){
+  const mo = g.moment, m = mo && MOMENTS.find(x => x.id === mo.id); if (!m || m.errand !== 'shop' || !hasAssistant(g)) return null;
+  const R = rng(g.seed*421 + g.month*37 + 5), arrive = R() < 0.8 ? mo.day + 2 : mo.day + m.due + 1;
+  const r = resolveErrand(g, {arrive, qty:beanNeed(g, arrive), sup:'budget'}); r.by = 'assistant'; return r;
+}
+
 /* Draw this month's moment (call when the month starts to play). Sets g.moment
    = {id, day} (the day it interrupts) or null. About two months in three get one;
    the same moment doesn't come back within six months. Level I has none. */
@@ -654,20 +726,22 @@ function drawMoment(g){
   const log = g.momLog || [];
   const pool = MOMENTS.filter(m => m.biz.includes(g.biz) && (g.biz === 'idea' || g.level > 1) && F.L >= m.min && (!m.cond || m.cond(g)) && !log.some(x => x.id === m.id && g.month - x.m < 6));
   if (!pool.length) return null;
-  const m = pool[Math.floor(R()*pool.length)];
+  const tot = pool.reduce((s, x) => s + (x.w || 1), 0); let pick = R()*tot;   // errands count double
+  const m = pool.find(x => (pick -= (x.w || 1)) < 0) || pool[pool.length - 1];
   g.moment = {id:m.id, day:8 + Math.floor(R()*7)};
   return g.moment;
 }
 /* The open moment as plain data for a card: {id, day, title, text, safe, choices:[{l, s, chips}]}. */
 function momentView(g){
   const mo = g.moment, m = mo && MOMENTS.find(x => x.id === mo.id); if (!m) return null;
-  return {id:m.id, day:mo.day, title:m.title, text:typeof m.text === 'function' ? m.text(g) : m.text, safe:m.safe, choices:m.choices.map(c => ({l:c.l, s:c.s, chips:c.chips(g)}))};
+  return {id:m.id, day:mo.day, title:m.title, text:typeof m.text === 'function' ? m.text(g, mo) : m.text, safe:m.safe, errand:m.errand || null, due:m.due || 0, out:mo.day + (m.due || 0),
+    choices:m.choices.map(c => ({l:c.l, s:c.s, chips:c.chips(g)}))};
 }
 /* Answer the open moment with choice i. Effects apply to this month. Returns the outcome line. */
 function chooseMoment(g, i){
   const mo = g.moment, m = mo && MOMENTS.find(x => x.id === mo.id); g.moment = null; if (!m) return '';
   const c = m.choices[i] || m.choices[m.safe], f = (30 - mo.day)/30, R = rng(g.seed*389 + g.month*61 + i);
-  const msg = c.do(g, R, f);
+  const msg = c.do(g, R, f, mo);
   g.momLog = (g.momLog || []).concat([{id:m.id, m:g.month, i}]).slice(-12);
   g.news.push({t:m.title, p:msg, s:c.s});
   return msg;

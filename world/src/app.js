@@ -183,6 +183,8 @@ const IC = {
   close:'<path d="M6 6l12 12M18 6L6 18" fill="none" stroke-width="3.2" stroke-linecap="round"/>',
   plus:'<path d="M12 5v14M5 12h14" fill="none" stroke-width="3.2" stroke-linecap="round"/>',
   flag:'<path d="M5 21V4l13 4-13 5"/>',
+  cart:'<path d="M3 4h3l2 11h11l2-8H7"/><circle cx="10" cy="19" r="1.8"/><circle cx="17" cy="19" r="1.8"/>',
+  star:'<path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.5 6.7 19.4l1.2-6L3.4 9.3l6-.7z"/>',
   clock:'<circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2" fill="none"/><path d="M9 2h6" fill="none"/>',
 };
 const svgIc = (k, size = 24) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="#FFFFFF" stroke="#1F2430" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true">${IC[k] || ''}</svg>`;
@@ -651,8 +653,8 @@ const MOM_IC = {beans:['box','blu'], sick:['people','red'], office:['cup','grn']
 let autoOn = false, autoWait = 0, momTimer = null;
 const speed = () => DB.speed || '2';
 const custLabel = g => g.biz === 'idea' ? cap1((g.idea.unit || 'sale') + 's') : CUST_L[g.biz];
-function project(g){
-  const c = JSON.parse(JSON.stringify(g)); c.moment = null; c.event = null;
+function project(g, fn){
+  const c = JSON.parse(JSON.stringify(g)); if (fn) fn(c); c.moment = null; c.event = null;
   const r = stepMonth(c); if (!r.ok) return {err:r.msg};
   return {rev:c.last.rev, cust:c.last.cust || 0, cash:c.bs.cash, ni:c.last.ni};
 }
@@ -676,24 +678,29 @@ function doRun(){
   prevCash = Math.round(g.bs.cash);
   closePanel(); document.body.classList.add('live-on'); updateLiveDock(); liveTick(0);
 }
-function stopLive(){ live = null; autoOn = false; clearInterval(momTimer); document.body.classList.remove('live-on'); $('#weekPill').hidden = true; }
+function stopLive(){ cleanErrand(); live = null; autoOn = false; clearInterval(momTimer); document.body.classList.remove('live-on'); $('#weekPill').hidden = true; }
 function skipLive(){
   const L = live; if (!L) return;
   const g = DB.game, stop = g.moment ? g.moment.day : 30;
   if (L.paused) return;
+  if (errand) return toast('Finish or ignore the errand first');
   L.day = Math.max(L.day, stop - 0.001); liveTick(0.01);
 }
 /* Called from the frame loop. */
 function liveTick(dt){
   const L = live, g = DB.game; if (!L || !g) return;
   if (L.dirty && !panel && !modalKind){ L.dirty = false; const p = project(g); if (!p.err) rebase(L, p); }
-  if (!L.paused && !panel && !modalKind) L.day = Math.min(30, L.day + dt*SPEED[speed()]);
-  if (g.moment && !L.paused && L.day >= g.moment.day){ L.day = g.moment.day; L.paused = true; updateWeek(); showMoment(); return; }
+  if (!L.paused && !panel && !modalKind) L.day = Math.min(30, L.day + dt*(errand ? ERRAND_SPEED : SPEED[speed()]));
+  if (g.moment && !L.paused && !errand && L.day >= g.moment.day){
+    const v = momentView(g);
+    if (!(v && v.errand && !reduceMotion() && startErrand(v))){ L.day = g.moment.day; L.paused = true; updateWeek(); showMoment(); return; }
+  }
+  if (errand) errandTick(dt);
   const whole = Math.floor(L.day);
   const burst = whole - L.shownDay > 2;
   while (L.shownDay < whole){ const i = L.shownDay; L.daily[i] = liveVal(L, 'rev', i + 1) - liveVal(L, 'rev', i); L.shownDay++; if (L.daily[i] > 0.5 && !burst) coinPop(L.daily[i]); }
   updateWeek(); updateLiveCard();
-  if (L.day >= 30) finishLive();
+  if (L.day >= 30){ const r = errandMonthEnd(); finishLive(); if (r) showErrResult(r); }
 }
 function finishLive(){
   const g = DB.game, m0 = g.month; live = null; document.body.classList.remove('live-on');
@@ -758,8 +765,8 @@ function updateWeek(){
   const L = live, el = $('#weekPill'); if (!L){ el.hidden = true; return; }
   const day = Math.max(1, Math.ceil(L.day)), wk = Math.min(4, Math.floor((day - 1)/7.5) + 1);
   const segs = [0, 1, 2, 3].map(i => { const f = Math.max(0, Math.min(1, (L.day - i*7.5)/7.5)); return `<i style="--f:${(f*100).toFixed(1)}%"></i>`; }).join('');
-  el.hidden = false; el.classList.toggle('paused', L.paused);
-  el.innerHTML = `${L.paused ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="#FFFFFF" aria-hidden="true"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>` : ''}<span class="ol-sm">${L.paused ? 'Paused · ' : ''}Week ${wk} · Day ${day}</span><span class="wk" role="img" aria-label="Day ${day} of 30">${segs}</span>`;
+  el.hidden = false; el.classList.toggle('paused', L.paused || !!errand);
+  el.innerHTML = `${L.paused ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="#FFFFFF" aria-hidden="true"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>` : ''}<span class="ol-sm">${L.paused ? 'Paused · ' : errand ? 'Errand time: slowed · ' : ''}Week ${wk} · Day ${day}</span><span class="wk" role="img" aria-label="Day ${day} of 30">${segs}</span>`;
   const top = $('#dTop').getBoundingClientRect(); el.style.top = Math.round(top.bottom + 8) + 'px';
 }
 /* A coin rising over your business for each day's takings. */
@@ -804,12 +811,219 @@ $('#live').addEventListener('click', e => {
   if (b.dataset.live === 'stop'){ autoOn = false; updateLiveDock(); }
 });
 
+/* ---------- Errands: big café events played in the town ----------
+   When the live month reaches an errand moment, the clock slows (1 day every
+   5 s), an errand card appears and a beacon marks where to go. Bean run: buy at
+   the Corner Shop, carry the crate back to the café door. Inspection: go into the
+   café and fix 3 hazards in 30 s. The engine grades it (resolveErrand). */
+const ERRAND_SPEED = 0.2;                 // days per second while an errand runs
+let errand = null;
+const ERR_IC = {shop:['box', 'blu'], inspect:['clip', 'pur']};
+function shopSlot(){
+  const fs = bldgs.filter(s => s.roles && s.roles[0] === 'filler' && !s.parkPlot);
+  return fs.find(s => s.dressed && fileId(s.dressed) === 'corner-shop') || fs.find(s => s.fillerIndex % 8 === 0) || fs[0] || null;
+}
+/* Start the errand for moment view v; false when it can't be played here (then the quick card is used). */
+function startErrand(v){
+  const g = DB.game;
+  if (v.errand === 'shop' && !shopSlot()) return false;
+  if (v.errand === 'inspect' && !interiorModel()) return false;
+  errand = {kind:v.errand, v, step:'go', qty:0, sup:'budget', found:0, timer:0, hazards:[], tgt:null};
+  if (v.errand === 'shop'){ const s = shopSlot(); errand.tgt = {errand:'shop', name:'the Corner Shop', verb:'Buy beans', door:s.door, r:3.2}; targets.unshift(errand.tgt); setBeacon(s.door); }
+  else { setBeacon(bizSlot.door); if (inside) setTimeout(() => { if (errand && errand.step === 'go' && inside) startInspection(); }, 600); }
+  if (hasAssistant(g) && v.errand === 'shop' && autoOn && speed() === 'auto'){ errandAssistant(); return true; }
+  document.body.classList.add('errand-on'); renderErrand(); updateWeek();
+  return true;
+}
+function renderErrand(){
+  const el = $('#errand'), g = DB.game, L = live;
+  if (!errand || errand.step === 'task'){ el.hidden = true; return; }
+  const v = errand.v, left = L ? Math.max(0, Math.ceil(v.out - L.day)) : 0, [ik, ic] = ERR_IC[errand.kind];
+  const steps = errand.kind === 'shop' ? [['go', 'Go to the Corner Shop'], ['buy', 'Buy beans'], ['carry', 'Bring them to the café']] : [['go', 'Go inside your café'], ['task', 'Fix 3 hazards in 30 s']];
+  const cur = errand.kind === 'shop' ? (errand.step === 'carry' ? 2 : 0) : 0;
+  el.hidden = false;
+  el.innerHTML = `<div class="er-h shine"><span class="ol">Errand</span><span class="er-left" id="erLeft">${left > 0 ? left + ' day' + (left > 1 ? 's' : '') + ' left' : 'Late!'}</span></div>
+    <div class="er-b"><div class="er-top">${icon(ik, ic, 'big')}<span><b>${esc(v.title)}</b><small>${esc(v.text)}</small></span></div>
+      <ol class="er-steps">${steps.map(([k, t], i) => `<li class="${i < cur ? 'done' : i === cur ? 'cur' : ''}"><span>${i < cur ? svgIc('check', 16) : i + 1}</span>${esc(t)}${i === cur && errand.tgt ? ` <em id="erDist"></em>` : ''}</li>`).join('')}</ol>
+      <div class="er-btns">${errand.kind === 'shop' && errand.step === 'go' && hasAssistant(g) ? `<button type="button" class="btn primary" data-er="sam">Send Sam</button>` : ''}<button type="button" class="btn" data-er="ignore">Ignore</button></div></div>`;
+  errandDist();
+}
+function errandDist(){ const d = $('#erDist'); if (!d || !errand || !errand.tgt || inside) { if (d) d.textContent = ''; return; } d.textContent = '· ' + Math.round(Math.hypot(errand.tgt.door.x - player.position.x, errand.tgt.door.z - player.position.z)) + ' m'; }
+let erAcc = 0;
+function errandTick(dt){
+  if (!errand) return;
+  const L = live, v = errand.v;
+  if (beacon){ beacon.position.y = 7 + Math.sin(T*3)*0.4; beacon.rotation.y += dt*1.5; beacon.visible = !inside; }
+  if (errand.step === 'task' && !panel && !modalKind){
+    errand.timer -= dt; errand.hazards.forEach(h => { if (h.ring.visible) h.ring.scale.setScalar(1 + Math.sin(T*6)*0.08); });
+    updateInspectHud(); if (errand.timer <= 0) return finishInspection();
+  }
+  erAcc += dt; if (erAcc > 0.25){ erAcc = 0; errandDist(); const lf = $('#erLeft'); if (lf && L){ const left = Math.ceil(v.out - L.day); lf.textContent = left > 0 ? left + ' day' + (left > 1 ? 's' : '') + ' left' : 'Late!'; lf.classList.toggle('late', left <= 0); } }
+  // Out of beans: sales stall until the crate arrives.
+  if (errand.kind === 'shop' && L && !errand.stalled && L.day >= v.out){ errand.stalled = true; const p = project(DB.game, c => resolveErrand(c, null)); if (!p.err) rebase(L, p); toast('Out of beans! Sales have stopped'); }
+  if (errand.kind === 'inspect' && L && errand.step === 'go' && L.day >= v.out) finishErrand(null);
+}
+/* The 3D beacon over where to go. */
+let beacon = null;
+function setBeacon(door){
+  clearBeacon();
+  beacon = new THREE.Group();
+  const gold = new THREE.MeshBasicMaterial({color:0xFFC21A});
+  const cone = new THREE.Mesh(new THREE.ConeGeometry(0.8, 1.6, 4), gold); cone.rotation.x = Math.PI; beacon.add(cone);
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(1.1, 0.16, 8, 24), gold); ring.position.y = 1.4; ring.rotation.x = Math.PI/2; beacon.add(ring);
+  beacon.position.set(door.x, 7, door.z); scene.add(beacon);
+}
+function clearBeacon(){ if (beacon){ scene.remove(beacon); beacon = null; } }
+/* Carrying the crate of beans back. */
+let crate = null;
+function holdCrate(on){
+  if (crate){ player.remove(crate); crate = null; }
+  if (!on) return;
+  crate = new THREE.Group(); addBox(crate, 0.7, 0.45, 0.5, 0xA86B3C, 0, 0, 0); addBox(crate, 0.5, 0.12, 0.32, 0x5A3A22, 0, 0.26, 0);
+  crate.position.set(0, 1.05, 0.5); player.add(crate);
+}
+function errandAct(t){
+  if (!errand) return;
+  if (t.errand === 'shop') return showErrShop();
+  if (t.errand === 'deliver') return finishErrand({arrive:Math.max(1, Math.ceil(live ? live.day : 30)), qty:errand.qty, sup:errand.sup});
+  if (t.errand === 'hazard') return fixHazard(t.i);
+}
+/* The Corner Shop window: which beans, how many. */
+function showErrShop(){
+  const g = DB.game, L = live, today = Math.max(1, Math.ceil(L ? L.day : 15)), need = beanNeed(g, today);
+  if (!errand.qty) errand.qty = need;
+  const q = errand.qty, cost = q*BEAN[errand.sup]*g.env.cost, lasts = Math.min(40, today + q*BEAN.cups/cupsPerDay(g)), w = x => Math.max(0, Math.min(100, x/30*100));
+  const sup = (k, nm, chips) => `<button type="button" class="esup${errand.sup === k ? ' on' : ''}" data-sup="${k}" aria-pressed="${errand.sup === k}"><span class="bean ${k}"></span><span><b>${nm}</b><span class="chips">${chips.map(([t, c]) => chip(t, c)).join('')}</span></span></button>`;
+  showModal('errshop', `<div class="mhead" style="--c:${HEX.blu}">${svgIc('cart', 30)}<span><small class="ol-sm">Errand · step 2 of 3</small><span class="ol">Corner Shop</span></span></div>
+    <div class="mbody"><h3 class="eh">Which beans?</h3><div class="esups">${sup('budget', 'Budget beans', [[money(BEAN.budget*g.env.cost) + ' a bag', ''], ['Same taste as now', 'grn']])}${sup('premium', 'Premium beans', [[money(BEAN.premium*g.env.cost) + ' a bag', ''], ['+ reputation', 'grn']])}</div>
+      <h3 class="eh">How many bags?</h3>
+      <div class="eqty"><div class="stepper"><button type="button" data-q="-1" aria-label="Fewer">−</button><span>${q}</span><button type="button" data-q="1" aria-label="More">+</button></div>
+        <div class="ecov"><div class="ebar" role="img" aria-label="${q} bags last until day ${Math.floor(lasts)}"><i class="past" style="width:${w(today)}%"></i><i class="cov" style="left:${w(today)}%;width:${w(lasts) - w(today)}%"></i></div>
+          <div class="elabs"><span>Today · day ${today}</span><span>Lasts to day ${Math.floor(lasts)}</span><span>Month ends</span></div></div></div>
+      <div class="tiles">${tile('You need', '≈ ' + need + ' bags', 'blu')}${tile('Cost', money(cost), 'red')}${tile('Cash after', money(g.bs.cash - cost), 'sun')}</div>
+      <div class="foot"><button class="btn primary big" data-m="ebuy">Buy ${q} bags and carry</button><button class="btn" data-m="eleave">Leave</button></div>
+      <p class="help">${q > need*1.3 ? 'Too many: some will go stale.' : q < need ? 'Too few: you’ll run out again.' : 'Enough to last the month.'}</p></div>`);
+}
+function errShopClick(t){
+  const g = DB.game;
+  if (t.dataset.sup){ errand.sup = t.dataset.sup; modalKind = null; return showErrShop(); }
+  if (t.dataset.q){ errand.qty = Math.max(1, Math.min(60, errand.qty + +t.dataset.q)); modalKind = null; return showErrShop(); }
+  if (t.dataset.m === 'eleave'){ hideModal(); return; }
+  if (t.dataset.m === 'ebuy'){
+    const cost = errand.qty*BEAN[errand.sup]*g.env.cost; if (g.bs.cash < cost) return toast('Not enough cash');
+    hideModal(); errand.step = 'carry'; holdCrate(true);
+    const i = targets.indexOf(errand.tgt); if (i >= 0) targets.splice(i, 1);
+    errand.tgt = {errand:'deliver', name:bizName(), verb:'Deliver the beans', door:bizSlot.door, r:3.4}; targets.unshift(errand.tgt); setBeacon(bizSlot.door);
+    renderErrand();
+  }
+}
+/* The inspection mini-task inside the café. */
+const HAZ = [['spill', 'Mop the spill'], ['bin', 'Empty the bin'], ['fridge', 'Close the fridge']];
+function hazardSpots(){
+  const B = iBounds, pts = [], avoid = inTargets.map(t => t.door).concat([{x:player.position.x, z:player.position.z}, {x:player.position.x, z:player.position.z - 1}]);
+  for (let x = B.minX + 0.9; x <= B.maxX - 0.9; x += 0.5) for (let z = B.minZ + 0.9; z <= B.maxZ - 1.2; z += 0.5){
+    if (iObstacles.some(o => x > o.minX - 0.75 && x < o.maxX + 0.75 && z > o.minZ - 0.75 && z < o.maxZ + 0.75)) continue;
+    if (avoid.some(d => Math.hypot(d.x - x, d.z - z) < 1.7)) continue;
+    pts.push({x, z}); }
+  if (pts.length < 3) return null;
+  const out = [pts[Math.floor(pts.length*0.37)]];
+  while (out.length < 3){ let best = null, bd = -1; for (const p of pts){ const d = Math.min(...out.map(o => Math.hypot(o.x - p.x, o.z - p.z))); if (d > bd){ bd = d; best = p; } } out.push(best); }
+  return out;
+}
+function makeHazard(kind, p){
+  const g = new THREE.Group(), parts = {};
+  if (kind === 'spill'){ const d = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.03, 20), mat(0xFFFFFF)); d.position.y = 0.02; g.add(d); parts.fix = [d]; const c = addBox(g, 0.18, 0.18, 0.3, 0xBFE6FF, 0.3, 0.09, 0.1); parts.fix.push(c); }
+  if (kind === 'bin'){ addBox(g, 0.5, 0.7, 0.5, 0x4A4F59, 0, 0.35, 0); addBox(g, 0.58, 0.08, 0.58, 0x2B3140, 0, 0.74, 0);
+    parts.fix = [addBox(g, 0.22, 0.22, 0.22, 0xF4C430, -0.08, 0.9, 0), addBox(g, 0.2, 0.18, 0.2, 0xFFFFFF, 0.12, 0.88, 0.05), addBox(g, 0.2, 0.16, 0.24, 0xFF6B5A, 0.45, 0.08, 0.2)]; }
+  if (kind === 'fridge'){ addBox(g, 0.9, 1.7, 0.7, 0xFFFFFF, 0, 0.85, 0); addBox(g, 0.78, 1.5, 0.05, 0xFFE9A8, 0, 0.85, 0.33);
+    const hinge = new THREE.Group(); hinge.position.set(0.45, 0, 0.36); g.add(hinge); addBox(hinge, 0.88, 1.6, 0.06, 0xBFE6FF, -0.44, 0.85, 0); hinge.rotation.y = -1.2; parts.door = hinge; }
+  const ring = new THREE.Mesh(new THREE.RingGeometry(0.8, 1.0, 32), new THREE.MeshBasicMaterial({color:0xFFC21A, transparent:true, opacity:0.95}));
+  ring.rotation.x = -Math.PI/2; ring.position.y = 0.03; g.add(ring);
+  g.position.set(p.x, 0, p.z); iRoom.add(g);
+  return Object.assign({kind, g, ring, done:false}, parts);
+}
+function startInspection(){
+  const spots = iRoom && hazardSpots(); if (!spots){ finishErrand({found:3}); return; }
+  errand.step = 'task'; errand.timer = 30; errand.found = 0;
+  errand.hazards = HAZ.map(([k], i) => makeHazard(k, spots[i]));
+  errand.hazards.forEach((h, i) => { h.tgt = {errand:'hazard', i, name:HAZ[i][1], verb:HAZ[i][1], door:{x:spots[i].x, z:spots[i].z}, r:1.4}; inTargets.unshift(h.tgt); });
+  clearBeacon(); renderErrand(); $('#inspectHud').hidden = false; updateInspectHud();
+  toast('Find the 3 hazards!');
+}
+function fixHazard(i){
+  const h = errand && errand.hazards[i]; if (!h || h.done) return;
+  h.done = true; h.ring.visible = false; (h.fix || []).forEach(o => o.visible = false); if (h.door) h.door.rotation.y = 0;
+  const j = inTargets.indexOf(h.tgt); if (j >= 0) inTargets.splice(j, 1); nearTarget = null;
+  errand.found++; updateInspectHud();
+  if (errand.found >= 3) setTimeout(finishInspection, 500);
+}
+function updateInspectHud(){
+  const el = $('#inspectHud'); if (!errand || errand.step !== 'task'){ el.hidden = true; return; }
+  const t = Math.max(0, errand.timer);
+  el.innerHTML = `<div class="ih-h shine">${svgIc('clip', 26)}<span class="ol">Health inspection: find 3 hazards</span><b class="ol">0:${String(Math.ceil(t)).padStart(2, '0')}</b></div>
+    <div class="ih-b"><div class="ih-bar" role="img" aria-label="${Math.ceil(t)} seconds left"><i style="width:${t/30*100}%"></i></div>
+      <div class="ih-row"><span class="ih-dots">${[0, 1, 2].map(i => `<span class="${i < errand.found ? 'on' : ''}">${i < errand.found ? svgIc('check', 16) : ''}</span>`).join('')}</span><small>Walk up and press E (or tap)</small></div></div>`;
+}
+function finishInspection(){
+  if (!errand || errand.kind !== 'inspect') return;
+  const found = errand.found, late = live && live.day > errand.v.out;
+  finishErrand({found, late});
+}
+function errandAssistant(){ const r = assistantErrand(DB.game); cleanErrand(); if (r) afterErrand(r); }
+/* Grade it, rebase the live month, show the result card. */
+function finishErrand(res){
+  if (!errand) return;
+  const r = resolveErrand(DB.game, res); cleanErrand(); if (r) afterErrand(r);
+}
+function afterErrand(r){
+  const g = DB.game; save();
+  if (live){ const p = project(g); if (!p.err) rebase(live, p); }
+  meetSubjects([r.errand === 'shop' ? 'ops' : 'law']);
+  showErrResult(r); updateWeek();
+}
+function cleanErrand(){
+  if (!errand) return;
+  const i = targets.indexOf(errand.tgt); if (i >= 0) targets.splice(i, 1);
+  (errand.hazards || []).forEach(h => { if (h.g.parent) h.g.parent.remove(h.g); const j = inTargets.indexOf(h.tgt); if (j >= 0) inTargets.splice(j, 1); });
+  clearBeacon(); holdCrate(false); errand = null; nearTarget = null;
+  document.body.classList.remove('errand-on'); $('#errand').hidden = true; $('#inspectHud').hidden = true;
+}
+/* At day 30 an errand still open counts as not done (the crate, if bought, arrives too late to help). */
+function errandMonthEnd(){
+  if (!errand) return null;
+  const res = errand.kind === 'shop' ? (errand.step === 'carry' ? {arrive:30, qty:errand.qty, sup:errand.sup} : null) : (errand.step === 'task' ? {found:errand.found, late:true} : null);
+  const r = resolveErrand(DB.game, res); cleanErrand(); return r;
+}
+function showErrResult(r){
+  const g = DB.game, shop = r.errand === 'shop', good = shop ? !r.ignored && r.lost === 0 : r.pass;
+  const title = shop ? (r.ignored ? 'Out of beans' : r.lost > 0 ? 'Beans arrived late' : 'Beans restocked') : (r.pass ? 'Inspection passed' : 'Inspection failed');
+  const sub = r.by === 'assistant' ? 'Sam did the run' : r.ignored ? 'Errand ignored' : 'Errand done';
+  const star = on => `<span class="estar${on ? ' on' : ''}">${svgIc('star', 30)}</span>`;
+  const tiles = shop ? (r.ignored ? [tile('Days without coffee', String(Math.round(r.lost)), 'red'), tile('Lost sales', '≈ ' + money(r.lostSales), 'red'), tile('Reputation', 'Down', 'red')]
+      : [tile(r.late ? 'Late' : 'On time', r.late ? r.late + ' day' + (r.late > 1 ? 's' : '') : 'No lost days', r.late ? 'red' : 'grn'), tile('Bought', r.qty + ' bags', r.stars[1] ? 'grn' : 'sun', 'needed ≈ ' + r.need), tile(r.sup === 'premium' ? 'Premium beans' : 'Budget beans', money(r.cost), r.sup === 'premium' ? 'grn' : 'sun', r.sup === 'premium' ? '+ reputation' : 'Premium: + reputation')])
+    : [tile('Hazards fixed', r.found + ' of 3', r.pass ? 'grn' : 'red'), tile('Fine', r.pass ? 'None' : money(r.cost), r.pass ? 'grn' : 'red'), tile('Days closed', r.pass ? '0' : '1', r.pass ? 'grn' : 'red')];
+  const warn = r.ignored ? note(`Lesson: small problems grow. This cost ≈ <b>${money(r.lostSales + r.cost)}</b>.`, 'red')
+    : r.lostSales > 0 ? note(`Lost ≈ <b>${money(r.lostSales)}</b> in sales while the café waited.`, 'sun')
+    : note(`Ignored, it would have cost ≈ <b>${money(r.ignoreCost)}</b>${shop ? ' and months of lower reputation' : ''}.`, 'red');
+  showModal('errres', `<div class="mhead center" style="--c:${good ? HEX.grn : HEX.red}"><div class="estars">${(r.stars.length ? r.stars : [false, false, false]).map(star).join('')}</div><h2 class="ol">${esc(title)}</h2><span class="ol-sm">${esc(sub)} · day ${Math.min(30, Math.ceil(live ? live.day : 30))} of 30</span></div>
+    <div class="mbody"><div class="tiles">${tiles.join('')}</div>${warn}
+      <div class="foot"><button class="btn primary big" data-m="errok">Back to the month</button><button class="btn" data-m="lesson" data-subj="${shop ? 'ops' : 'law'}">Lesson</button></div></div>`);
+}
+$('#errand').addEventListener('click', e => {
+  const b = e.target.closest('[data-er]'); if (!b || !errand) return;
+  if (b.dataset.er === 'sam') errandAssistant();
+  if (b.dataset.er === 'ignore'){ if (!b.dataset.sure){ b.dataset.sure = '1'; b.textContent = 'Sure? Tap again'; return; } finishErrand(null); }
+});
+
+
 /* ---------- Modals: setup, event, result ---------- */
 let lessonBack = null;
 function showModal(kind, html){ modalKind = kind; document.body.classList.add('modal-open'); $('#modalBox').className = 'modal-box k-' + kind; $('#modalBox').innerHTML = html; $('#modal').hidden = false; const b = $('#modalBox').querySelector('button'); if (b) b.focus(); }
 function hideModal(){ modalKind = null; document.body.classList.remove('modal-open'); $('#modal').hidden = true; }
 $('#modalBox').addEventListener('click', e => {
-  const t = e.target.closest('[data-m],[data-biz],[data-lvl],[data-kind]'); if (!t) return; const pk = DB.pick, g = DB.game;
+  const t = e.target.closest('[data-m],[data-biz],[data-lvl],[data-kind],[data-sup],[data-q]'); if (!t) return; const pk = DB.pick, g = DB.game;
+  if (modalKind === 'errshop' && (t.dataset.sup || t.dataset.q || t.dataset.m === 'ebuy' || t.dataset.m === 'eleave')) return errShopClick(t);
+  if (t.dataset.m === 'errok'){ hideModal(); render(); return; }
   if (t.dataset.kind){ const nm = $('#coName'), was = nm && nm.value === TYCOON.names[newco.biz]; newco.biz = t.dataset.kind; modalKind = null; showNewCo(); if (!was && nm && nm.value) $('#coName').value = nm.value; return; }
   if (t.dataset.biz){ pk.biz = t.dataset.biz; if (!unlocked(pk.biz, pk.level)) pk.level = 1; save(); modalKind = null; showSetup(); return; }
   if (t.dataset.lvl){ pk.level = +t.dataset.lvl; save(); modalKind = null; showSetup(); return; }
@@ -834,7 +1048,7 @@ $('#modalBox').addEventListener('click', e => {
   if (m === 'new'){ modalKind = null; showSetup(); }
   if (m === 'diff'){ const order = ['easy', 'normal', 'hard']; S().diff = order[(order.indexOf(S().diff) + 1) % 3]; save(); modalKind = null; showSetup(); }
   if (m === 'lesson'){ const s = t.dataset.subj, from = modalKind; lessonBack = from; markRead(s); showModal('lesson', lessonHtml(s) + `<div class="row"><button class="btn primary" data-m="back-result">${from === 'result' ? 'Back to results' : 'Back'}</button></div>`); }
-  if (m === 'back-result'){ modalKind = null; ({mile:showMilestone, year:showYear})[lessonBack] ? ({mile:showMilestone, year:showYear})[lessonBack]() : showResult(); }
+  if (m === 'back-result'){ modalKind = null; if (lessonBack === 'errres'){ hideModal(); render(); return; } ({mile:showMilestone, year:showYear})[lessonBack] ? ({mile:showMilestone, year:showYear})[lessonBack]() : showResult(); }
 });
 
 /* =========================================================
@@ -1066,6 +1280,7 @@ canvas.addEventListener('touchmove', e => { if (e.touches.length === 2 && pinch)
 
 let nearTarget = null;
 function interact(){ const t = nearTarget; if (!t) return;
+  if (t.errand) return errandAct(t);
   if (t.exit) return exitInterior();
   if (t.talk) return talk();
   if (t.station) return openStation(t.station);
@@ -1383,7 +1598,8 @@ function enterInterior(){
     buildInterior(m); inside = true; nearTarget = null; iScene.add(player);
     const dr = iRoom.userData.door; player.position.set(dr.x, 0, dr.z - 1.4); player.rotation.y = Math.PI;
     camPos.set(player.position.x*0.4, 9.5, iBounds.maxZ + 8); camLook = null; syncInterior();
-    if (!iTip){ iTip = true; toast('Walk to a green ring to make decisions. The door takes you outside.'); }
+    if (errand && errand.kind === 'inspect' && errand.step === 'go') startInspection();
+    else if (!iTip){ iTip = true; toast('Walk to a green ring to make decisions. The door takes you outside.'); }
   });
 }
 function leaveInterior(){
@@ -1405,7 +1621,7 @@ function collideIn(p){
    - Customer comments are heard by asking a customer, not printed in the paper.
    ========================================================= */
 const STATION_DECS = {
-  cafe:{price:['price'], staff:['staff'], stock:['prep', 'quality'], marketing:['mkt']},
+  cafe:{price:['price'], staff:['staff', 'assistant'], stock:['prep', 'quality'], marketing:['mkt']},
   saas:{price:['price', 'pb', 'pp', 'pe', 'annual'], staff:['devs', 'support', 'reps'], marketing:['mkt']},
   shop:{price:['price', 'shipfee'], stock:['order', 'quality'], staff:['packers'], marketing:['ads']},
   agency:{clients:['rate', 'pricing'], staff:['staff'], marketing:['mkt']},
@@ -1521,7 +1737,7 @@ function makeFillers(){
   FILLER_SLOTS.forEach(([x, z, face], i) => {
     const [c, r] = FILLER_LOOK[i % FILLER_LOOK.length], h = [7.5, 10.5, 13.5, 9, 12.5, 7.5, 11, 15][i % 8];
     const slot = makeBuilding({x, z, w:9, d:8, h, color:c, roofColor:r, face, window:0xBFE6FF, sign:[FILLER_NAMES[i % FILLER_NAMES.length]], role:'filler', variant:(i*3) % 8, tint:{wall:c, roof:r}, noSign:true});
-    slot.signFor = m => [FILLER_SIGN[fileId(m)] || FILLER_NAMES[i % FILLER_NAMES.length]];
+    slot.signFor = m => [FILLER_SIGN[fileId(m)] || FILLER_NAMES[i % FILLER_NAMES.length]]; slot.fillerIndex = i;
     if (i === PARK_SLOT) slot.parkPlot = true; else DOORS.push(slot.door);
   });
 }
@@ -1925,6 +2141,6 @@ if (!webgl){
   if (!DB.game || (!isTy(DB.game) && DB.game.status !== 'playing')) showStart();
   requestAnimationFrame(t => { last = t; frame(t); });
 }
-window.__town = {city:() => ({npcs, sitters, DOORS, weatherKind, lampGlows, skyline, setDay:v => { dayT = v; }, setWeather}), cam:() => ({yaw:camYaw, pitch:camPitch, pos:camera.position.clone()}), DB:() => DB, runMonth, doRun, hideModal, showStart, showNewCo, useSlot, showRescue, showYear, showMilestone, doUpgrade, live:() => live, setSpeed, skipLive, answerMoment, showMoment, chooseEvent:answerEvent, startGame, openPanel, closePanel, openLesson, openStation, showEvent, showResult, showSetup, player:() => player, targets, MODELS, tryModelFile, slots:() => ({bldgs, bizSlot, people, trees, props}),
+window.__town = {city:() => ({npcs, sitters, DOORS, weatherKind, lampGlows, skyline, setDay:v => { dayT = v; }, setWeather}), cam:() => ({yaw:camYaw, pitch:camPitch, pos:camera.position.clone()}), DB:() => DB, runMonth, doRun, hideModal, errand:() => errand, startErrand, finishErrand, errandAct, shopSlot, fixHazard, showStart, showNewCo, useSlot, showRescue, showYear, showMilestone, doUpgrade, live:() => live, setSpeed, skipLive, answerMoment, showMoment, chooseEvent:answerEvent, startGame, openPanel, closePanel, openLesson, openStation, showEvent, showResult, showSetup, player:() => player, targets, MODELS, tryModelFile, slots:() => ({bldgs, bizSlot, people, trees, props}),
   interior:() => ({inside, iRoom, iPeople, iDyn, inTargets, iBounds, iObstacles}), enterInterior, exitInterior, streetPlaced, interact, near:() => nearTarget, traffic:() => ({cars, occupied, busDwell}), stepCity:(n, dt) => { for (let i = 0; i < n; i++){ T += dt; updateWalkers(dt); updateTraffic(dt); updateCompanions(dt); } }, view:(x, z, yaw, pitch, zm) => { player.position.set(x, 0, z); camYaw = yaw; camPitch = pitch; zoom = zm; camManual = T + 1e6; }, city4:() => ({parkOn, parkGroup, billboard, construction, foodTruck, skyModels, companions})};
 })();

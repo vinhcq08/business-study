@@ -96,8 +96,13 @@ Also keep the **order** in which the engine draws random numbers. Each `R()` cal
 | `makeOffer(g)`, `acceptOffer(g, 'fair' \| 'rich' \| 'none')` | The investor pitch |
 | `drawMoment(g)` | Call when Run is pressed: may set `g.moment = {id, day}`, a mid-month surprise (its own random stream; Level I has none). `stepMonth` refuses while it is open |
 | `momentView(g)`, `chooseMoment(g, i)` | The moment's card as plain data (title, text, choices with effect chips, `safe` = the cautious choice auto-run takes), and the answer. Effects that last "the rest of the month" scale with the days left |
+| `resolveErrand(g, res)` | Finishes an errand moment (`momentView(g).errand` is `'shop'` or `'inspect'`) with what happened in the town: `{arrive, qty, sup}` for the bean run, `{found, late}` for the inspection, or `null` if ignored. Returns the graded result (stars, lost days, lost sales, cost, what ignoring would have cost) |
+| `assistantErrand(g)` | The café assistant (decision `assistant`, Level III+) does the bean run instead of you |
+| `beanNeed(g, day)` | Bags of beans needed from `day` to the end of the month (for the shop window) |
 | `daySplit(g)` | 30 weights (adding up to 1) that spread the month's sales over its days, for the time-lapse only |
 | `goalKey(g)`, `valuation(g)`, `stake(g)`, `ownership(g)`, `loanLimit(g)` | Numbers for the HUD and report |
+
+**Errands:** in the café, some moments are errands played in the town. The clock slows to 1 day every 5 seconds, a beacon marks the Corner Shop, and you buy beans there and carry the crate to the café; or you go inside and fix 3 hazards in 30 seconds before the inspector comes. The engine does all the grading in `resolveErrand`, so a Roblox version only has to report the arrival day, the bags and the supplier, or how many hazards were fixed.
 
 **The live month:** the page plays each month as a short time-lapse. It runs `stepMonth` on a copy of `g` to get the month's totals, spreads them over the days with `daySplit`, pauses on `g.moment.day` for the moment card, runs the copy again after the answer, and only then runs the real `stepMonth`, so the report matches what was shown. On Roblox the same works with a deep copy of the state table.
 
